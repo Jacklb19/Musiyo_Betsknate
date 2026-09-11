@@ -1,0 +1,57 @@
+# Standard Unity .gitignore rules
+# Ref: https://github.com/github/gitignore/blob/main/Unity.gitignore
+
+[aA]ssets/AssetStoreTools*
+
+# External Code Formatting Packages
+[aA]ssets/Plugins/Editor/JetBrains*
+
+# Visual Studio / VS Code / Rider project files
+.vs/
+.idea/
+.vscode/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity generated build & temporary directories
+[lL]ibrary/
+[tT]emp/
+[oO]bj/
+[bB]uild/
+[bB]uilds/
+[lL]ogs/
+[uU]ser[sS]ettings/
+[mM]emoryCaptures/
+[rR]ecordings/
+
+# Asset cache
+[dD]erivedDataCache/
+
+# Crash Reports
+sysinfo.txt
+
+# Builds
+*.apk
+*.aab
+*.unitypackage
+*.app
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
