@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fdcfdb66b256d7a46b53eb7600ba11bf, type: 3}
+  m_Name: Mascara_Sabedor_Ejemplo
+  m_EditorClassIdentifier: MusiyoBetsknate.Dominio:Mascara
+  id: MASK-003
+  nombre: "M\xE1scara Ancestral de Sabedor (Ejemplo)"
+  comunidadOrigen: "Comunidad Kam\xEBnts\xE1 - Valle de Sibundoy"
+  categoria: Linaje y Sabiduria
+  descripcionBreve: "Pieza que personifica el respeto a los abuelos y la transmisi\xF3n de la memoria oral en los encuentros comunitarios."
+  fichaCultural:
+    titulo: "M\xE1scara del Rostro Mayor"
+    descripcionDetallada: "Representaci\xF3n solemne de la serenidad y la experiencia acumulada. Los trazos de tallado evocan las ense\xF1anzas transmitidas junto al fog\xF3n."
+    contextoTradicional: "Custodiada en espacios familiares y expuesta durante momentos de reflexi\xF3n y narraci\xF3n de la historia ancestral."
+    procedenciaComunitaria: "Municipio de Sibundoy, Putumayo"
+  consentimientoCultural:
+    estado: 0
+    observaciones: "Documento inicial cargado. Pendiente de visita de validaci\xF3n cultural."
+    fechaRegistro: "2026-09-12T12:00:00Z"
+  materiales: "Madera nativa y tintes vegetales"
+  tecnicaElaboracion: "Tallado con acabado al natural"
+  autorArtesano: "Cultor Tradicional de Ejemplo"
+  significadoRitual: "Memoria viva, respeto a los ancestros y consejo sabio"

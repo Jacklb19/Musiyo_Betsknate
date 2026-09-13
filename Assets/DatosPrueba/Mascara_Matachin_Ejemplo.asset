@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fdcfdb66b256d7a46b53eb7600ba11bf, type: 3}
+  m_Name: Mascara_Matachin_Ejemplo
+  m_EditorClassIdentifier: MusiyoBetsknate.Dominio:Mascara
+  id: MASK-001
+  nombre: "M\xE1scara Tradicional de Matach\xEDn (Ejemplo)"
+  comunidadOrigen: "Comunidad Kam\xEBnts\xE1 - Valle de Sibundoy"
+  categoria: Indumentaria Ritual
+  descripcionBreve: "M\xE1scara ceremonial empleada por los danzantes del B\xEBtsknat\xE9 para representar la alegr\xEDa y el vigor en el desfile de apertura."
+  fichaCultural:
+    titulo: "M\xE1scara de Matach\xEDn del Carnaval del Perd\xF3n"
+    descripcionDetallada: "Esta pieza representa la fuerza y el j\xFAbilo dentro de la festividad del B\xEBtsknat\xE9. Su dise\xF1o refleja expresiones vivas que acompa\xF1an los cantos y recorridos comunitarios durante la celebraci\xF3n anual."
+    contextoTradicional: "Utilizada principalmente en las comparsas que abren el d\xEDa grande del carnaval, guiando el baile de reconciliaci\xF3n entre familias."
+    procedenciaComunitaria: "Valle de Sibundoy, Putumayo"
+  consentimientoCultural:
+    estado: 1
+    observaciones: "Aprobada para divulgaci\xF3n p\xFAblica en el museo virtual con fines pedag\xF3gicos."
+    fechaRegistro: "2026-09-12T10:00:00Z"
+  materiales: "Madera de sauce blanco, pigmentos minerales y barniz vegetal"
+  tecnicaElaboracion: "Tallado tradicional a mano con gubias y pulido fino"
+  autorArtesano: "Artesano Tradicional de Ejemplo"
+  significadoRitual: "Alegr\xEDa, custodia ceremonial y renovaci\xF3n comunitaria"
