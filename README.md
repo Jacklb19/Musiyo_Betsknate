@@ -12,6 +12,7 @@ Prototipo del museo virtual interactivo del Carnaval del Perdón. Este repositor
 
 - Ejecutar las pruebas EditMode del ensamblado `MusiyoBetsknate.Tests` en Test Runner.
 - Para generar el prototipo WebGL en `Build/RecorridoPruebaWebGL`, ejecutar el método de editor `MusiyoBetsknate.Editor.ConstruirWebGLPrueba.Construir` en modo batch.
+- El WebGL consulta `GET /api/v1/recorridos/recorrido-prueba` en el mismo origen de la página. Acepta `recorrido`, `punto` y `elemento` en la URL solo cuando están en el contrato público. La selección de un punto con `Tab` se comunica a la página contenedora.
 - El editor actual no incluye el módulo Android; la versión Meta Quest aún requiere Android/OpenXR y una prueba con el visor físico.
 
-La escena de prueba y su contrato JSON contienen solo identificadores y geometría sintéticos. La aplicación web, la API y el contenido cultural autorizado todavía deben integrarse antes de una entrega pública.
+La escena de prueba y su contrato JSON contienen solo identificadores y geometría sintéticos. El build WebGL debe servirse desde la web junto a la API. Aún faltan recursos culturales autorizados y la integración Quest antes de una entrega pública.
