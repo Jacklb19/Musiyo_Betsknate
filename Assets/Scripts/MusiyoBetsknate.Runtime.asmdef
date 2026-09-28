@@ -1,0 +1,4 @@
+{
+    "name": "MusiyoBetsknate.Runtime",
+    "references": ["Unity.InputSystem", "Unity.TextMeshPro", "Unity.ugui"]
+}

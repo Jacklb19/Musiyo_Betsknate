@@ -48,6 +48,31 @@ namespace MusiyoBetsknate.UI
         [Tooltip("Texto explicativo de no disponibilidad del contenido cultural")]
         private TextMeshProUGUI textoMensajeBloqueo;
 
+        private void Update()
+        {
+            // Un retiro recibido o el vencimiento limpia también los textos ya renderizados.
+            if (elementoActual != null && !elementoActual.EsDivulgablePublicamente)
+            {
+                elementoActual = null;
+                MostrarBloqueo("Contenido no disponible para divulgación pública.");
+            }
+        }
+
+        public void Cerrar()
+        {
+            elementoActual = null;
+            LimpiarTextos();
+            if (panelContenido != null) panelContenido.SetActive(false);
+            if (panelContenidoNoDisponible != null) panelContenidoNoDisponible.SetActive(false);
+        }
+
+        private void LimpiarTextos()
+        {
+            if (textoNombre != null) textoNombre.text = string.Empty;
+            if (textoOrigen != null) textoOrigen.text = string.Empty;
+            if (textoDescripcion != null) textoDescripcion.text = string.Empty;
+        }
+
         private void Start()
         {
             if (elementoActual != null)
@@ -73,9 +98,7 @@ namespace MusiyoBetsknate.UI
             // Validación de gobernanza cultural (Fail-Closed)
             if (!elementoActual.EsDivulgablePublicamente)
             {
-                string mensaje = "Contenido no disponible para divulgación pública.\n" +
-                                 $"Estado: {(elementoActual.ConsentimientoCultural != null ? elementoActual.ConsentimientoCultural.Estado.ToString() : "Sin Consentimiento (Pendiente)")}";
-                MostrarBloqueo(mensaje);
+                MostrarBloqueo("Contenido no disponible para divulgación pública.");
                 return;
             }
 
@@ -116,6 +139,7 @@ namespace MusiyoBetsknate.UI
         /// </summary>
         private void MostrarBloqueo(string mensaje)
         {
+            LimpiarTextos();
             if (panelContenido != null) panelContenido.SetActive(false);
             if (panelContenidoNoDisponible != null) panelContenidoNoDisponible.SetActive(true);
             if (textoMensajeBloqueo != null) textoMensajeBloqueo.text = mensaje;

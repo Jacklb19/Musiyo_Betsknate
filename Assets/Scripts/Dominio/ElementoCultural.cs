@@ -42,8 +42,15 @@ namespace MusiyoBetsknate.Dominio
 
         [Header("Gobernanza Cultural (Relación 1 -> 0..1)")]
         [SerializeField]
-        [Tooltip("Consentimiento cultural registrado. Si es nulo o no aprobado, aplica la política fail-closed (Corrección #5)")]
+        [Tooltip("Dato legado de Sprint 1. No concede publicación; usar el resumen de revisión autorizado")]
         private ConsentimientoCultural consentimientoCultural;
+
+        [Header("Publicación por revisión (documentos corregidos)")]
+        [SerializeField] private RevisionPublicacion revisionPublicacion;
+        public RevisionPublicacion RevisionPublicacion => revisionPublicacion;
+
+        /// <summary>Aplica el resumen autorizado recibido del backend; null revoca la presentación.</summary>
+        public void AsignarRevisionPublicacion(RevisionPublicacion revision) => revisionPublicacion = revision;
 
         /// <summary>
         /// Identificador único del elemento cultural.
@@ -83,7 +90,8 @@ namespace MusiyoBetsknate.Dominio
         /// <summary>
         /// Evalúa si este elemento cultural puede ser divulgado públicamente según su consentimiento.
         /// </summary>
-        public bool EsDivulgablePublicamente => ConsentimientoCultural.EsAptoParaDivulgacionPublica(consentimientoCultural);
+        public bool EsDivulgablePublicamente => revisionPublicacion != null
+            && revisionPublicacion.EsPublicableEn(DateTimeOffset.UtcNow);
 
         /// <summary>
         /// Asigna valores base al elemento cultural en tiempo de ejecución o pruebas.
@@ -104,6 +112,8 @@ namespace MusiyoBetsknate.Dominio
             this.descripcionBreve = descripcionBreve;
             this.fichaCultural = ficha;
             this.consentimientoCultural = consentimiento;
+            // Cambiar el contenido invalida la aprobación anterior. Nunca heredar permisos.
+            this.revisionPublicacion = null;
         }
     }
 }

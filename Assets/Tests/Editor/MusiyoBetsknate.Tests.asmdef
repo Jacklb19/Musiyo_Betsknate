@@ -1,0 +1,6 @@
+{
+    "name": "MusiyoBetsknate.Tests",
+    "references": ["MusiyoBetsknate.Runtime", "Unity.TextMeshPro", "Unity.ugui"],
+    "includePlatforms": ["Editor"],
+    "optionalUnityReferences": ["TestAssemblies"]
+}

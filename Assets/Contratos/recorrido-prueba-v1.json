@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "recorridoId": "recorrido-prueba",
+  "salas": [
+    {
+      "id": "sala-prueba",
+      "orden": 0,
+      "puntos": [
+        { "anclajeId": "punto-01", "elementoIds": [] },
+        { "anclajeId": "punto-02", "elementoIds": [] },
+        { "anclajeId": "punto-03", "elementoIds": [] }
+      ]
+    }
+  ]
+}

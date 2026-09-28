@@ -56,6 +56,32 @@ sysinfo.txt
 ehthumbs.db
 Thumbs.db
 
-#Documentation
-Plan_Desarrollo_Unity_Musiyo_Betsknate.docx
-BITACORA_AVANCES.md
+# Solo README.md se versiona como documento Markdown.
+*.[mM][dD]
+!/README.md
+
+# Copias locales de documentos de referencia
+/Plan_Desarrollo_Unity_Musiyo_Betsknate*.docx
+/Propuesta_Curatorial_Salas_Musiyo_Betsknate*.docx
+/Requerimientos_Musiyo_Betsknate*.docx
+
+# Herramientas locales, resultados y archivos personales de trabajo
+/.codex/
+/.agents/
+/TestResults/
+/artifacts/
+*.log
+*.tmp
+*.bak
+~$*
+*.slnx
+.env
+.env.*
+!.env.example
+Desktop.ini
+
+# Capturas y cachés generadas por Unity
+/[Aa]ssets/[Ss]treamingAssets/aa/
+/[Aa]ssets/[Ss]treamingAssets/aa.meta
+/[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
+/[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*.meta
