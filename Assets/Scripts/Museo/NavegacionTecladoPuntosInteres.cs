@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -52,6 +53,8 @@ namespace MusiyoBetsknate.Museo
         /// Vitrina actualmente seleccionada mediante teclado (puede ser nula).
         /// </summary>
         public PuntoInteres VitrinaSeleccionada => vitrinaSeleccionada;
+
+        public event Action<PuntoInteres> PuntoSeleccionado;
 
         private void Reset()
         {
@@ -167,6 +170,7 @@ namespace MusiyoBetsknate.Museo
 
             vitrinaSeleccionada.Enfocar(PuntoInteres.FuenteEnfoque.Teclado);
             alSeleccionar?.Invoke(vitrinaSeleccionada);
+            PuntoSeleccionado?.Invoke(vitrinaSeleccionada);
             Anunciar(vitrinaSeleccionada.ObtenerAnuncioAccesible());
         }
 
