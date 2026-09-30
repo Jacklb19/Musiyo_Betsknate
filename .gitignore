@@ -56,9 +56,12 @@ sysinfo.txt
 ehthumbs.db
 Thumbs.db
 
-# Solo README.md se versiona como documento Markdown.
+# Only README.md is tracked as Markdown.
 *.[mM][dD]
 !/README.md
+
+# Local project documentation and older working notes.
+/.local_docs/
 
 # Copias locales de documentos de referencia
 /Plan_Desarrollo_Unity_Musiyo_Betsknate*.docx
