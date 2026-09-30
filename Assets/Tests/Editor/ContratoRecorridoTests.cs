@@ -26,5 +26,16 @@ namespace MusiyoBetsknate.Tests
             const string json = "{\"schemaVersion\":2,\"recorridoId\":\"r\",\"salas\":[{\"id\":\"s\",\"orden\":0,\"puntos\":[]}]}";
             Assert.IsFalse(ContratoRecorridoV1.IntentarLeer(json, out _, out _));
         }
+
+        [Test]
+        public void PuenteSoloResuelvePuntosYElementosPresentesEnContrato()
+        {
+            const string json = "{\"schemaVersion\":1,\"recorridoId\":\"r\",\"salas\":[{\"id\":\"s\",\"orden\":0,\"puntos\":[{\"anclajeId\":\"p1\",\"elementoIds\":[\"e1\"]}]}]}";
+            Assert.IsTrue(ContratoRecorridoV1.IntentarLeer(json, out var contrato, out var error), error);
+            Assert.IsTrue(PuenteRecorridoWeb.IntentarResolver(contrato, "p1", "e1", out var sala));
+            Assert.AreEqual("s", sala);
+            Assert.IsFalse(PuenteRecorridoWeb.IntentarResolver(contrato, "p1", "oculto", out _));
+            Assert.IsFalse(PuenteRecorridoWeb.IntentarResolver(contrato, "desconocido", null, out _));
+        }
     }
 }
