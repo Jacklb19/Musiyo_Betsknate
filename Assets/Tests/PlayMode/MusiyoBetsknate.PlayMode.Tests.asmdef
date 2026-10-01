@@ -1,0 +1,6 @@
+{
+    "name": "MusiyoBetsknate.PlayMode.Tests",
+    "references": ["MusiyoBetsknate.Runtime", "Unity.InputSystem", "Unity.InputSystem.TestFramework"],
+    "optionalUnityReferences": ["TestAssemblies"],
+    "defineConstraints": ["UNITY_INCLUDE_TESTS"]
+}
