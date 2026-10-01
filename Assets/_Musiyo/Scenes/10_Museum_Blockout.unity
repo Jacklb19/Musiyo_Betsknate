@@ -2076,6 +2076,7 @@ GameObject:
   m_Component:
   - component: {fileID: 612297962}
   - component: {fileID: 612297963}
+  - component: {fileID: 612297964}
   m_Layer: 0
   m_Name: MuseumBlockout
   m_TagString: Untagged
@@ -2121,6 +2122,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: MusiyoBetsknate.Runtime::MusiyoBetsknate.Museum.TourRuntime
   tourKey: museum-main
+--- !u!114 &612297964
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 612297961}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8408215ee90983e4188b8a5d0d6eb261, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MusiyoBetsknate.Runtime::MusiyoBetsknate.Museum.TourLoader
+  apiBase: 
+  loadOnStart: 1
 --- !u!1001 &630133762
 PrefabInstance:
   m_ObjectHideFlags: 0
