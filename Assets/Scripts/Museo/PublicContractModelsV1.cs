@@ -136,6 +136,17 @@ namespace MusiyoBetsknate.Museo
     }
 
     [Serializable, Preserve]
+    public sealed partial class ResourceAccessContractV1
+    {
+        [Preserve] public int schema_version;
+        [Preserve] public string url;
+        [Preserve] public string expires_at;
+        [Preserve] public string mime;
+        [Preserve] public int? byte_count;
+        [Preserve] public string sha256;
+    }
+
+    [Serializable, Preserve]
     public sealed partial class ResourceVariantContractV1
     {
         [Preserve] public string id;
@@ -231,5 +242,6 @@ namespace MusiyoBetsknate.Museo
         public const string ClearedBridge = @"{""$defs"":{""ClearedSelectionData"":{""additionalProperties"":false,""properties"":{""tour_key"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Tour Key"",""type"":""string""}},""required"":[""tour_key""],""title"":""ClearedSelectionData"",""type"":""object""}},""additionalProperties"":false,""properties"":{""source"":{""const"":""musiyo-unity"",""title"":""Source"",""type"":""string""},""type"":{""const"":""selection_cleared"",""title"":""Type"",""type"":""string""},""version"":{""const"":1,""title"":""Version"",""type"":""integer""},""data"":{""$ref"":""#/$defs/ClearedSelectionData""}},""required"":[""source"",""type"",""version"",""data""],""title"":""SelectionCleared"",""type"":""object""}";
         public const string Catalog = @"{""$defs"":{""CatalogItem"":{""additionalProperties"":false,""properties"":{""slug"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Slug"",""type"":""string""},""title"":{""title"":""Title"",""type"":""string""},""community"":{""anyOf"":[{""type"":""string""},{""type"":""null""}],""default"":null,""title"":""Community""},""thumbnail_resource_id"":{""anyOf"":[{""minLength"":1,""pattern"":""^\\S+$"",""type"":""string""},{""type"":""null""}],""default"":null,""title"":""Thumbnail Resource Id""},""has_3d_model"":{""default"":false,""title"":""Has 3D Model"",""type"":""boolean""},""has_narration"":{""default"":false,""title"":""Has Narration"",""type"":""boolean""},""description"":{""title"":""Description"",""type"":""string""},""category"":{""anyOf"":[{""$ref"":""#/$defs/NamedTerm""},{""type"":""null""}],""default"":null}},""required"":[""slug"",""title"",""description""],""title"":""CatalogItem"",""type"":""object""},""NamedTerm"":{""additionalProperties"":false,""properties"":{""slug"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Slug"",""type"":""string""},""name"":{""title"":""Name"",""type"":""string""}},""required"":[""slug"",""name""],""title"":""NamedTerm"",""type"":""object""}},""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""title"":""Schema Version"",""type"":""integer""},""items"":{""items"":{""$ref"":""#/$defs/CatalogItem""},""title"":""Items"",""type"":""array""},""total"":{""minimum"":0,""title"":""Total"",""type"":""integer""},""limit"":{""maximum"":100,""minimum"":1,""title"":""Limit"",""type"":""integer""},""offset"":{""minimum"":0,""title"":""Offset"",""type"":""integer""}},""required"":[""schema_version"",""items"",""total"",""limit"",""offset""],""title"":""CatalogPage"",""type"":""object""}";
         public const string CatalogFacet = @"{""additionalProperties"":false,""properties"":{""slug"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Slug"",""type"":""string""},""name"":{""title"":""Name"",""type"":""string""},""element_count"":{""minimum"":1,""title"":""Element Count"",""type"":""integer""}},""required"":[""slug"",""name"",""element_count""],""title"":""CatalogFacet"",""type"":""object""}";
+        public const string ResourceAccess = @"{""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""title"":""Schema Version"",""type"":""integer""},""url"":{""minLength"":1,""title"":""Url"",""type"":""string""},""expires_at"":{""format"":""date-time"",""title"":""Expires At"",""type"":""string""},""mime"":{""title"":""Mime"",""type"":""string""},""byte_count"":{""anyOf"":[{""minimum"":0,""type"":""integer""},{""type"":""null""}],""default"":null,""title"":""Byte Count""},""sha256"":{""anyOf"":[{""pattern"":""^[a-f0-9]{64}$"",""type"":""string""},{""type"":""null""}],""default"":null,""title"":""Sha256""}},""required"":[""schema_version"",""url"",""expires_at"",""mime""],""title"":""ResourceAccess"",""type"":""object""}";
     }
 }
