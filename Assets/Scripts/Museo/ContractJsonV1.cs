@@ -54,13 +54,21 @@ namespace MusiyoBetsknate.Museo
                     return true;
                 case "integer":
                     if (value.Type != JTokenType.Integer) return false;
-                    return schema["minimum"] == null || value.Value<double>() >= schema["minimum"].Value<double>();
+                    return WithinBounds(value, schema);
                 case "number":
                     if (value.Type != JTokenType.Integer && value.Type != JTokenType.Float) return false;
-                    return schema["minimum"] == null || value.Value<double>() >= schema["minimum"].Value<double>();
+                    return WithinBounds(value, schema);
                 case "boolean": return value.Type == JTokenType.Boolean;
                 default: throw new JsonException("Unsupported contract schema vocabulary.");
             }
+        }
+
+        private static bool WithinBounds(JToken value, JToken schema)
+        {
+            var number = value.Value<double>();
+            return !double.IsNaN(number) && !double.IsInfinity(number)
+                && (schema["minimum"] == null || number >= schema["minimum"].Value<double>())
+                && (schema["maximum"] == null || number <= schema["maximum"].Value<double>());
         }
     }
 }
