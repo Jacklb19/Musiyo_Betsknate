@@ -1,15 +1,47 @@
 {
-  "schemaVersion": 1,
-  "recorridoId": "recorrido-prueba",
-  "salas": [
+  "schema_version": 1,
+  "tour": {
+    "key": "recorrido-prueba",
+    "name": "Recorrido de prueba",
+    "revision": null
+  },
+  "rooms": [
     {
-      "id": "sala-prueba",
-      "orden": 0,
-      "puntos": [
-        { "anclajeId": "punto-01", "elementoIds": [] },
-        { "anclajeId": "punto-02", "elementoIds": [] },
-        { "anclajeId": "punto-03", "elementoIds": [] }
+      "key": "sala-prueba",
+      "name": "Sala de prueba",
+      "order": 0,
+      "short_description": "",
+      "ambient_audio_resource_id": null,
+      "points": [
+        {
+          "key": "punto-01",
+          "name": "Punto 1",
+          "order": 0,
+          "activation": [
+            "keyboard"
+          ],
+          "elements": []
+        },
+        {
+          "key": "punto-02",
+          "name": "Punto 2",
+          "order": 1,
+          "activation": [
+            "keyboard"
+          ],
+          "elements": []
+        },
+        {
+          "key": "punto-03",
+          "name": "Punto 3",
+          "order": 2,
+          "activation": [
+            "keyboard"
+          ],
+          "elements": []
+        }
       ]
     }
-  ]
+  ],
+  "guide": null
 }
