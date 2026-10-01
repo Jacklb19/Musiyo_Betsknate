@@ -52,6 +52,10 @@ namespace MusiyoBetsknate.Tests
                     Assert.That(interaction.SelectedElement, Is.Not.Null, source.ToString());
                     Assert.That(interaction.SelectedElement.slug, Is.EqualTo("synthetic-element"));
                     Assert.That(interaction.LastSource, Is.EqualTo(source));
+                    const string detail = "{\"slug\":\"synthetic-element\",\"title\":\"Test\",\"description\":\"Synthetic\","
+                        + "\"resources\":[{\"id\":\"test-narration\",\"kind\":\"narration\",\"mime\":\"audio/mpeg\",\"transcription\":\"TEST TRANSCRIPT\"}]}";
+                    Assert.That(ElementText.TryFormat(interaction.SelectedElement.slug, detail, out var text), Is.True);
+                    Assert.That(text, Does.Contain("TEST TRANSCRIPT"));
                 }
                 finally { Object.Destroy(root); }
                 yield return null;
