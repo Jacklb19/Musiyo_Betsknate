@@ -10,6 +10,14 @@ namespace MusiyoBetsknate.Museum
         private float elapsed;
         public float Progress { get; private set; }
 
+        public void SuppressUntilExit(string key)
+        {
+            candidate = key;
+            fired = key;
+            elapsed = 0;
+            Progress = 0;
+        }
+
         public bool Step(string key, bool eligible, float deltaTime, float duration)
         {
             if (!eligible || string.IsNullOrEmpty(key))
