@@ -1,0 +1,35 @@
+using MusiyoBetsknate.Museum;
+using MusiyoBetsknate.Museo;
+using NUnit.Framework;
+
+namespace MusiyoBetsknate.Tests
+{
+    public sealed class MuseumWebBridgeTests
+    {
+        [Test]
+        public void QueryParametersDecodeEscapesWithoutConfusingEmbeddedSeparators()
+        {
+            Assert.That(MuseumWebBridge.Parameter("?point=one%26two&element=plus%2Bsign", "point"), Is.EqualTo("one&two"));
+            Assert.That(MuseumWebBridge.Parameter("point=one&element=plus%2Bsign", "element"), Is.EqualTo("plus+sign"));
+            Assert.That(MuseumWebBridge.Parameter(null, "point"), Is.Null);
+        }
+
+        [Test]
+        public void ClosingSelectionUsesTheSharedContract()
+        {
+            const string json = "{\"source\":\"musiyo-unity\",\"type\":\"selection_cleared\",\"version\":1,\"data\":{\"tour_key\":\"museum-main\"}}";
+            Assert.That(SelectionClearedContractV1.TryParse(json, out var message), Is.True);
+            Assert.That(message.data.tour_key, Is.EqualTo("museum-main"));
+            Assert.That(SelectionClearedContractV1.TryParse(json.Replace("\"version\":1", "\"version\":true"), out _), Is.False);
+            Assert.That(SelectionClearedContractV1.TryParse(json.Replace("\"museum-main\"", "\"museum-main\",\"point_key\":\"stale\""), out _), Is.False);
+        }
+
+        [TestCase(null)]
+        [TestCase("")]
+        public void EmptyNetworkResponsesAreRejected(string json)
+        {
+            Assert.That(SelectionClearedContractV1.TryParse(json, out _), Is.False);
+            Assert.That(ElementContractV1.TryParse(json, out _), Is.False);
+        }
+    }
+}
