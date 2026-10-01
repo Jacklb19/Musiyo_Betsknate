@@ -56,6 +56,10 @@ namespace MusiyoBetsknate.Tests
                         + "\"resources\":[{\"id\":\"test-narration\",\"kind\":\"narration\",\"mime\":\"audio/mpeg\",\"transcription\":\"TEST TRANSCRIPT\"}]}";
                     Assert.That(ElementText.TryFormat(interaction.SelectedElement.slug, detail, out var text), Is.True);
                     Assert.That(text, Does.Contain("TEST TRANSCRIPT"));
+                    interaction.Close();
+                    yield return new WaitForSecondsRealtime(1.5f);
+                    Assert.That(interaction.State, Is.EqualTo(InteractionState.Exploration), "Closing must remain closed until leaving the point.");
+                    Assert.That(interaction.SelectedElement, Is.Null);
                 }
                 finally { Object.Destroy(root); }
                 yield return null;

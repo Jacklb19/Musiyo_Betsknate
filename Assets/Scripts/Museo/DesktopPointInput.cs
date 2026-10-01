@@ -22,8 +22,25 @@ namespace MusiyoBetsknate.Museum
         { visitor = visitorTransform; viewCamera = camera; }
 
         private void Awake() => interaction = GetComponent<MuseumInteraction>();
-        private void OnEnable() => GetComponent<TourRuntime>().Changed += ResetFocus;
-        private void OnDisable() => GetComponent<TourRuntime>().Changed -= ResetFocus;
+        private void OnEnable()
+        {
+            interaction = GetComponent<MuseumInteraction>();
+            GetComponent<TourRuntime>().Changed += ResetFocus;
+            interaction.Changed += SuppressActivePoint;
+        }
+        private void OnDisable()
+        {
+            GetComponent<TourRuntime>().Changed -= ResetFocus;
+            interaction.Changed -= SuppressActivePoint;
+        }
+
+        private void SuppressActivePoint()
+        {
+            if (interaction.ActivePoint == null) return;
+            var key = interaction.ActivePoint.Anchor.Key;
+            proximityDwell.SuppressUntilExit(key);
+            gazeDwell.SuppressUntilExit(key);
+        }
 
         private void ResetFocus()
         {
