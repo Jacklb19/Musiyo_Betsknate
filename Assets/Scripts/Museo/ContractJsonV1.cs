@@ -42,6 +42,7 @@ namespace MusiyoBetsknate.Museo
                     return record.Properties().All(field => properties[field.Name] == null || Matches(field.Value, properties[field.Name], root));
                 case "array":
                     if (!(value is JArray items) || (schema["minItems"] != null && items.Count < (int)schema["minItems"])) return false;
+                    if (schema["maxItems"] != null && items.Count > (int)schema["maxItems"]) return false;
                     if (schema["uniqueItems"]?.Value<bool>() == true
                         && items.Where((item, index) => items.Take(index).Any(prior => JToken.DeepEquals(prior, item))).Any()) return false;
                     return items.All(item => Matches(item, schema["items"], root));
@@ -49,6 +50,7 @@ namespace MusiyoBetsknate.Museo
                     if (value.Type != JTokenType.String) return false;
                     var text = value.Value<string>();
                     if (schema["minLength"] != null && text.Length < (int)schema["minLength"]) return false;
+                    if (schema["maxLength"] != null && text.Length > (int)schema["maxLength"]) return false;
                     if (schema["pattern"] != null && !Regex.IsMatch(text, (string)schema["pattern"])) return false;
                     if ((string)schema["format"] == "date-time" && !DateTimeOffset.TryParse(text, out _)) return false;
                     return true;
