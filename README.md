@@ -1,18 +1,16 @@
 # Musiyo Bëtsknaté
 
-Prototipo del museo virtual interactivo del Carnaval del Perdón. Este repositorio contiene el cliente Unity; el contenido cultural público requiere aprobación y autorización vigentes.
+Cliente Unity del museo virtual del Carnaval del Perdón. La escena contiene arquitectura neutra; el contenido se obtiene de Musiyo API mediante contratos v1 compartidos con Web.
 
-## Abrir el proyecto
+## Desarrollo
 
-- Instalar la versión de Unity indicada en `ProjectSettings/ProjectVersion.txt`, con soporte WebGL.
-- Abrir `Assets/_Musiyo/Scenes/10_Museum_Blockout.unity` para revisar la arquitectura neutra, los puntos y las colisiones. La escena anterior de prueba está en `Assets/Scenes/Recorrido_Prueba.unity`.
-- En la escena de prueba: caminar con `WASD`, mirar tras hacer clic y liberar el ratón con `Esc`.
+- Unity **6000.3.25f1**, con soporte WebGL. Escena: `Assets/_Musiyo/Scenes/10_Museum_Blockout.unity`.
+- La API debe servir `museum-main` en `/api/v1/tours/museum-main`. En el editor utiliza `http://127.0.0.1:8000`; en Web, el mismo origen de la página.
+- WASD o flechas: caminar; IJKL o ratón tras clic: mirar; Tab/Mayús+Tab: puntos; Enter: activar; F: ficha; Retroceso: volver; Esc: pausa. Sensibilidad ajustable en pausa.
+- `Musiyo > Build Museum Web` genera `Build/MuseumWeb` y su manifiesto. Web copia el resultado con `npm.cmd run unity:sync`.
 
-## Verificar
+## Verificación
 
-- Ejecutar las pruebas EditMode del ensamblado `MusiyoBetsknate.Tests` en Test Runner.
-- Ejecutar `Musiyo > Validate Saved Blockout` para verificar la escena técnica.
-- API genera los contratos v1 en inglés, sus copias SHA-256 en `Assets/Contracts/` y los DTO de Unity. El puente Web consulta `/api/v1/tours`; las pruebas verifican ejemplos, estructura y selección.
-- La versión Meta Quest requiere Android/OpenXR y una prueba con el visor físico.
+Pruebas EditMode: `MusiyoBetsknate.Tests`. Pruebas PlayMode: `MusiyoBetsknate.PlayMode.Tests`. `Musiyo > Validate Saved Blockout` comprueba anclas y colisiones.
 
-La escena técnica no incluye contenido cultural listo para publicación.
+Meta Quest, modelos remotos y reproducción de narraciones requieren sus siguientes tareas y validación de plataforma. No se incluyen máscaras, grabaciones ni claves.

@@ -12,6 +12,7 @@ namespace MusiyoBetsknate.Museo
         // Supports the vocabulary emitted by the canonical Pydantic models.
         public static T Parse<T>(string json, string schemaJson)
         {
+            if (string.IsNullOrWhiteSpace(json)) throw new JsonException("Empty v1 contract.");
             JToken value;
             using (var reader = new JsonTextReader(new StringReader(json)) { DateParseHandling = DateParseHandling.None })
                 value = JToken.Load(reader);
