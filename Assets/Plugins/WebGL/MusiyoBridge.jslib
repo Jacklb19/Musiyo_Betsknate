@@ -1,12 +1,15 @@
 mergeInto(LibraryManager.library, {
-  MusiyoNotificarPunto: function (recorridoPtr, puntoPtr) {
+  MusiyoNotifyPoint: function (tourPtr, pointPtr) {
     if (window.parent === window) return;
     window.parent.postMessage({
       source: 'musiyo-unity',
-      type: 'point-selected',
-      schemaVersion: 1,
-      recorridoId: UTF8ToString(recorridoPtr),
-      puntoId: UTF8ToString(puntoPtr)
+      type: 'selection_confirmed',
+      version: 1,
+      data: {
+        tour_key: UTF8ToString(tourPtr),
+        point_key: UTF8ToString(pointPtr),
+        element_slug: null
+      }
     }, window.location.origin);
   }
 });

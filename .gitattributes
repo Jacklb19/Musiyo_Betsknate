@@ -1,6 +1,9 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
+# Contract hashes must survive Windows and Linux checkouts.
+Assets/Contracts/** text eol=lf
+
 # Unity YAML binary files normalization
 *.cs diff=csharp text
 *.cginc text

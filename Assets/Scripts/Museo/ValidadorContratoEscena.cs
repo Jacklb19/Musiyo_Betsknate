@@ -14,8 +14,8 @@ namespace MusiyoBetsknate.Museo
                 Debug.LogError("No se asignó contrato de recorrido.", this);
                 return;
             }
-            if (!ContratoRecorridoV1.IntentarLeer(contratoJson.text, out var contrato, out var error)
-                || !contrato.CoincideCon(recorrido, out error))
+            if (!TourContractV1.TryParse(contratoJson.text, out var contract, out var error)
+                || !contract.MatchesScene(recorrido, out error))
                 Debug.LogError("Contrato de recorrido incompatible: " + error, this);
         }
     }
