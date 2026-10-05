@@ -101,6 +101,7 @@ namespace MusiyoBetsknate.Museum
                     Cycle(keyboard.shiftKey.isPressed ? -1 : 1);
                 if (keyboard.enterKey.wasPressedThisFrame) Confirm();
                 if (keyboard.fKey.wasPressedThisFrame) interaction.OpenDetail();
+                if (keyboard.xKey.wasPressedThisFrame) GetComponent<MuseumModelPresenter>()?.Examine();
                 if (keyboard.digit1Key.wasPressedThisFrame) interaction.SelectElement(0);
                 if (keyboard.digit2Key.wasPressedThisFrame) interaction.SelectElement(1);
                 if (keyboard.digit3Key.wasPressedThisFrame) interaction.SelectElement(2);

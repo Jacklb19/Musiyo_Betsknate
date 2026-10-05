@@ -28,11 +28,26 @@ namespace MusiyoBetsknate.Museum
         private Coroutine reading;
         private string requestedSlug;
         private string detail;
+        private MuseumModelPresenter model;
+        private Button examineButton;
+        private Button modelRetryButton;
+        private TMP_Text modelText;
+        private GameObject modelControls;
+
+        private void Awake()
+        {
+            if (interaction == null) return;
+            model = interaction.GetComponent<MuseumModelPresenter>();
+            if (model == null) model = interaction.gameObject.AddComponent<MuseumModelPresenter>();
+            if (visitor != null) model.Configure(visitor.GetComponentInChildren<Camera>(), visitor.transform);
+            CreateModelInterface();
+        }
 
         private void OnEnable()
         {
             loader.Changed += Refresh;
             interaction.Changed += Refresh;
+            if (model != null) model.Changed += Refresh;
             retryButton.onClick.AddListener(loader.Reload);
             closeButton.onClick.AddListener(interaction.Back);
             pauseButton.onClick.AddListener(TogglePause);
@@ -49,6 +64,7 @@ namespace MusiyoBetsknate.Museum
         {
             loader.Changed -= Refresh;
             interaction.Changed -= Refresh;
+            if (model != null) model.Changed -= Refresh;
             retryButton.onClick.RemoveListener(loader.Reload);
             closeButton.onClick.RemoveListener(interaction.Back);
             pauseButton.onClick.RemoveListener(TogglePause);
@@ -65,6 +81,8 @@ namespace MusiyoBetsknate.Museum
             var focus = pointInput.FocusedPoint;
             focusText.text = focus != null && focus.Content != null ? focus.Content.name + " · Enter para activar"
                 : pointInput.GazeProgress > 0 ? "Mirada: " + Mathf.RoundToInt(pointInput.GazeProgress * 100) + "%" : ".";
+            if (model != null && model.State == ModelLoadState.Loading && modelText.gameObject.activeInHierarchy)
+                modelText.text = model.Status + " " + Mathf.RoundToInt(model.Progress * 100) + "%";
         }
 
         private void Refresh()
@@ -72,6 +90,7 @@ namespace MusiyoBetsknate.Museum
             statusText.text = loader.Status;
             retryButton.gameObject.SetActive(loader.State == TourLoadState.Unavailable);
             bool paused = interaction.State == InteractionState.Paused;
+            RefreshModelInterface();
             pauseButton.GetComponentInChildren<TMP_Text>().text = paused ? "Reanudar" : "Pausa";
             if (sensitivitySlider != null) sensitivitySlider.gameObject.SetActive(paused);
             panel.SetActive(interaction.State != InteractionState.Exploration);
@@ -87,7 +106,8 @@ namespace MusiyoBetsknate.Museum
             elementTemplate.gameObject.SetActive(false);
             bool choosing = interaction.State == InteractionState.PointFocus;
             elementList.gameObject.SetActive(choosing);
-            detailButton.gameObject.SetActive(interaction.State == InteractionState.ElementSelected);
+            detailButton.gameObject.SetActive(interaction.State == InteractionState.ElementSelected
+                || interaction.State == InteractionState.ModelExamination);
             if (paused) { panelText.text = "Visita en pausa. Ajusta la sensibilidad del ratón o reanuda para continuar."; return; }
             var point = interaction.ActivePoint;
             if (point == null) { panelText.text = ""; return; }
@@ -113,7 +133,9 @@ namespace MusiyoBetsknate.Museum
                 CancelDetail();
                 requestedSlug = null;
                 detail = null;
-                panelText.text = point.Content.name + "\n" + element.title + "\nF: leer ficha · Retroceso: cerrar";
+                panelText.text = point.Content.name + "\n" + element.title + (interaction.State == InteractionState.ModelExamination
+                    ? "\nFlechas: rotar · + / −: acercar o alejar · Inicio: restablecer\nF: ficha · Retroceso: salir del examen"
+                    : "\nF: leer ficha · Retroceso: cerrar");
                 return;
             }
             panelText.text = detail ?? "Cargando ficha…";
@@ -152,6 +174,59 @@ namespace MusiyoBetsknate.Museum
             detailRequest.Abort();
             detailRequest.Dispose();
             detailRequest = null;
+        }
+
+        private void CreateModelInterface()
+        {
+            modelText = Instantiate(panelText, elementList.parent);
+            modelText.name = "ModelStatus";
+            modelText.text = "";
+            modelText.GetComponent<LayoutElement>().minHeight = 0;
+            examineButton = ModelButton("Examinar modelo (X)", elementList.parent, () => model.Examine());
+            modelRetryButton = ModelButton("Reintentar modelo", elementList.parent, model.Retry);
+            modelControls = new GameObject("ModelControls", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(LayoutElement));
+            modelControls.transform.SetParent(elementList.parent, false);
+            var layout = modelControls.GetComponent<VerticalLayoutGroup>();
+            layout.spacing = 8;
+            layout.childControlHeight = true;
+            layout.childForceExpandHeight = false;
+            ModelButton("Girar a la izquierda", modelControls.transform, () => model.Rotate(new Vector2(-15, 0)));
+            ModelButton("Girar a la derecha", modelControls.transform, () => model.Rotate(new Vector2(15, 0)));
+            ModelButton("Girar hacia arriba", modelControls.transform, () => model.Rotate(new Vector2(0, -15)));
+            ModelButton("Girar hacia abajo", modelControls.transform, () => model.Rotate(new Vector2(0, 15)));
+            ModelButton("Acercar", modelControls.transform, () => model.Zoom(-.1f));
+            ModelButton("Alejar", modelControls.transform, () => model.Zoom(.1f));
+            ModelButton("Restablecer modelo", modelControls.transform, model.ResetPose);
+        }
+
+        private Button ModelButton(string label, Transform parent, UnityEngine.Events.UnityAction action)
+        {
+            var button = Instantiate(detailButton, parent);
+            button.name = "ModelAction";
+            button.GetComponentInChildren<TMP_Text>().text = label;
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(action);
+            var rect = button.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.pivot = new Vector2(.5f, .5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = new Vector2(0, 52);
+            button.gameObject.AddComponent<LayoutElement>().preferredHeight = 52;
+            return button;
+        }
+
+        private void RefreshModelInterface()
+        {
+            if (model == null) return;
+            bool selected = interaction.SelectedElement?.has_3d_model == true
+                && interaction.State != InteractionState.Paused && interaction.State != InteractionState.Exploration;
+            bool examining = interaction.State == InteractionState.ModelExamination;
+            modelText.gameObject.SetActive(selected && interaction.State != InteractionState.Reading);
+            modelText.text = model.Status + (string.IsNullOrEmpty(model.Attribution) ? "" : "\n" + model.Attribution);
+            examineButton.gameObject.SetActive(selected && interaction.State == InteractionState.ElementSelected && model.CanExamine);
+            modelRetryButton.gameObject.SetActive(selected && model.State == ModelLoadState.Unavailable);
+            modelControls.SetActive(examining);
         }
     }
 }
