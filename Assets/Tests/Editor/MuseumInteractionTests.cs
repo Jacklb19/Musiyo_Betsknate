@@ -135,6 +135,36 @@ namespace MusiyoBetsknate.Tests
             Assert.That(interaction.SelectedElement, Is.Null);
             Assert.That(interaction.ActivePoint, Is.Null);
         }
+
+        [Test]
+        public void ExaminationRetainsItsStateAcrossReadingAndPause()
+        {
+            Assert.That(interaction.OpenModel(), Is.False);
+            interaction.Activate(first, ActivationSource.Keyboard);
+            Assert.That(interaction.OpenModel(), Is.True);
+            Assert.That(interaction.BlocksMovement, Is.True);
+            Assert.That(interaction.OpenDetail(), Is.True);
+            interaction.SetPaused(true);
+            interaction.Back();
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.Reading));
+            interaction.Back();
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.ModelExamination));
+            interaction.Back();
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.ElementSelected));
+        }
+
+        [Test]
+        public void ExpiredModelCannotBeRestoredFromReadingOrPause()
+        {
+            interaction.Activate(first, ActivationSource.Keyboard);
+            interaction.OpenModel();
+            interaction.OpenDetail();
+            interaction.SetPaused(true);
+            interaction.CancelModel();
+            interaction.Back();
+            interaction.Back();
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.ElementSelected));
+        }
     }
 
     public sealed class PointActivationTests

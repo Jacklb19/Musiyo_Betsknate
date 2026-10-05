@@ -11,6 +11,7 @@ namespace MusiyoBetsknate.Museum
     public sealed class MuseumInteraction : MonoBehaviour
     {
         private InteractionState previousState;
+        private InteractionState detailReturnState = InteractionState.ElementSelected;
         private bool connected;
         public InteractionState State { get; private set; }
         public TourPoint ActivePoint { get; private set; }
@@ -69,16 +70,36 @@ namespace MusiyoBetsknate.Museum
 
         public bool OpenDetail()
         {
-            if (SelectedElement == null || State != InteractionState.ElementSelected) return false;
+            if (SelectedElement == null || (State != InteractionState.ElementSelected && State != InteractionState.ModelExamination)) return false;
+            detailReturnState = State;
             State = InteractionState.Reading;
             Changed?.Invoke();
             return true;
         }
 
+        public bool OpenModel()
+        {
+            if (SelectedElement == null || State != InteractionState.ElementSelected) return false;
+            State = InteractionState.ModelExamination;
+            Changed?.Invoke();
+            return true;
+        }
+
+        public void CancelModel()
+        {
+            if (detailReturnState == InteractionState.ModelExamination) detailReturnState = InteractionState.ElementSelected;
+            if (previousState == InteractionState.ModelExamination) previousState = InteractionState.ElementSelected;
+            if (State != InteractionState.ModelExamination) return;
+            State = InteractionState.ElementSelected;
+            Changed?.Invoke();
+        }
+
         public void Back()
         {
             if (State == InteractionState.Paused) { SetPaused(false); return; }
-            if (State == InteractionState.Reading || State == InteractionState.ModelExamination)
+            if (State == InteractionState.Reading)
+            { State = detailReturnState; Changed?.Invoke(); return; }
+            if (State == InteractionState.ModelExamination)
             { State = InteractionState.ElementSelected; Changed?.Invoke(); return; }
             Close();
         }
@@ -103,6 +124,7 @@ namespace MusiyoBetsknate.Museum
             if (ActivePoint != null) ActivePoint.SetState(PointState.Available);
             ActivePoint = null;
             SelectedElement = null;
+            detailReturnState = InteractionState.ElementSelected;
             ElementChanged?.Invoke(null);
         }
     }
