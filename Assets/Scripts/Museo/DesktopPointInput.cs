@@ -91,10 +91,16 @@ namespace MusiyoBetsknate.Museum
         {
 #if ENABLE_INPUT_SYSTEM
             var keyboard = Keyboard.current;
+            var wayfinding = GetComponent<MuseumWayfinding>();
             if (keyboard != null)
             {
+                if (keyboard.hKey.wasPressedThisFrame) wayfinding?.ToggleMenu();
                 if (keyboard.escapeKey.wasPressedThisFrame)
+                {
+                    if (wayfinding?.MenuOpen == true) { wayfinding.CloseMenu(); return; }
                     interaction.SetPaused(interaction.State != InteractionState.Paused);
+                }
+                if (wayfinding?.MenuOpen == true) return;
                 if (keyboard.backspaceKey.wasPressedThisFrame) interaction.Back();
                 if (interaction.State == InteractionState.Paused) return;
                 if (interaction.State == InteractionState.Exploration && keyboard.tabKey.wasPressedThisFrame)
@@ -111,6 +117,7 @@ namespace MusiyoBetsknate.Museum
                 if (keyboard.digit3Key.wasPressedThisFrame) interaction.SelectElement(2);
             }
 #endif
+            if (GetComponent<MuseumWayfinding>()?.MenuOpen == true) return;
             if (visitor == null || viewCamera == null || interaction.Runtime.Contract == null) return;
             if (interaction.State != InteractionState.Exploration) return;
             TourPoint nearestPoint = null;

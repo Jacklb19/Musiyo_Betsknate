@@ -9,6 +9,7 @@ Cliente Unity del museo virtual del Carnaval del Perdón. La escena contiene arq
 - WASD o flechas: caminar; IJKL o ratón tras clic: mirar; Tab/Mayús+Tab: puntos; Enter: activar; F: ficha; Retroceso: volver; Esc: pausa. Sensibilidad ajustable en pausa.
 - Los GLB publicados se cargan al acercarse o seleccionar su elemento. X: examinar; flechas o arrastre: rotar; rueda o +/-: zoom; Inicio: restablecer. La ficha permanece disponible con F.
 - La narración publicada acompaña al elemento con transcripción y WebVTT opcional. Espacio: pausa; R: repetir; M: silencio. Volumen y subtítulos se ajustan en pausa. Puedes caminar mientras escuchas.
+- H: orientación opcional hacia una sala o por el orden sugerido. La línea del suelo sigue las colisiones del museo; puedes desactivarla y explorar libremente.
 - `Musiyo > Build Museum Web` genera `Build/MuseumWeb` y su manifiesto. Web copia el resultado con `npm.cmd run unity:sync`.
 
 ## Verificación

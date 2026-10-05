@@ -67,6 +67,15 @@ namespace MusiyoBetsknate.Tests
                 interaction.Back();
                 yield return new WaitForSecondsRealtime(.25f);
                 Assert.That(visitor.transform.position.z, Is.GreaterThan(stopped + .1f));
+                var guidance = root.AddComponent<MuseumWayfinding>();
+                guidance.Configure(visitor.transform);
+                guidance.ToggleMenu();
+                float menuPosition = visitor.transform.position.z;
+                yield return new WaitForSecondsRealtime(.25f);
+                Assert.That(visitor.transform.position.z, Is.EqualTo(menuPosition).Within(.01f));
+                guidance.CloseMenu();
+                yield return new WaitForSecondsRealtime(.25f);
+                Assert.That(visitor.transform.position.z, Is.GreaterThan(menuPosition + .1f));
                 Release(keyboard.wKey);
             }
             finally { Object.Destroy(root); Object.Destroy(actions); }

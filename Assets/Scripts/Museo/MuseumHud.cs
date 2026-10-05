@@ -55,6 +55,10 @@ namespace MusiyoBetsknate.Museum
             narration = interaction.GetComponent<MuseumNarration>();
             if (narration == null) narration = interaction.gameObject.AddComponent<MuseumNarration>();
             CreateNarrationInterface();
+            var wayfinding = interaction.GetComponent<MuseumWayfinding>();
+            if (wayfinding == null) wayfinding = interaction.gameObject.AddComponent<MuseumWayfinding>();
+            wayfinding.Configure(visitor != null ? visitor.transform : null);
+            gameObject.AddComponent<MuseumWayfindingHud>().Configure(wayfinding, interaction, detailButton, focusText);
         }
 
         private void OnEnable()
