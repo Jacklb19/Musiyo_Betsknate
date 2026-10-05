@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
 
 namespace MusiyoBetsknate.Museum
 {
@@ -82,19 +83,20 @@ namespace MusiyoBetsknate.Museum
         {
             if (actions == null || body == null || viewCamera == null) return;
             bool blocked = interaction != null && interaction.BlocksMovement;
-            bool panelOpen = interaction != null && interaction.State != InteractionState.Exploration;
-            if (blocked || panelOpen || Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            bool choosing = interaction != null && interaction.State == InteractionState.PointFocus;
+            if (blocked || choosing || Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
                 CapturePointer(false);
-            else if (capture.WasPressedThisFrame()) CapturePointer(true);
+            else if (capture.WasPressedThisFrame() && (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject()))
+                CapturePointer(true);
             if (!blocked)
             {
                 var delta = captured ? look.ReadValue<Vector2>() * lookSensitivity : Vector2.zero;
-                if (!panelOpen) delta += keyboardLook.ReadValue<Vector2>() * (70 * Time.deltaTime);
+                if (!choosing) delta += keyboardLook.ReadValue<Vector2>() * (70 * Time.deltaTime);
                 transform.Rotate(Vector3.up, delta.x, Space.World);
                 pitch = Mathf.Clamp(pitch - delta.y, -80, 80);
                 viewCamera.transform.localRotation = Quaternion.Euler(pitch, 0, 0);
             }
-            var input = blocked || panelOpen ? Vector2.zero : Vector2.ClampMagnitude(move.ReadValue<Vector2>(), 1);
+            var input = blocked || choosing ? Vector2.zero : Vector2.ClampMagnitude(move.ReadValue<Vector2>(), 1);
             float speed = sprint.IsPressed() ? 3 : 2;
             if (body.isGrounded && verticalSpeed < 0) verticalSpeed = -1;
             verticalSpeed += Physics.gravity.y * Time.deltaTime;

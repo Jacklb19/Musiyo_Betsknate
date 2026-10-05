@@ -102,6 +102,10 @@ namespace MusiyoBetsknate.Museum
                 if (keyboard.enterKey.wasPressedThisFrame) Confirm();
                 if (keyboard.fKey.wasPressedThisFrame) interaction.OpenDetail();
                 if (keyboard.xKey.wasPressedThisFrame) GetComponent<MuseumModelPresenter>()?.Examine();
+                var narration = GetComponent<MuseumNarration>();
+                if (keyboard.rKey.wasPressedThisFrame) narration?.Repeat();
+                if (keyboard.spaceKey.wasPressedThisFrame) narration?.TogglePause();
+                if (keyboard.mKey.wasPressedThisFrame) narration?.ToggleMute();
                 if (keyboard.digit1Key.wasPressedThisFrame) interaction.SelectElement(0);
                 if (keyboard.digit2Key.wasPressedThisFrame) interaction.SelectElement(1);
                 if (keyboard.digit3Key.wasPressedThisFrame) interaction.SelectElement(2);
