@@ -33,6 +33,17 @@ namespace MusiyoBetsknate.Museum
         private Button modelRetryButton;
         private TMP_Text modelText;
         private GameObject modelControls;
+        private MuseumNarration narration;
+        private TMP_Text narrationText;
+        private TMP_Text subtitleText;
+        private GameObject subtitleBackground;
+        private GameObject narrationControls;
+        private Button audioPauseButton;
+        private Button audioMuteButton;
+        private Button narrationRetryButton;
+        private Slider volumeSlider;
+        private Button subtitlesButton;
+        private bool showSubtitles = true;
 
         private void Awake()
         {
@@ -41,6 +52,9 @@ namespace MusiyoBetsknate.Museum
             if (model == null) model = interaction.gameObject.AddComponent<MuseumModelPresenter>();
             if (visitor != null) model.Configure(visitor.GetComponentInChildren<Camera>(), visitor.transform);
             CreateModelInterface();
+            narration = interaction.GetComponent<MuseumNarration>();
+            if (narration == null) narration = interaction.gameObject.AddComponent<MuseumNarration>();
+            CreateNarrationInterface();
         }
 
         private void OnEnable()
@@ -48,6 +62,11 @@ namespace MusiyoBetsknate.Museum
             loader.Changed += Refresh;
             interaction.Changed += Refresh;
             if (model != null) model.Changed += Refresh;
+            if (narration != null)
+            {
+                narration.Changed += Refresh;
+                narration.SubtitleChanged += RefreshSubtitle;
+            }
             retryButton.onClick.AddListener(loader.Reload);
             closeButton.onClick.AddListener(interaction.Back);
             pauseButton.onClick.AddListener(TogglePause);
@@ -65,6 +84,11 @@ namespace MusiyoBetsknate.Museum
             loader.Changed -= Refresh;
             interaction.Changed -= Refresh;
             if (model != null) model.Changed -= Refresh;
+            if (narration != null)
+            {
+                narration.Changed -= Refresh;
+                narration.SubtitleChanged -= RefreshSubtitle;
+            }
             retryButton.onClick.RemoveListener(loader.Reload);
             closeButton.onClick.RemoveListener(interaction.Back);
             pauseButton.onClick.RemoveListener(TogglePause);
@@ -91,6 +115,7 @@ namespace MusiyoBetsknate.Museum
             retryButton.gameObject.SetActive(loader.State == TourLoadState.Unavailable);
             bool paused = interaction.State == InteractionState.Paused;
             RefreshModelInterface();
+            RefreshNarrationInterface();
             pauseButton.GetComponentInChildren<TMP_Text>().text = paused ? "Reanudar" : "Pausa";
             if (sensitivitySlider != null) sensitivitySlider.gameObject.SetActive(paused);
             panel.SetActive(interaction.State != InteractionState.Exploration);
@@ -227,6 +252,82 @@ namespace MusiyoBetsknate.Museum
             examineButton.gameObject.SetActive(selected && interaction.State == InteractionState.ElementSelected && model.CanExamine);
             modelRetryButton.gameObject.SetActive(selected && model.State == ModelLoadState.Unavailable);
             modelControls.SetActive(examining);
+        }
+
+        private void CreateNarrationInterface()
+        {
+            narrationText = Instantiate(panelText, elementList.parent);
+            narrationText.name = "NarrationStatus";
+            narrationText.GetComponent<LayoutElement>().minHeight = 0;
+            narrationControls = new GameObject("NarrationControls", typeof(RectTransform), typeof(VerticalLayoutGroup));
+            narrationControls.transform.SetParent(elementList.parent, false);
+            var layout = narrationControls.GetComponent<VerticalLayoutGroup>();
+            layout.spacing = 8;
+            layout.childControlHeight = true;
+            layout.childForceExpandHeight = false;
+            audioPauseButton = ModelButton("Pausar narración", narrationControls.transform, narration.TogglePause);
+            ModelButton("Repetir narración (R)", narrationControls.transform, narration.Repeat);
+            audioMuteButton = ModelButton("Silenciar narración (M)", narrationControls.transform, narration.ToggleMute);
+            narrationRetryButton = ModelButton("Reintentar narración", elementList.parent, narration.Retry);
+            subtitleText = Instantiate(focusText, transform);
+            subtitleText.name = "NarrationSubtitles";
+            subtitleText.fontSize = 24;
+            subtitleText.overflowMode = TextOverflowModes.Truncate;
+            subtitleText.raycastTarget = false;
+            var rect = subtitleText.rectTransform;
+            rect.anchorMin = new Vector2(0, 0);
+            rect.anchorMax = new Vector2(.7f, 0);
+            rect.pivot = new Vector2(.5f, 0);
+            rect.anchoredPosition = new Vector2(0, 132);
+            rect.sizeDelta = new Vector2(-48, 160);
+            subtitleText.alignment = TextAlignmentOptions.Bottom;
+            subtitleBackground = new GameObject("SubtitleBackground", typeof(RectTransform), typeof(Image));
+            subtitleBackground.transform.SetParent(transform, false);
+            var backgroundRect = (RectTransform)subtitleBackground.transform;
+            backgroundRect.anchorMin = rect.anchorMin;
+            backgroundRect.anchorMax = rect.anchorMax;
+            backgroundRect.pivot = rect.pivot;
+            backgroundRect.anchoredPosition = rect.anchoredPosition;
+            backgroundRect.sizeDelta = rect.sizeDelta;
+            subtitleBackground.GetComponent<Image>().color = new Color(.06f, .12f, .11f, .96f);
+            subtitleBackground.GetComponent<Image>().raycastTarget = false;
+            subtitleBackground.transform.SetSiblingIndex(subtitleText.transform.GetSiblingIndex());
+            volumeSlider = Instantiate(sensitivitySlider, elementList.parent);
+            volumeSlider.name = "NarrationVolume";
+            volumeSlider.GetComponentInChildren<TMP_Text>().text = "Volumen de narración";
+            volumeSlider.gameObject.AddComponent<LayoutElement>().preferredHeight = 70;
+            volumeSlider.minValue = 0;
+            volumeSlider.maxValue = 1;
+            volumeSlider.value = narration.Volume;
+            volumeSlider.onValueChanged.RemoveAllListeners();
+            volumeSlider.onValueChanged.AddListener(narration.SetVolume);
+            subtitlesButton = ModelButton("Ocultar subtítulos", elementList.parent, () => { showSubtitles = !showSubtitles; RefreshSubtitle(); });
+        }
+
+        private void RefreshNarrationInterface()
+        {
+            if (narration == null) return;
+            bool paused = interaction.State == InteractionState.Paused;
+            bool selected = interaction.SelectedElement?.has_narration == true && !paused;
+            narrationText.gameObject.SetActive(selected);
+            narrationText.text = narration.Status + "\n" + narration.Transcription + (string.IsNullOrEmpty(narration.Attribution) ? "" : "\n" + narration.Attribution);
+            narrationControls.SetActive(selected && narration.CanPlay);
+            audioPauseButton.GetComponentInChildren<TMP_Text>().text = narration.State == NarrationState.Playing
+                ? "Pausar narración (Espacio)" : "Reanudar narración (Espacio)";
+            audioMuteButton.GetComponentInChildren<TMP_Text>().text = narration.Muted ? "Activar sonido (M)" : "Silenciar narración (M)";
+            narrationRetryButton.gameObject.SetActive(selected && narration.State == NarrationState.Unavailable);
+            volumeSlider.gameObject.SetActive(paused);
+            subtitlesButton.gameObject.SetActive(paused);
+            RefreshSubtitle();
+        }
+
+        private void RefreshSubtitle()
+        {
+            subtitleText.text = narration.Subtitle;
+            subtitleText.gameObject.SetActive(showSubtitles && !string.IsNullOrEmpty(narration.Subtitle)
+                && interaction.State != InteractionState.Paused);
+            subtitleBackground.SetActive(subtitleText.gameObject.activeSelf);
+            subtitlesButton.GetComponentInChildren<TMP_Text>().text = showSubtitles ? "Ocultar subtítulos" : "Mostrar subtítulos";
         }
     }
 }
