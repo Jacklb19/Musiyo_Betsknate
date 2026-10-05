@@ -11,6 +11,7 @@ Cliente Unity del museo virtual del Carnaval del Perdón. La escena contiene arq
 - La narración publicada acompaña al elemento con transcripción y WebVTT opcional. Espacio: pausa; R: repetir; M: silencio. Volumen y subtítulos se ajustan en pausa. Puedes caminar mientras escuchas.
 - H: orientación opcional hacia una sala o por el orden sugerido. La línea del suelo sigue las colisiones del museo; puedes desactivarla y explorar libremente.
 - `Musiyo > Build Museum Web` genera `Build/MuseumWeb` y su manifiesto. Web copia el resultado con `npm.cmd run unity:sync`.
+- Variantes offline: `npm.cmd --prefix tools/ModelVariants ci`, luego `node tools/ModelVariants/variants.mjs <source.glb> <new-external-directory> [web|quest]`. Conserva el original y genera candidatos con informe técnico; los modelos deben permanecer fuera del repositorio.
 
 ## Verificación
 
