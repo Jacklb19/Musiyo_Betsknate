@@ -82,7 +82,8 @@ namespace MusiyoBetsknate.Museum
         private void Update()
         {
             if (actions == null || body == null || viewCamera == null) return;
-            bool blocked = interaction != null && interaction.BlocksMovement;
+            bool blocked = interaction != null && (interaction.BlocksMovement
+                || interaction.GetComponent<MuseumWayfinding>()?.MenuOpen == true);
             bool choosing = interaction != null && interaction.State == InteractionState.PointFocus;
             if (blocked || choosing || Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
                 CapturePointer(false);
