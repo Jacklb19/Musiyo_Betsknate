@@ -32,8 +32,10 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(visitor, Is.Not.Null);
                 var body = visitor.GetComponent<CharacterController>();
                 Assert.That(body.height, Is.EqualTo(1.75f).Within(.001f));
-                Assert.That(body.center.y, Is.EqualTo(.875f).Within(.001f));
-                Assert.That(visitor.GetComponentInChildren<Camera>().transform.localPosition.y, Is.EqualTo(1.65f).Within(.001f));
+                var bodyCenter = visitor.transform.TransformPoint(body.center);
+                float groundClearance = bodyCenter.y - body.height * visitor.transform.lossyScale.y / 2;
+                Assert.That(groundClearance, Is.InRange(-.001f, body.stepOffset), "The capsule must start near the arrival floor without penetrating it.");
+                Assert.That(visitor.GetComponentInChildren<Camera>().transform.position.y, Is.EqualTo(1.65f).Within(.001f));
                 var input = new SerializedObject(visitor);
                 Assert.That(input.FindProperty("inputActions").objectReferenceValue, Is.Not.Null);
                 Assert.That(input.FindProperty("viewCamera").objectReferenceValue, Is.Not.Null);
