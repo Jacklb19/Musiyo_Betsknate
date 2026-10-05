@@ -65,6 +65,20 @@ namespace MusiyoBetsknate.Tests
         }
 
         [Test]
+        public void SingleElementActivationNotifiesWithTheCompletedSelection()
+        {
+            int notifications = 0;
+            interaction.Changed += () =>
+            {
+                notifications++;
+                Assert.That(interaction.State, Is.EqualTo(InteractionState.ElementSelected));
+                Assert.That(interaction.SelectedElement.slug, Is.EqualTo("one"));
+            };
+            Assert.That(interaction.Activate(first, ActivationSource.Keyboard), Is.True);
+            Assert.That(notifications, Is.EqualTo(1));
+        }
+
+        [Test]
         public void EmptyPointAndDisabledMethodCannotActivate()
         {
             first.Content.activation = new[] { "keyboard" };
@@ -125,6 +139,17 @@ namespace MusiyoBetsknate.Tests
 
     public sealed class PointActivationTests
     {
+        [Test]
+        public void ClosedPointCannotDwellActivateAgainUntilLeaving()
+        {
+            var dwell = new DwellActivation();
+            dwell.SuppressUntilExit("point.test");
+            Assert.That(dwell.Step("point.test", true, 2, .8f), Is.False);
+            Assert.That(dwell.Step("point.test", true, 2, .8f), Is.False);
+            Assert.That(dwell.Step(null, false, 0, .8f), Is.False);
+            Assert.That(dwell.Step("point.test", true, 1, .8f), Is.True);
+        }
+
         [Test]
         public void DwellRequiresContinuousTimeAndDoesNotRepeatUntilLeaving()
         {
