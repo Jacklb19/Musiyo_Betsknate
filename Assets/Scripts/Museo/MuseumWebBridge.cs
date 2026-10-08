@@ -20,6 +20,8 @@ namespace MusiyoBetsknate.Museum
         private static extern void MusiyoClearSelection(string tour);
         [DllImport("__Internal")]
         private static extern void MusiyoReturnToCatalog(string tour);
+        [DllImport("__Internal")]
+        private static extern void MusiyoKeepKeyboardInCanvas();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
@@ -28,6 +30,7 @@ namespace MusiyoBetsknate.Museum
             if (runtime != null && runtime.GetComponent<MuseumWebBridge>() == null)
                 runtime.gameObject.AddComponent<MuseumWebBridge>();
             WebGLInput.captureAllKeyboardInput = false;
+            MusiyoKeepKeyboardInCanvas();
         }
 #endif
 
