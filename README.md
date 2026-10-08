@@ -6,6 +6,7 @@ Cliente Unity del museo virtual del Carnaval del Perdón. La escena contiene arq
 
 - Unity **6000.3.25f1**, con soporte WebGL. Escena: `Assets/_Musiyo/Scenes/10_Museum_Blockout.unity`.
 - La API debe servir `museum-main` en `/api/v1/tours/museum-main`. En el editor utiliza `http://127.0.0.1:8000`; en Web, el mismo origen de la página.
+- Para los datos sintéticos locales existentes: `powershell -File tools/Development/start-api.ps1`. El script configura juntos `TestResults/development.db` y `TestResults/private`; acepta `-DatabasePath`, `-StorageRoot`, `-WebOrigin` y `-Port` para otros entornos. No crea ni migra bases.
 - WASD o flechas: caminar; IJKL o ratón tras clic: mirar; Tab/Mayús+Tab: puntos; Enter: activar; F: ficha; Retroceso: volver; Esc: pausa. Sensibilidad ajustable en pausa.
 - Los GLB publicados se cargan al acercarse o seleccionar su elemento. X: examinar; flechas o arrastre: rotar; rueda o +/-: zoom; Inicio: restablecer. La ficha permanece disponible con F.
 - La narración publicada acompaña al elemento con transcripción y WebVTT opcional. Espacio: pausa; R: repetir; M: silencio. Volumen y subtítulos se ajustan en pausa. Puedes caminar mientras escuchas.
