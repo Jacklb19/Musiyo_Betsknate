@@ -24,6 +24,17 @@ namespace MusiyoBetsknate.Tests
             Assert.That(SelectionClearedContractV1.TryParse(json.Replace("\"museum-main\"", "\"museum-main\",\"point_key\":\"stale\""), out _), Is.False);
         }
 
+        [Test]
+        public void ReturningToTheCatalogueUsesItsOwnVersionedMessage()
+        {
+            const string json = "{\"source\":\"musiyo-unity\",\"type\":\"return_to_catalog\",\"version\":1,\"data\":{\"tour_key\":\"museum-main\"}}";
+            Assert.That(ReturnToCatalogContractV1.TryParse(json, out var message), Is.True);
+            Assert.That(message.data.tour_key, Is.EqualTo("museum-main"));
+            Assert.That(SelectionClearedContractV1.TryParse(json, out _), Is.False, "A navigation request is not a cleared selection.");
+            Assert.That(ReturnToCatalogContractV1.TryParse(json.Replace("\"version\":1", "\"version\":\"1\""), out _), Is.False);
+            Assert.That(ReturnToCatalogContractV1.TryParse(json.Replace("\"museum-main\"", "\"museum-main\",\"point_key\":\"stale\""), out _), Is.False);
+        }
+
         [TestCase(null)]
         [TestCase("")]
         public void EmptyNetworkResponsesAreRejected(string json)

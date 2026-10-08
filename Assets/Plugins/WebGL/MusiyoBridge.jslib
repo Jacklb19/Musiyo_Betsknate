@@ -14,6 +14,12 @@ mergeInto(LibraryManager.library, {
       }
     } }));
   },
+  MusiyoReturnToCatalog: function (tourPtr) {
+    window.dispatchEvent(new CustomEvent('musiyo:navigation', { detail: {
+      source: 'musiyo-unity', type: 'return_to_catalog', version: 1,
+      data: { tour_key: UTF8ToString(tourPtr) }
+    } }));
+  },
   MusiyoNotifyPoint: function (tourPtr, pointPtr) {
     if (window.parent === window) return;
     window.parent.postMessage({

@@ -18,6 +18,8 @@ namespace MusiyoBetsknate.Museum
         private static extern void MusiyoConfirmSelection(string tour, string point, string element);
         [DllImport("__Internal")]
         private static extern void MusiyoClearSelection(string tour);
+        [DllImport("__Internal")]
+        private static extern void MusiyoReturnToCatalog(string tour);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
@@ -91,6 +93,15 @@ namespace MusiyoBetsknate.Museum
             }
             finally { applying = false; }
             NotifySelection();
+        }
+
+        /// <summary>Asks the hosting page to navigate to the catalogue; Unity never changes the page itself.</summary>
+        public void ReturnToCatalog()
+        {
+            if (interaction == null) return;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            MusiyoReturnToCatalog(interaction.Runtime.TourKey);
+#endif
         }
 
         private void NotifySelection()
