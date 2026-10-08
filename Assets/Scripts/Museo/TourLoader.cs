@@ -43,10 +43,10 @@ namespace MusiyoBetsknate.Museum
 
         private IEnumerator Load()
         {
-            SetState(TourLoadState.Loading, "Cargando recorrido…");
+            SetState(TourLoadState.Loading, MuseumInterfaceText.Get("tour_loading"));
             string url;
             try { url = ApiBase + "/tours/" + Uri.EscapeDataString(Runtime.TourKey) + "?schema_version=1"; }
-            catch (ArgumentException) { SetState(TourLoadState.Unavailable, "La dirección del servicio no es válida."); yield break; }
+            catch (ArgumentException) { SetState(TourLoadState.Unavailable, MuseumInterfaceText.Get("tour_invalid_service")); yield break; }
             activeRequest = UnityWebRequest.Get(url);
             activeRequest.timeout = 15;
             yield return activeRequest.SendWebRequest();
@@ -56,10 +56,10 @@ namespace MusiyoBetsknate.Museum
             activeRequest = null;
             loading = null;
             if (!success)
-            { SetState(TourLoadState.Unavailable, "No fue posible cargar el contenido. Puedes seguir recorriendo el museo y reintentar."); yield break; }
+            { SetState(TourLoadState.Unavailable, MuseumInterfaceText.Get("tour_unavailable")); yield break; }
             if (!TourContractV1.TryParse(json, out var contract, out var error) || !Runtime.Apply(contract, out error))
-            { SetState(TourLoadState.Unavailable, "El recorrido recibido no es compatible."); yield break; }
-            SetState(TourLoadState.Ready, "Recorrido disponible. Exploración libre · ruta sugerida de unos 30 minutos.");
+            { SetState(TourLoadState.Unavailable, MuseumInterfaceText.Get("tour_incompatible")); yield break; }
+            SetState(TourLoadState.Ready, MuseumInterfaceText.Format("tour_ready", MuseumInterfaceText.Current.SuggestedVisitMinutes));
         }
 
         private void SetState(TourLoadState state, string status)

@@ -128,6 +128,31 @@ namespace MusiyoBetsknate.Tests
         }
 
         [Test]
+        public void EntryFlowBlocksActivationUntilTransitionFinishesAndPreservesReadingOnReturn()
+        {
+            var flow = root.AddComponent<MuseumVisitFlow>();
+            Assert.That(interaction.BlocksMovement, Is.True);
+            Assert.That(interaction.Activate(first, ActivationSource.Keyboard), Is.False);
+            flow.BeginVisit();
+            flow.Advance(MuseumExperienceConfiguration.Current.EntryFadeSeconds * .5f);
+            Assert.That(flow.Phase, Is.EqualTo(VisitPhase.Entering));
+            Assert.That(interaction.Activate(first, ActivationSource.Proximity), Is.False);
+            flow.Advance(float.NaN);
+            Assert.That(flow.TransitionProgress, Is.EqualTo(.5f).Within(.001));
+            flow.Advance(MuseumExperienceConfiguration.Current.EntryFadeSeconds);
+            Assert.That(interaction.BlocksMovement, Is.False);
+            Assert.That(interaction.Activate(first, ActivationSource.Keyboard), Is.True);
+            interaction.OpenDetail();
+            flow.ReturnToMenu();
+            Assert.That(flow.Phase, Is.EqualTo(VisitPhase.Menu));
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.Paused));
+            flow.BeginVisit();
+            flow.Advance(MuseumExperienceConfiguration.Current.EntryFadeSeconds);
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.Reading));
+            Assert.That(interaction.SelectedElement.slug, Is.EqualTo("one"));
+        }
+
+        [Test]
         public void RefreshRemovesStaleSelection()
         {
             interaction.Activate(first, ActivationSource.Keyboard);

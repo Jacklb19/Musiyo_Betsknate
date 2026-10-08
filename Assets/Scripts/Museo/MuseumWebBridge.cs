@@ -85,8 +85,9 @@ namespace MusiyoBetsknate.Museum
             applying = true;
             try
             {
-                if (interaction.State == InteractionState.Paused) interaction.SetPaused(false);
                 if (visitor != null && !visitor.FocusPoint(point.Anchor)) return;
+                if (interaction.State == InteractionState.Paused) interaction.SetPaused(false);
+                GetComponent<MuseumVisitFlow>()?.EnterImmediately();
                 if (!interaction.Activate(point, ActivationSource.DeepLink)) return;
                 if (!string.IsNullOrEmpty(slug))
                     interaction.SelectElement(Array.FindIndex(point.Content.elements, element => element.slug == slug));
