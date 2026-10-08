@@ -21,7 +21,7 @@ namespace MusiyoBetsknate.Museum
             guide = wayfinding;
             interaction = state;
             template = buttonTemplate;
-            open = ActionButton("Orientación (H)", transform, guide.ToggleMenu);
+            open = ActionButton(MuseumInterfaceText.Get("wayfinding_open"), transform, guide.ToggleMenu);
             var rect = open.GetComponent<RectTransform>();
             rect.anchorMin = rect.anchorMax = new Vector2(1, 1);
             rect.pivot = new Vector2(1, 1);
@@ -61,9 +61,9 @@ namespace MusiyoBetsknate.Museum
             choiceLayout.spacing = 8;
             choiceLayout.childControlHeight = true;
             choiceLayout.childForceExpandHeight = false;
-            ActionButton("Seguir ruta sugerida", menu.transform, guide.FollowSuggested);
-            ActionButton("Desactivar orientación", menu.transform, () => { guide.StopGuidance(); guide.CloseMenu(); });
-            ActionButton("Cerrar orientación (Esc)", menu.transform, guide.CloseMenu);
+            ActionButton(MuseumInterfaceText.Get("wayfinding_follow"), menu.transform, guide.FollowSuggested);
+            ActionButton(MuseumInterfaceText.Get("wayfinding_stop"), menu.transform, () => { guide.StopGuidance(); guide.CloseMenu(); });
+            ActionButton(MuseumInterfaceText.Get("wayfinding_close"), menu.transform, guide.CloseMenu);
             guide.Changed += Refresh;
             interaction.Changed += Refresh;
             Refresh();
@@ -85,8 +85,9 @@ namespace MusiyoBetsknate.Museum
             open.interactable = !interaction.BlocksMovement;
             menu.SetActive(guide.MenuOpen);
             legend.gameObject.SetActive(!guide.MenuOpen && !interaction.BlocksMovement);
-            legend.text = "Sala: " + guide.CurrentRoomName + "\n" + guide.Status;
-            title.text = "Orientación opcional\nSala: " + guide.CurrentRoomName + (guide.Rooms.Count == 0 ? "\nLas salas aún no están disponibles." : "\nElige tu destino:");
+            legend.text = MuseumInterfaceText.Format("wayfinding_legend", guide.CurrentRoomName, string.IsNullOrEmpty(guide.Status) ? MuseumInterfaceText.Get("wayfinding_free") : guide.Status);
+            title.text = guide.Rooms.Count == 0 ? MuseumInterfaceText.Format("wayfinding_title_empty", guide.CurrentRoomName)
+                : MuseumInterfaceText.Format("wayfinding_title", guide.CurrentRoomName);
             if (guide.MenuOpen)
             {
                 foreach (Transform child in choices) { child.gameObject.SetActive(false); Destroy(child.gameObject); }

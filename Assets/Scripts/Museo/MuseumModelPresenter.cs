@@ -144,14 +144,14 @@ namespace MusiyoBetsknate.Museum
             if (session != null)
             {
                 if (State == ModelLoadState.Loading && Time.realtimeSinceStartup > session.Deadline)
-                { Fail("La carga tardó demasiado. Puedes reintentar o continuar la visita."); return; }
+                { Fail(MuseumInterfaceText.Get("model_timeout")); return; }
                 if (session.Ready && DateTimeOffset.UtcNow >= session.Expiration)
-                { Fail("El acceso al modelo venció. Reintenta para comprobar su disponibilidad."); return; }
+                { Fail(MuseumInterfaceText.Get("model_expired")); return; }
                 if (visitor != null && interaction.State != InteractionState.ModelExamination
                     && interaction.State != InteractionState.Paused
                     && (Vector3.Distance(visitor.position, session.Point.Anchor.transform.position) > 15
                         || currentRoom != null && session.VisitorRoom != null && currentRoom != session.VisitorRoom))
-                { Release(); attemptedKey = null; SetState(ModelLoadState.Idle, "Acércate al punto para volver a cargar su modelo."); }
+                { Release(); attemptedKey = null; SetState(ModelLoadState.Idle, MuseumInterfaceText.Get("model_released")); }
                 else if (session.VisitorRoom == null && currentRoom != null) session.VisitorRoom = currentRoom;
             }
             if (interaction.State == InteractionState.ElementSelected && interaction.SelectedElement?.has_3d_model == true
@@ -226,7 +226,7 @@ namespace MusiyoBetsknate.Museum
             var pending = new LoadSession { Point = point, Slug = slug, Deadline = Time.realtimeSinceStartup + 60,
                 VisitorRoom = visitor != null ? roomAnchors.FirstOrDefault(room => room.Contains(visitor.position)) : null };
             session = pending;
-            SetState(ModelLoadState.Loading, "Cargando modelo…");
+            SetState(ModelLoadState.Loading, MuseumInterfaceText.Get("model_loading"));
             Load(pending);
         }
 
@@ -290,16 +290,16 @@ namespace MusiyoBetsknate.Museum
                 pending.Ready = retained = true;
                 Progress = 1;
                 Attribution = string.Join("\n", new[] { resource.alternative_text,
-                    string.IsNullOrEmpty(resource.credit) ? null : "Crédito: " + resource.credit,
-                    string.IsNullOrEmpty(resource.provenance) ? null : "Procedencia: " + resource.provenance }.Where(value => !string.IsNullOrEmpty(value)));
+                    string.IsNullOrEmpty(resource.credit) ? null : MuseumInterfaceText.Format("narration_credit", resource.credit),
+                    string.IsNullOrEmpty(resource.provenance) ? null : MuseumInterfaceText.Format("narration_provenance", resource.provenance) }.Where(value => !string.IsNullOrEmpty(value)));
                 UpdatePose();
-                SetState(ModelLoadState.Ready, "Modelo disponible. X: examinar");
+                SetState(ModelLoadState.Ready, MuseumInterfaceText.Get("model_ready"));
             }
             catch (OperationCanceledException) { }
             catch (Exception)
             {
                 if (this != null && session == pending && !pending.Cancellation.IsCancellationRequested)
-                    SetState(ModelLoadState.Unavailable, "El modelo no está disponible o supera los límites. Puedes reintentar y seguir recorriendo el museo.");
+                    SetState(ModelLoadState.Unavailable, MuseumInterfaceText.Get("model_unavailable"));
             }
             finally
             {

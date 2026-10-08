@@ -27,8 +27,8 @@ namespace MusiyoBetsknate.Museum
         public bool MenuOpen { get; private set; }
         public string CurrentRoomKey { get; private set; }
         public string TargetRoomKey { get; private set; }
-        public string CurrentRoomName => rooms.FirstOrDefault(room => room.key == CurrentRoomKey)?.name ?? "Entre salas";
-        public string Status { get; private set; } = "Exploración libre.";
+        public string CurrentRoomName => rooms.FirstOrDefault(room => room.key == CurrentRoomKey)?.name ?? MuseumInterfaceText.Get("wayfinding_between_rooms");
+        public string Status { get; private set; } = "";
         public IReadOnlyList<RoomContractV1> Rooms => rooms;
         public bool NavigationReady => navigation != null;
         public int CornerCount => route != null ? route.positionCount : 0;
@@ -78,7 +78,7 @@ namespace MusiyoBetsknate.Museum
             suggested = false;
             TargetRoomKey = null;
             ClearPath();
-            Status = "Exploración libre.";
+            Status = MuseumInterfaceText.Get("wayfinding_free");
             Changed?.Invoke();
         }
         public void FollowSuggested()
@@ -86,7 +86,7 @@ namespace MusiyoBetsknate.Museum
             UpdateRoom();
             var index = rooms.FindIndex(room => room.key == CurrentRoomKey);
             if (index >= rooms.Count - 1 && index >= 0)
-            { StopGuidance(); Status = "Estás en la última sala de la ruta sugerida. Puedes seguir explorando."; CloseMenu(); return; }
+            { StopGuidance(); Status = MuseumInterfaceText.Get("wayfinding_last_room"); CloseMenu(); return; }
             if (rooms.Count == 0) return;
             suggested = true;
             SetTarget(rooms[index + 1].key);
@@ -96,7 +96,7 @@ namespace MusiyoBetsknate.Museum
             if (!rooms.Any(room => room.key == key)) return;
             UpdateRoom();
             if (key == CurrentRoomKey)
-            { StopGuidance(); Status = "Ya estás en " + CurrentRoomName + ". Puedes explorar la sala."; CloseMenu(); return; }
+            { StopGuidance(); Status = MuseumInterfaceText.Format("wayfinding_already_here", CurrentRoomName); CloseMenu(); return; }
             suggested = false;
             SetTarget(key);
         }
@@ -135,8 +135,8 @@ namespace MusiyoBetsknate.Museum
                 {
                     bool finished = suggested;
                     StopGuidance();
-                    Status = finished ? "Fin de la ruta sugerida. Puedes seguir explorando."
-                        : "Has llegado a " + CurrentRoomName + ". Puedes explorar la sala.";
+                    Status = finished ? MuseumInterfaceText.Get("wayfinding_route_finished")
+                        : MuseumInterfaceText.Format("wayfinding_arrived", CurrentRoomName);
                 }
             }
             Changed?.Invoke();
@@ -201,13 +201,13 @@ namespace MusiyoBetsknate.Museum
             if (!TryPath(feet, TargetRoomKey, out var corners))
             {
                 ClearPath();
-                Status = "No hay un camino calculado desde aquí. Puedes continuar explorando o elegir otra sala.";
+                Status = MuseumInterfaceText.Get("wayfinding_no_path");
             }
             else
             {
                 route.positionCount = corners.Length;
                 route.SetPositions(corners.Select(corner => corner + Vector3.up * .035f).ToArray());
-                Status = "Hacia " + rooms.First(room => room.key == TargetRoomKey).name + " · Sigue la línea del suelo.";
+                Status = MuseumInterfaceText.Format("wayfinding_heading", rooms.First(room => room.key == TargetRoomKey).name);
             }
             Changed?.Invoke();
         }
