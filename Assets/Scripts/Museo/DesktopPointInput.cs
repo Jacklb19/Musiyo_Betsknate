@@ -105,7 +105,13 @@ namespace MusiyoBetsknate.Museum
                 if (interaction.State == InteractionState.Paused) return;
                 if (interaction.State == InteractionState.Exploration && keyboard.tabKey.wasPressedThisFrame)
                     Cycle(keyboard.shiftKey.isPressed ? -1 : 1);
-                if (keyboard.enterKey.wasPressedThisFrame) Confirm();
+                if (keyboard.enterKey.wasPressedThisFrame)
+                {
+                    var arrival = GetComponent<MuseumArrival>();
+                    if (arrival != null && arrival.Visible && keyboardPoint == null) arrival.Dismiss();
+                    else Confirm();
+                }
+                if (keyboard.gKey.wasPressedThisFrame) GetComponent<MuseumGuide>()?.Ask();
                 if (keyboard.fKey.wasPressedThisFrame) interaction.OpenDetail();
                 if (keyboard.xKey.wasPressedThisFrame) GetComponent<MuseumModelPresenter>()?.Examine();
                 var narration = GetComponent<MuseumNarration>();

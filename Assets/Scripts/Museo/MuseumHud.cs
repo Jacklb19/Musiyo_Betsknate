@@ -44,6 +44,14 @@ namespace MusiyoBetsknate.Museum
         private Slider volumeSlider;
         private Button subtitlesButton;
         private bool showSubtitles = true;
+        private MuseumArrival arrival;
+        private MuseumGuide guide;
+        private MuseumFarewell farewell;
+        private GameObject welcomeCard;
+        private TMP_Text welcomeTitle;
+        private TMP_Text welcomeBody;
+        private TMP_Text stationText;
+        private Button returnButton;
 
         private void Awake()
         {
@@ -59,12 +67,26 @@ namespace MusiyoBetsknate.Museum
             if (wayfinding == null) wayfinding = interaction.gameObject.AddComponent<MuseumWayfinding>();
             wayfinding.Configure(visitor != null ? visitor.transform : null);
             gameObject.AddComponent<MuseumWayfindingHud>().Configure(wayfinding, interaction, detailButton, focusText);
+            var visitorTransform = visitor != null ? visitor.transform : null;
+            arrival = interaction.GetComponent<MuseumArrival>();
+            if (arrival == null) arrival = interaction.gameObject.AddComponent<MuseumArrival>();
+            arrival.Configure(visitorTransform);
+            guide = interaction.GetComponent<MuseumGuide>();
+            if (guide == null) guide = interaction.gameObject.AddComponent<MuseumGuide>();
+            guide.Configure(visitorTransform);
+            farewell = interaction.GetComponent<MuseumFarewell>();
+            if (farewell == null) farewell = interaction.gameObject.AddComponent<MuseumFarewell>();
+            farewell.Configure(visitorTransform);
+            CreateStationInterface();
         }
 
         private void OnEnable()
         {
             loader.Changed += Refresh;
             interaction.Changed += Refresh;
+            if (arrival != null) arrival.Changed += Refresh;
+            if (guide != null) guide.Changed += Refresh;
+            if (farewell != null) farewell.Changed += Refresh;
             if (model != null) model.Changed += Refresh;
             if (narration != null)
             {
@@ -87,6 +109,9 @@ namespace MusiyoBetsknate.Museum
         {
             loader.Changed -= Refresh;
             interaction.Changed -= Refresh;
+            if (arrival != null) arrival.Changed -= Refresh;
+            if (guide != null) guide.Changed -= Refresh;
+            if (farewell != null) farewell.Changed -= Refresh;
             if (model != null) model.Changed -= Refresh;
             if (narration != null)
             {
@@ -107,8 +132,8 @@ namespace MusiyoBetsknate.Museum
         private void Update()
         {
             var focus = pointInput.FocusedPoint;
-            focusText.text = focus != null && focus.Content != null ? focus.Content.name + " · Enter para activar"
-                : pointInput.GazeProgress > 0 ? "Mirada: " + Mathf.RoundToInt(pointInput.GazeProgress * 100) + "%" : ".";
+            focusText.text = focus != null && focus.Content != null ? MuseumInterfaceText.Format("focus_point", focus.Content.name)
+                : pointInput.GazeProgress > 0 ? MuseumInterfaceText.Format("gaze_progress", Mathf.RoundToInt(pointInput.GazeProgress * 100)) : ".";
             if (model != null && model.State == ModelLoadState.Loading && modelText.gameObject.activeInHierarchy)
                 modelText.text = model.Status + " " + Mathf.RoundToInt(model.Progress * 100) + "%";
         }
@@ -120,7 +145,8 @@ namespace MusiyoBetsknate.Museum
             bool paused = interaction.State == InteractionState.Paused;
             RefreshModelInterface();
             RefreshNarrationInterface();
-            pauseButton.GetComponentInChildren<TMP_Text>().text = paused ? "Reanudar" : "Pausa";
+            RefreshStationInterface();
+            pauseButton.GetComponentInChildren<TMP_Text>().text = paused ? MuseumInterfaceText.Get("resume") : MuseumInterfaceText.Get("pause");
             if (sensitivitySlider != null) sensitivitySlider.gameObject.SetActive(paused);
             panel.SetActive(interaction.State != InteractionState.Exploration);
             if (interaction.State == InteractionState.Exploration || paused)
@@ -137,12 +163,17 @@ namespace MusiyoBetsknate.Museum
             elementList.gameObject.SetActive(choosing);
             detailButton.gameObject.SetActive(interaction.State == InteractionState.ElementSelected
                 || interaction.State == InteractionState.ModelExamination);
-            if (paused) { panelText.text = "Visita en pausa. Ajusta la sensibilidad del ratón o reanuda para continuar."; return; }
+            if (paused) { panelText.text = MuseumInterfaceText.Get("pause_description"); return; }
+            if (interaction.State == InteractionState.GuideQuestion)
+            {
+                panelText.text = guide != null ? MuseumInterfaceText.Format("guide_panel", guide.Name, guide.Message) : "";
+                return;
+            }
             var point = interaction.ActivePoint;
             if (point == null) { panelText.text = ""; return; }
             if (choosing)
             {
-                panelText.text = point.Content.name + "\nElige un elemento:";
+                panelText.text = MuseumInterfaceText.Format("element_choice", point.Content.name);
                 for (int index = 0; index < point.Content.elements.Length; index++)
                 {
                     int selectedIndex = index;
@@ -163,13 +194,13 @@ namespace MusiyoBetsknate.Museum
                 requestedSlug = null;
                 detail = null;
                 panelText.text = point.Content.name + "\n" + element.title + (interaction.State == InteractionState.ModelExamination
-                    ? "\nFlechas: rotar · + / −: acercar o alejar · Inicio: restablecer\nF: ficha · Retroceso: salir del examen"
-                    : "\nF: leer ficha · Retroceso: cerrar");
+                    ? MuseumInterfaceText.Get("examination_controls")
+                    : MuseumInterfaceText.Get("detail_controls"));
                 return;
             }
-            panelText.text = detail ?? "Cargando ficha…";
+            panelText.text = detail ?? MuseumInterfaceText.Get("detail_loading");
 #if UNITY_WEBGL && !UNITY_EDITOR
-            panelText.text = "La ficha seleccionada está disponible debajo del recorrido. Pulsa Volver para continuar la visita.";
+            panelText.text = MuseumInterfaceText.Get("detail_web");
             return;
 #else
             if (requestedSlug == element.slug) return;
@@ -190,7 +221,7 @@ namespace MusiyoBetsknate.Museum
             detailRequest = null;
             reading = null;
             if (!success || !ElementText.TryFormat(slug, json, out var formatted))
-            { detail = "La ficha no está disponible. Puedes cerrar y seguir recorriendo el museo."; Refresh(); yield break; }
+            { detail = MuseumInterfaceText.Get("detail_unavailable"); Refresh(); yield break; }
             detail = formatted;
             Refresh();
         }
@@ -211,21 +242,21 @@ namespace MusiyoBetsknate.Museum
             modelText.name = "ModelStatus";
             modelText.text = "";
             modelText.GetComponent<LayoutElement>().minHeight = 0;
-            examineButton = ModelButton("Examinar modelo (X)", elementList.parent, () => model.Examine());
-            modelRetryButton = ModelButton("Reintentar modelo", elementList.parent, model.Retry);
+            examineButton = ModelButton(MuseumInterfaceText.Get("examine_model"), elementList.parent, () => model.Examine());
+            modelRetryButton = ModelButton(MuseumInterfaceText.Get("retry_model"), elementList.parent, model.Retry);
             modelControls = new GameObject("ModelControls", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(LayoutElement));
             modelControls.transform.SetParent(elementList.parent, false);
             var layout = modelControls.GetComponent<VerticalLayoutGroup>();
             layout.spacing = 8;
             layout.childControlHeight = true;
             layout.childForceExpandHeight = false;
-            ModelButton("Girar a la izquierda", modelControls.transform, () => model.Rotate(new Vector2(-15, 0)));
-            ModelButton("Girar a la derecha", modelControls.transform, () => model.Rotate(new Vector2(15, 0)));
-            ModelButton("Girar hacia arriba", modelControls.transform, () => model.Rotate(new Vector2(0, -15)));
-            ModelButton("Girar hacia abajo", modelControls.transform, () => model.Rotate(new Vector2(0, 15)));
-            ModelButton("Acercar", modelControls.transform, () => model.Zoom(-.1f));
-            ModelButton("Alejar", modelControls.transform, () => model.Zoom(.1f));
-            ModelButton("Restablecer modelo", modelControls.transform, model.ResetPose);
+            ModelButton(MuseumInterfaceText.Get("rotate_left"), modelControls.transform, () => model.Rotate(new Vector2(-15, 0)));
+            ModelButton(MuseumInterfaceText.Get("rotate_right"), modelControls.transform, () => model.Rotate(new Vector2(15, 0)));
+            ModelButton(MuseumInterfaceText.Get("rotate_up"), modelControls.transform, () => model.Rotate(new Vector2(0, -15)));
+            ModelButton(MuseumInterfaceText.Get("rotate_down"), modelControls.transform, () => model.Rotate(new Vector2(0, 15)));
+            ModelButton(MuseumInterfaceText.Get("zoom_in"), modelControls.transform, () => model.Zoom(-.1f));
+            ModelButton(MuseumInterfaceText.Get("zoom_out"), modelControls.transform, () => model.Zoom(.1f));
+            ModelButton(MuseumInterfaceText.Get("reset_model"), modelControls.transform, model.ResetPose);
         }
 
         private Button ModelButton(string label, Transform parent, UnityEngine.Events.UnityAction action)
@@ -269,10 +300,10 @@ namespace MusiyoBetsknate.Museum
             layout.spacing = 8;
             layout.childControlHeight = true;
             layout.childForceExpandHeight = false;
-            audioPauseButton = ModelButton("Pausar narración", narrationControls.transform, narration.TogglePause);
-            ModelButton("Repetir narración (R)", narrationControls.transform, narration.Repeat);
-            audioMuteButton = ModelButton("Silenciar narración (M)", narrationControls.transform, narration.ToggleMute);
-            narrationRetryButton = ModelButton("Reintentar narración", elementList.parent, narration.Retry);
+            audioPauseButton = ModelButton(MuseumInterfaceText.Get("pause_narration"), narrationControls.transform, narration.TogglePause);
+            ModelButton(MuseumInterfaceText.Get("repeat_narration"), narrationControls.transform, narration.Repeat);
+            audioMuteButton = ModelButton(MuseumInterfaceText.Get("mute_narration"), narrationControls.transform, narration.ToggleMute);
+            narrationRetryButton = ModelButton(MuseumInterfaceText.Get("retry_narration"), elementList.parent, narration.Retry);
             subtitleText = Instantiate(focusText, transform);
             subtitleText.name = "NarrationSubtitles";
             subtitleText.fontSize = 24;
@@ -298,14 +329,14 @@ namespace MusiyoBetsknate.Museum
             subtitleBackground.transform.SetSiblingIndex(subtitleText.transform.GetSiblingIndex());
             volumeSlider = Instantiate(sensitivitySlider, elementList.parent);
             volumeSlider.name = "NarrationVolume";
-            volumeSlider.GetComponentInChildren<TMP_Text>().text = "Volumen de narración";
+            volumeSlider.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Get("narration_volume");
             volumeSlider.gameObject.AddComponent<LayoutElement>().preferredHeight = 70;
             volumeSlider.minValue = 0;
             volumeSlider.maxValue = 1;
             volumeSlider.value = narration.Volume;
             volumeSlider.onValueChanged.RemoveAllListeners();
             volumeSlider.onValueChanged.AddListener(narration.SetVolume);
-            subtitlesButton = ModelButton("Ocultar subtítulos", elementList.parent, () => { showSubtitles = !showSubtitles; RefreshSubtitle(); });
+            subtitlesButton = ModelButton(MuseumInterfaceText.Get("hide_subtitles"), elementList.parent, () => { showSubtitles = !showSubtitles; RefreshSubtitle(); });
         }
 
         private void RefreshNarrationInterface()
@@ -317,12 +348,80 @@ namespace MusiyoBetsknate.Museum
             narrationText.text = narration.Status + "\n" + narration.Transcription + (string.IsNullOrEmpty(narration.Attribution) ? "" : "\n" + narration.Attribution);
             narrationControls.SetActive(selected && narration.CanPlay);
             audioPauseButton.GetComponentInChildren<TMP_Text>().text = narration.State == NarrationState.Playing
-                ? "Pausar narración (Espacio)" : "Reanudar narración (Espacio)";
-            audioMuteButton.GetComponentInChildren<TMP_Text>().text = narration.Muted ? "Activar sonido (M)" : "Silenciar narración (M)";
+                ? MuseumInterfaceText.Get("pause_narration_keyboard") : MuseumInterfaceText.Get("resume_narration_keyboard");
+            audioMuteButton.GetComponentInChildren<TMP_Text>().text = narration.Muted ? MuseumInterfaceText.Get("unmute_narration") : MuseumInterfaceText.Get("mute_narration");
             narrationRetryButton.gameObject.SetActive(selected && narration.State == NarrationState.Unavailable);
             volumeSlider.gameObject.SetActive(paused);
             subtitlesButton.gameObject.SetActive(paused);
             RefreshSubtitle();
+        }
+
+        private void CreateStationInterface()
+        {
+            // Prompt line for the guide and the end of the suggested route, below the orientation legend.
+            stationText = Instantiate(focusText, transform);
+            stationText.name = "StationPrompt";
+            stationText.fontSize = 24;
+            stationText.alignment = TextAlignmentOptions.TopLeft;
+            stationText.raycastTarget = false;
+            var promptRect = stationText.rectTransform;
+            promptRect.anchorMin = promptRect.anchorMax = new Vector2(0, 1);
+            promptRect.pivot = new Vector2(0, 1);
+            promptRect.anchoredPosition = new Vector2(24, -196);
+            promptRect.sizeDelta = new Vector2(1200, 80);
+            returnButton = ModelButton(MuseumInterfaceText.Get("return_to_catalog"), transform, farewell.ReturnToCatalog);
+            returnButton.name = "ReturnToCatalog";
+            var returnRect = returnButton.GetComponent<RectTransform>();
+            returnRect.anchorMin = returnRect.anchorMax = new Vector2(0, 1);
+            returnRect.pivot = new Vector2(0, 1);
+            returnRect.anchoredPosition = new Vector2(24, -280);
+            returnRect.sizeDelta = new Vector2(280, 52);
+
+            welcomeCard = new GameObject("WelcomeCard", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup));
+            welcomeCard.transform.SetParent(transform, false);
+            var cardRect = (RectTransform)welcomeCard.transform;
+            cardRect.anchorMin = cardRect.anchorMax = new Vector2(.5f, .5f);
+            cardRect.pivot = new Vector2(.5f, .5f);
+            cardRect.anchoredPosition = new Vector2(0, 40);
+            cardRect.sizeDelta = new Vector2(820, 460);
+            welcomeCard.GetComponent<Image>().color = new Color(.06f, .12f, .11f, .97f);
+            var layout = welcomeCard.GetComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(28, 28, 24, 24);
+            layout.spacing = 16;
+            layout.childControlWidth = layout.childControlHeight = true;
+            layout.childForceExpandHeight = false;
+            welcomeTitle = Instantiate(panelText, welcomeCard.transform);
+            welcomeTitle.name = "WelcomeTitle";
+            welcomeTitle.fontSize = 36;
+            welcomeTitle.GetComponent<LayoutElement>().minHeight = 0;
+            welcomeBody = Instantiate(panelText, welcomeCard.transform);
+            welcomeBody.name = "WelcomeBody";
+            welcomeBody.fontSize = 24;
+            welcomeBody.GetComponent<LayoutElement>().minHeight = 0;
+            ModelButton(MuseumInterfaceText.Get("start_visit"), welcomeCard.transform, arrival.Dismiss);
+            welcomeCard.SetActive(false);
+        }
+
+        private void RefreshStationInterface()
+        {
+            if (stationText == null) return;
+            bool exploring = interaction.State == InteractionState.Exploration;
+            bool welcome = arrival != null && arrival.Visible && exploring;
+            welcomeCard.SetActive(welcome);
+            if (welcome)
+            {
+                welcomeTitle.text = arrival.Title;
+                welcomeBody.text = arrival.Body;
+            }
+            string prompt = "";
+            if (exploring && !welcome)
+            {
+                if (guide != null && !string.IsNullOrEmpty(guide.Prompt)) prompt = guide.Prompt;
+                if (farewell != null && farewell.AtEnd) prompt = string.IsNullOrEmpty(prompt) ? farewell.Message : prompt + "\n" + farewell.Message;
+            }
+            stationText.text = prompt;
+            stationText.gameObject.SetActive(!string.IsNullOrEmpty(prompt));
+            returnButton.gameObject.SetActive(exploring && !welcome && farewell != null && farewell.AtEnd && farewell.CanReturn);
         }
 
         private void RefreshSubtitle()
@@ -331,7 +430,7 @@ namespace MusiyoBetsknate.Museum
             subtitleText.gameObject.SetActive(showSubtitles && !string.IsNullOrEmpty(narration.Subtitle)
                 && interaction.State != InteractionState.Paused);
             subtitleBackground.SetActive(subtitleText.gameObject.activeSelf);
-            subtitlesButton.GetComponentInChildren<TMP_Text>().text = showSubtitles ? "Ocultar subtítulos" : "Mostrar subtítulos";
+            subtitlesButton.GetComponentInChildren<TMP_Text>().text = showSubtitles ? MuseumInterfaceText.Get("hide_subtitles") : MuseumInterfaceText.Get("show_subtitles");
         }
     }
 }
