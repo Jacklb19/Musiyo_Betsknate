@@ -55,5 +55,16 @@ namespace MusiyoBetsknate.Tests
             Assert.That(NarrationResourcePolicy.TryAccess("https://museum.example/api/v1", json, "audio/mpeg",
                 NarrationResourcePolicy.ByteLimit, out _, out _), Is.EqualTo(accepted));
         }
+
+        [Test]
+        public void NarrationPausesBeyondTheMarginAndResumesInsideThePointRadius()
+        {
+            const float radius = 2, margin = 2;
+            Assert.That(MuseumNarration.IsAway(3.9f, radius, margin, false), Is.False, "Stepping past the radius alone keeps playing.");
+            Assert.That(MuseumNarration.IsAway(4.1f, radius, margin, false), Is.True);
+            Assert.That(MuseumNarration.IsAway(3f, radius, margin, true), Is.True, "Returning halfway stays paused.");
+            Assert.That(MuseumNarration.IsAway(1.9f, radius, margin, true), Is.False);
+            Assert.That(MuseumExperienceConfiguration.Current.NarrationLeaveMargin, Is.GreaterThan(0));
+        }
     }
 }

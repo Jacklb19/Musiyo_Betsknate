@@ -53,6 +53,7 @@ namespace MusiyoBetsknate.Museum
         private TMP_Text welcomeBody;
         private TMP_Text stationText;
         private Button returnButton;
+        private CanvasGroup panelGroup;
 
         private void Awake()
         {
@@ -67,6 +68,7 @@ namespace MusiyoBetsknate.Museum
             CreateModelInterface();
             narration = interaction.GetComponent<MuseumNarration>();
             if (narration == null) narration = interaction.gameObject.AddComponent<MuseumNarration>();
+            narration.Configure(visitor != null ? visitor.transform : null);
             CreateNarrationInterface();
             var wayfinding = interaction.GetComponent<MuseumWayfinding>();
             if (wayfinding == null) wayfinding = interaction.gameObject.AddComponent<MuseumWayfinding>();
@@ -139,6 +141,12 @@ namespace MusiyoBetsknate.Museum
             CancelDetail();
         }
 
+        private CanvasGroup PanelGroup()
+        {
+            if (panelGroup == null && !panel.TryGetComponent(out panelGroup)) panelGroup = panel.AddComponent<CanvasGroup>();
+            return panelGroup;
+        }
+
         private void TogglePause() => interaction.SetPaused(interaction.State != InteractionState.Paused);
         private void OpenDetail() => interaction.OpenDetail();
 
@@ -147,6 +155,9 @@ namespace MusiyoBetsknate.Museum
             var focus = pointInput.FocusedPoint;
             focusText.text = focus != null && focus.Content != null ? MuseumInterfaceText.Format("focus_point", focus.Content.name)
                 : pointInput.GazeProgress > 0 ? MuseumInterfaceText.Format("gaze_progress", Mathf.RoundToInt(pointInput.GazeProgress * 100)) : ".";
+            if (panel.activeSelf && PanelGroup().alpha < 1)
+                panelGroup.alpha = Mathf.MoveTowards(panelGroup.alpha, 1,
+                    Time.unscaledDeltaTime / MuseumExperienceConfiguration.Current.PanelFadeSeconds);
             if (model != null && model.State == ModelLoadState.Loading && modelText.gameObject.activeInHierarchy)
                 modelText.text = model.Status + " " + Mathf.RoundToInt(model.Progress * 100) + "%";
         }
@@ -161,7 +172,9 @@ namespace MusiyoBetsknate.Museum
             RefreshStationInterface();
             pauseButton.GetComponentInChildren<TMP_Text>().text = paused ? MuseumInterfaceText.Get("resume") : MuseumInterfaceText.Get("pause");
             if (sensitivitySlider != null) sensitivitySlider.gameObject.SetActive(false);
-            panel.SetActive(!visitFlow.BlocksInput && !paused && interaction.State != InteractionState.Exploration);
+            bool showPanel = !visitFlow.BlocksInput && !paused && interaction.State != InteractionState.Exploration;
+            if (showPanel && !panel.activeSelf) PanelGroup().alpha = 0; // Update fades the point panel in.
+            panel.SetActive(showPanel);
             if (interaction.State == InteractionState.Exploration || paused)
             {
                 CancelDetail();

@@ -12,12 +12,14 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("schema_version")] public int SchemaVersion;
         [JsonProperty("entry_fade_seconds")] public float EntryFadeSeconds;
         [JsonProperty("entry_menu_fade_share")] public float EntryMenuFadeShare;
+        [JsonProperty("panel_fade_seconds")] public float PanelFadeSeconds;
         [JsonProperty("walk_speed")] public float WalkSpeed;
         [JsonProperty("sprint_speed")] public float SprintSpeed;
         [JsonProperty("acceleration")] public float Acceleration;
         [JsonProperty("deceleration")] public float Deceleration;
         [JsonProperty("keyboard_look_speed")] public float KeyboardLookSpeed;
         [JsonProperty("maximum_pitch")] public float MaximumPitch;
+        [JsonProperty("narration_leave_margin")] public float NarrationLeaveMargin;
         [JsonProperty("default_sensitivity")] public float DefaultSensitivity;
         [JsonProperty("minimum_sensitivity")] public float MinimumSensitivity;
         [JsonProperty("maximum_sensitivity")] public float MaximumSensitivity;
@@ -54,10 +56,10 @@ namespace MusiyoBetsknate.Museum
         {
             var result = JsonConvert.DeserializeObject<MuseumExperienceConfiguration>(json);
             if (result == null || result.SchemaVersion != 1 || !Positive(result.EntryFadeSeconds)
-                || !Positive(result.EntryMenuFadeShare) || result.EntryMenuFadeShare >= 1
+                || !Positive(result.PanelFadeSeconds) || !Positive(result.EntryMenuFadeShare) || result.EntryMenuFadeShare >= 1
                 || !Positive(result.WalkSpeed) || !Positive(result.SprintSpeed) || result.SprintSpeed < result.WalkSpeed
                 || !Positive(result.Acceleration) || !Positive(result.Deceleration)
-                || !Positive(result.KeyboardLookSpeed) || !Positive(result.MaximumPitch) || result.MaximumPitch >= 90
+                || !Positive(result.NarrationLeaveMargin) || !Positive(result.KeyboardLookSpeed) || !Positive(result.MaximumPitch) || result.MaximumPitch >= 90
                 || !Positive(result.MinimumSensitivity) || !Positive(result.MaximumSensitivity)
                 || !Finite(result.DefaultSensitivity) || result.DefaultSensitivity < result.MinimumSensitivity
                 || result.DefaultSensitivity > result.MaximumSensitivity || !Finite(result.DefaultVolume)
