@@ -13,6 +13,8 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("entry_fade_seconds")] public float EntryFadeSeconds;
         [JsonProperty("entry_menu_fade_share")] public float EntryMenuFadeShare;
         [JsonProperty("panel_fade_seconds")] public float PanelFadeSeconds;
+        [JsonProperty("panel_scroll_step")] public float PanelScrollStep;
+        [JsonProperty("model_control_columns")] public int ModelControlColumns;
         [JsonProperty("walk_speed")] public float WalkSpeed;
         [JsonProperty("sprint_speed")] public float SprintSpeed;
         [JsonProperty("acceleration")] public float Acceleration;
@@ -56,7 +58,8 @@ namespace MusiyoBetsknate.Museum
         {
             var result = JsonConvert.DeserializeObject<MuseumExperienceConfiguration>(json);
             if (result == null || result.SchemaVersion != 1 || !Positive(result.EntryFadeSeconds)
-                || !Positive(result.PanelFadeSeconds) || !Positive(result.EntryMenuFadeShare) || result.EntryMenuFadeShare >= 1
+                || !Positive(result.PanelFadeSeconds) || !Positive(result.PanelScrollStep) || result.PanelScrollStep > 1
+                || result.ModelControlColumns < 1 || !Positive(result.EntryMenuFadeShare) || result.EntryMenuFadeShare >= 1
                 || !Positive(result.WalkSpeed) || !Positive(result.SprintSpeed) || result.SprintSpeed < result.WalkSpeed
                 || !Positive(result.Acceleration) || !Positive(result.Deceleration)
                 || !Positive(result.NarrationLeaveMargin) || !Positive(result.KeyboardLookSpeed) || !Positive(result.MaximumPitch) || result.MaximumPitch >= 90
