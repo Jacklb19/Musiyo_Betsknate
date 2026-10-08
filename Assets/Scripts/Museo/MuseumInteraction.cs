@@ -85,6 +85,16 @@ namespace MusiyoBetsknate.Museum
             return true;
         }
 
+        /// <summary>Opens the guide conversation from free exploration; Back returns to exploration.</summary>
+        public bool OpenGuide()
+        {
+            Connect();
+            if (State != InteractionState.Exploration || Runtime.Contract == null || Runtime.Guide == null) return false;
+            State = InteractionState.GuideQuestion;
+            Changed?.Invoke();
+            return true;
+        }
+
         public void CancelModel()
         {
             if (detailReturnState == InteractionState.ModelExamination) detailReturnState = InteractionState.ElementSelected;

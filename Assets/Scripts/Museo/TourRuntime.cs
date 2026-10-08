@@ -14,6 +14,9 @@ namespace MusiyoBetsknate.Museum
         private readonly List<string> diagnostics = new List<string>();
         public string TourKey => tourKey;
         public TourContractV1 Contract { get; private set; }
+        public GuideContractV1 Guide => Contract?.guide;
+        /// <summary>Scene point bound to the published guide, when the contract declares one at a known anchor.</summary>
+        public TourPoint GuidePoint { get; private set; }
         public IReadOnlyList<TourPoint> OrderedPoints => orderedPoints;
         public IReadOnlyList<string> Diagnostics => diagnostics;
         public event Action Changed;
@@ -49,6 +52,15 @@ namespace MusiyoBetsknate.Museum
                     orderedPoints.Add(point);
                 }
             }
+            if (contract.guide != null)
+            {
+                if (points.TryGetValue(contract.guide.key, out var guidePoint))
+                {
+                    GuidePoint = guidePoint;
+                    guidePoint.MarkGuide(true);
+                }
+                else diagnostics.Add("Unknown guide anchor: " + contract.guide.key);
+            }
             Contract = contract;
             Changed?.Invoke();
             return true;
@@ -56,12 +68,46 @@ namespace MusiyoBetsknate.Museum
 
         public TourPoint FindPoint(string key) => key != null && points.TryGetValue(key, out var point) ? point : null;
 
+        /// <summary>Finds a technical anchor of the scene by key, declared in the contract or not.</summary>
+        public PointAnchor FindAnchor(string key)
+        {
+            if (string.IsNullOrEmpty(key)) return null;
+            foreach (var anchor in GetComponentsInChildren<PointAnchor>(true))
+                if (anchor.Key == key) return anchor;
+            return null;
+        }
+
+        public RoomAnchor FindRoom(string key)
+        {
+            if (string.IsNullOrEmpty(key)) return null;
+            foreach (var room in GetComponentsInChildren<RoomAnchor>(true))
+                if (room.Key == key) return room;
+            return null;
+        }
+
+        /// <summary>Contract room whose scene anchor contains the position, or null between rooms.</summary>
+        public RoomContractV1 RoomAt(Vector3 position)
+        {
+            if (Contract == null) return null;
+            foreach (var room in Contract.rooms)
+            {
+                var anchor = FindRoom(room.key);
+                if (anchor != null && anchor.Contains(position)) return room;
+            }
+            return null;
+        }
+
         public void Clear()
         {
-            foreach (var point in GetComponentsInChildren<TourPoint>(true)) point.Bind(null);
+            foreach (var point in GetComponentsInChildren<TourPoint>(true))
+            {
+                point.MarkGuide(false);
+                point.Bind(null);
+            }
             points.Clear();
             orderedPoints.Clear();
             diagnostics.Clear();
+            GuidePoint = null;
             Contract = null;
             Changed?.Invoke();
         }
