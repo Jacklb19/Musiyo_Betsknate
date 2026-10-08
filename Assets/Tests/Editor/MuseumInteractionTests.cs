@@ -201,6 +201,7 @@ namespace MusiyoBetsknate.Tests
             dwell.SuppressUntilExit("point.test");
             Assert.That(dwell.Step("point.test", true, 2, .8f), Is.False);
             Assert.That(dwell.Step("point.test", true, 2, .8f), Is.False);
+            Assert.That(dwell.Progress, Is.Zero, "A suppressed point must not show a filling indicator.");
             Assert.That(dwell.Step(null, false, 0, .8f), Is.False);
             Assert.That(dwell.Step("point.test", true, 1, .8f), Is.True);
         }

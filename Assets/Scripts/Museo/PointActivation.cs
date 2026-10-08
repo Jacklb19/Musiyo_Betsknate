@@ -23,6 +23,8 @@ namespace MusiyoBetsknate.Museum
             if (!eligible || string.IsNullOrEmpty(key))
             { candidate = null; fired = null; elapsed = 0; Progress = 0; return false; }
             if (candidate != key) { candidate = key; elapsed = 0; fired = null; }
+            // A point that already fired (or was closed) shows no progress until the visitor leaves it.
+            if (fired == key) { elapsed = 0; Progress = 0; return false; }
             elapsed += Mathf.Max(0, deltaTime);
             Progress = Mathf.Clamp01(elapsed / Mathf.Max(duration, 0.01f));
             if (Progress < 1 || fired == key) return false;
