@@ -12,6 +12,7 @@ namespace MusiyoBetsknate.Museo
         // Supports the vocabulary emitted by the canonical Pydantic models.
         public static T Parse<T>(string json, string schemaJson)
         {
+            if (string.IsNullOrWhiteSpace(json)) throw new JsonException("Empty v1 contract.");
             JToken value;
             using (var reader = new JsonTextReader(new StringReader(json)) { DateParseHandling = DateParseHandling.None })
                 value = JToken.Load(reader);
@@ -41,6 +42,7 @@ namespace MusiyoBetsknate.Museo
                     return record.Properties().All(field => properties[field.Name] == null || Matches(field.Value, properties[field.Name], root));
                 case "array":
                     if (!(value is JArray items) || (schema["minItems"] != null && items.Count < (int)schema["minItems"])) return false;
+                    if (schema["maxItems"] != null && items.Count > (int)schema["maxItems"]) return false;
                     if (schema["uniqueItems"]?.Value<bool>() == true
                         && items.Where((item, index) => items.Take(index).Any(prior => JToken.DeepEquals(prior, item))).Any()) return false;
                     return items.All(item => Matches(item, schema["items"], root));
@@ -48,18 +50,27 @@ namespace MusiyoBetsknate.Museo
                     if (value.Type != JTokenType.String) return false;
                     var text = value.Value<string>();
                     if (schema["minLength"] != null && text.Length < (int)schema["minLength"]) return false;
+                    if (schema["maxLength"] != null && text.Length > (int)schema["maxLength"]) return false;
                     if (schema["pattern"] != null && !Regex.IsMatch(text, (string)schema["pattern"])) return false;
                     if ((string)schema["format"] == "date-time" && !DateTimeOffset.TryParse(text, out _)) return false;
                     return true;
                 case "integer":
                     if (value.Type != JTokenType.Integer) return false;
-                    return schema["minimum"] == null || value.Value<double>() >= schema["minimum"].Value<double>();
+                    return WithinBounds(value, schema);
                 case "number":
                     if (value.Type != JTokenType.Integer && value.Type != JTokenType.Float) return false;
-                    return schema["minimum"] == null || value.Value<double>() >= schema["minimum"].Value<double>();
+                    return WithinBounds(value, schema);
                 case "boolean": return value.Type == JTokenType.Boolean;
                 default: throw new JsonException("Unsupported contract schema vocabulary.");
             }
+        }
+
+        private static bool WithinBounds(JToken value, JToken schema)
+        {
+            var number = value.Value<double>();
+            return !double.IsNaN(number) && !double.IsInfinity(number)
+                && (schema["minimum"] == null || number >= schema["minimum"].Value<double>())
+                && (schema["maximum"] == null || number <= schema["maximum"].Value<double>());
         }
     }
 }

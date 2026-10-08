@@ -1,0 +1,274 @@
+{
+  "name": "MuseumDesktop",
+  "maps": [
+    {
+      "name": "Desktop",
+      "id": "0b71bfe2-e289-4ed8-bcf9-b8a4d82e3f8c",
+      "actions": [
+        {
+          "name": "Move",
+          "type": "Value",
+          "id": "b56396ab-495d-4c25-9952-6325586b6029",
+          "expectedControlType": "Vector2",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": true
+        },
+        {
+          "name": "Look",
+          "type": "Value",
+          "id": "3adfd792-ce9d-477e-8b49-51e1e3a27591",
+          "expectedControlType": "Vector2",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": true
+        },
+        {
+          "name": "KeyboardLook",
+          "type": "Value",
+          "id": "25d3082c-ae79-4636-9231-9bb7cd4c3f7e",
+          "expectedControlType": "Vector2",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": true
+        },
+        {
+          "name": "Sprint",
+          "type": "Button",
+          "id": "fe18c2a8-81b8-49ec-b32d-0760f2137a11",
+          "expectedControlType": "Button",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": false
+        },
+        {
+          "name": "CapturePointer",
+          "type": "Button",
+          "id": "e13fc1d4-8f38-477e-a7b4-950519de6954",
+          "expectedControlType": "Button",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": false
+        }
+      ],
+      "bindings": [
+        {
+          "name": "",
+          "id": "466d3d62-d7fd-4a7b-b72d-5513004d050f",
+          "path": "2DVector",
+          "action": "Move",
+          "groups": "KeyboardMouse",
+          "interactions": "",
+          "processors": "",
+          "isComposite": true,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "up",
+          "id": "d04a697c-7ead-4b39-aef0-2420ee9f3e0f",
+          "path": "<Keyboard>/w",
+          "action": "Move",
+          "groups": "KeyboardMouse",
+          "interactions": "",
+          "processors": "",
+          "isComposite": false,
+          "isPartOfComposite": true
+        },
+        {
+          "name": "down",
+          "id": "b5307bfa-f353-4fa8-b086-7caa0cddbf5a",
+          "path": "<Keyboard>/s",
+          "action": "Move",
+          "groups": "KeyboardMouse",
+          "interactions": "",
+          "processors": "",
+          "isComposite": false,
+          "isPartOfComposite": true
+        },
+        {
+          "name": "left",
+          "id": "a4997188-1afb-4777-8fde-aebc029a16de",
+          "path": "<Keyboard>/a",
+          "action": "Move",
+          "groups": "KeyboardMouse",
+          "interactions": "",
+          "processors": "",
+          "isComposite": false,
+          "isPartOfComposite": true
+        },
+        {
+          "name": "right",
+          "id": "72cccd29-2a74-446a-83d3-6a088113d23e",
+          "path": "<Keyboard>/d",
+          "action": "Move",
+          "groups": "KeyboardMouse",
+          "interactions": "",
+          "processors": "",
+          "isComposite": false,
+          "isPartOfComposite": true
+        },
+        {
+          "name": "",
+          "id": "9193f8a4-dcc4-49bc-83a5-9b4bf5f93b38",
+          "path": "2DVector",
+          "action": "Move",
+          "groups": "KeyboardMouse",
+          "interactions": "",
+          "processors": "",
+          "isComposite": true,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "up",
+          "id": "7b39d560-4d2f-4661-901f-3083e2d320a1",
+          "path": "<Keyboard>/upArrow",
+          "action": "Move",
+          "groups": "KeyboardMouse",
+          "interactions": "",
+          "processors": "",
+          "isComposite": false,
+          "isPartOfComposite": true
+        },
+        {
+          "name": "down",
+          "id": "c1a5f2b0-6208-42fc-b75d-75fc9d02d8ab",
+          "path": "<Keyboard>/downArrow",
+          "action": "Move",
+          "groups": "KeyboardMouse",
+          "interactions": "",
+          "processors": "",
+          "isComposite": false,
+          "isPartOfComposite": true
+        },
+        {
+          "name": "left",
+          "id": "8408eb51-fee8-4c84-aab4-bc64267b2cd8",
+          "path": "<Keyboard>/leftArrow",
+          "action": "Move",
+          "groups": "KeyboardMouse",
+          "interactions": "",
+          "processors": "",
+          "isComposite": false,
+          "isPartOfComposite": true
+        },
+        {
+          "name": "right",
+          "id": "7b4686a7-5c02-45f4-9b91-d934801d8001",
+          "path": "<Keyboard>/rightArrow",
+          "action": "Move",
+          "groups": "KeyboardMouse",
+          "interactions": "",
+          "processors": "",
+          "isComposite": false,
+          "isPartOfComposite": true
+        },
+        {
+          "name": "",
+          "id": "50618abf-018c-4cf1-af0c-dec64e2bd737",
+          "path": "2DVector",
+          "action": "KeyboardLook",
+          "groups": "KeyboardMouse",
+          "interactions": "",
+          "processors": "",
+          "isComposite": true,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "up",
+          "id": "00138b75-0e4a-4208-aa44-27c9a78a83fb",
+          "path": "<Keyboard>/i",
+          "action": "KeyboardLook",
+          "groups": "KeyboardMouse",
+          "interactions": "",
+          "processors": "",
+          "isComposite": false,
+          "isPartOfComposite": true
+        },
+        {
+          "name": "down",
+          "id": "8620b5c8-434d-46db-9032-25fcd263bd1c",
+          "path": "<Keyboard>/k",
+          "action": "KeyboardLook",
+          "groups": "KeyboardMouse",
+          "interactions": "",
+          "processors": "",
+          "isComposite": false,
+          "isPartOfComposite": true
+        },
+        {
+          "name": "left",
+          "id": "9095eb78-f289-4bb0-991e-5895addfd6b7",
+          "path": "<Keyboard>/j",
+          "action": "KeyboardLook",
+          "groups": "KeyboardMouse",
+          "interactions": "",
+          "processors": "",
+          "isComposite": false,
+          "isPartOfComposite": true
+        },
+        {
+          "name": "right",
+          "id": "b3a73066-16ce-42be-b452-32e79d0021b4",
+          "path": "<Keyboard>/l",
+          "action": "KeyboardLook",
+          "groups": "KeyboardMouse",
+          "interactions": "",
+          "processors": "",
+          "isComposite": false,
+          "isPartOfComposite": true
+        },
+        {
+          "name": "",
+          "id": "f0f628dc-65e8-4515-8c10-d2ad84d19b15",
+          "path": "<Mouse>/delta",
+          "action": "Look",
+          "groups": "KeyboardMouse",
+          "interactions": "",
+          "processors": "",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "6819dc2f-26f5-4a07-9c82-edbb9e055f15",
+          "path": "<Keyboard>/leftShift",
+          "action": "Sprint",
+          "groups": "KeyboardMouse",
+          "interactions": "",
+          "processors": "",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "d15aea2b-c631-4642-82c4-b5f35e8252c0",
+          "path": "<Mouse>/leftButton",
+          "action": "CapturePointer",
+          "groups": "KeyboardMouse",
+          "interactions": "",
+          "processors": "",
+          "isComposite": false,
+          "isPartOfComposite": false
+        }
+      ]
+    }
+  ],
+  "controlSchemes": [
+    {
+      "name": "KeyboardMouse",
+      "bindingGroup": "KeyboardMouse",
+      "devices": [
+        {
+          "devicePath": "<Keyboard>",
+          "isOptional": false,
+          "isOR": false
+        },
+        {
+          "devicePath": "<Mouse>",
+          "isOptional": true,
+          "isOR": false
+        }
+      ]
+    }
+  ]
+}
