@@ -106,7 +106,10 @@ namespace MusiyoBetsknate.Museum
                 {
                     if (wayfinding?.MenuOpen == true) { wayfinding.CloseMenu(); return; }
                     if (flow != null && flow.Menu != null && flow.Menu.Back()) return;
-                    interaction.SetPaused(interaction.State != InteractionState.Paused);
+                    var controller = visitor != null ? visitor.GetComponent<DesktopVisitorController>() : null;
+                    // The browser may deliver Escape after it already released the pointer and paused the visit.
+                    bool justPaused = controller != null && Time.unscaledTime - controller.PointerReleasePauseTime < .3f;
+                    if (!justPaused) interaction.SetPaused(interaction.State != InteractionState.Paused);
                     return;
                 }
                 if (wayfinding?.MenuOpen == true) return;
