@@ -29,6 +29,16 @@ mergeInto(LibraryManager.library, {
       }
     } }));
   },
+  MusiyoPointPresence: function (tourPtr, pointPtr, elementPtr, presencePtr) {
+    window.dispatchEvent(new CustomEvent('musiyo:presence', { detail: {
+      source: 'musiyo-unity', type: 'point_presence', version: 1,
+      data: {
+        tour_key: UTF8ToString(tourPtr), point_key: UTF8ToString(pointPtr),
+        element_slug: elementPtr ? UTF8ToString(elementPtr) : null,
+        presence: UTF8ToString(presencePtr)
+      }
+    } }));
+  },
   MusiyoReturnToCatalog: function (tourPtr) {
     window.dispatchEvent(new CustomEvent('musiyo:navigation', { detail: {
       source: 'musiyo-unity', type: 'return_to_catalog', version: 1,
