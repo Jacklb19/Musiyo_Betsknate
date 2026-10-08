@@ -3,6 +3,8 @@
   "entry_fade_seconds": 1.1,
   "entry_menu_fade_share": 0.4,
   "panel_fade_seconds": 0.2,
+  "panel_scroll_step": 0.25,
+  "model_control_columns": 2,
   "walk_speed": 2.0,
   "sprint_speed": 3.0,
   "acceleration": 8.0,

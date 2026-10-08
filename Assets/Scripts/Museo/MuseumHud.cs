@@ -2,6 +2,7 @@ using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 
@@ -54,6 +55,8 @@ namespace MusiyoBetsknate.Museum
         private TMP_Text stationText;
         private Button returnButton;
         private CanvasGroup panelGroup;
+        private ScrollRect panelScroll;
+        private string panelSubject;
 
         private void Awake()
         {
@@ -141,6 +144,23 @@ namespace MusiyoBetsknate.Museum
             CancelDetail();
         }
 
+        private ScrollRect PanelScroll()
+        {
+            if (panelScroll == null) panel.TryGetComponent(out panelScroll);
+            return panelScroll;
+        }
+
+        /// <summary>Page Up and Page Down scroll long panels; the mouse wheel stays free for model zoom.</summary>
+        private void ScrollPanelWithKeyboard()
+        {
+            var keyboard = Keyboard.current;
+            if (keyboard == null || !panel.activeSelf || PanelScroll() == null) return;
+            int direction = keyboard.pageDownKey.wasPressedThisFrame ? -1 : keyboard.pageUpKey.wasPressedThisFrame ? 1 : 0;
+            if (direction == 0) return;
+            panelScroll.verticalNormalizedPosition = Mathf.Clamp01(panelScroll.verticalNormalizedPosition
+                + direction * MuseumExperienceConfiguration.Current.PanelScrollStep);
+        }
+
         private CanvasGroup PanelGroup()
         {
             if (panelGroup == null && !panel.TryGetComponent(out panelGroup)) panelGroup = panel.AddComponent<CanvasGroup>();
@@ -155,6 +175,7 @@ namespace MusiyoBetsknate.Museum
             var focus = pointInput.FocusedPoint;
             focusText.text = focus != null && focus.Content != null ? MuseumInterfaceText.Format("focus_point", focus.Content.name)
                 : pointInput.GazeProgress > 0 ? MuseumInterfaceText.Format("gaze_progress", Mathf.RoundToInt(pointInput.GazeProgress * 100)) : ".";
+            ScrollPanelWithKeyboard();
             if (panel.activeSelf && PanelGroup().alpha < 1)
                 panelGroup.alpha = Mathf.MoveTowards(panelGroup.alpha, 1,
                     Time.unscaledDeltaTime / MuseumExperienceConfiguration.Current.PanelFadeSeconds);
@@ -175,6 +196,10 @@ namespace MusiyoBetsknate.Museum
             bool showPanel = !visitFlow.BlocksInput && !paused && interaction.State != InteractionState.Exploration;
             if (showPanel && !panel.activeSelf) PanelGroup().alpha = 0; // Update fades the point panel in.
             panel.SetActive(showPanel);
+            // A new point, element or state starts reading from the top instead of a previous scroll offset.
+            string subject = interaction.ActivePoint?.Anchor.Key + "/" + interaction.SelectedElement?.slug + "/" + interaction.State;
+            if (subject != panelSubject && PanelScroll() != null) panelScroll.verticalNormalizedPosition = 1;
+            panelSubject = subject;
             if (interaction.State == InteractionState.Exploration || paused)
             {
                 CancelDetail();
@@ -270,12 +295,15 @@ namespace MusiyoBetsknate.Museum
             modelText.GetComponent<LayoutElement>().minHeight = 0;
             examineButton = ModelButton(MuseumInterfaceText.Get("examine_model"), elementList.parent, () => model.Examine());
             modelRetryButton = ModelButton(MuseumInterfaceText.Get("retry_model"), elementList.parent, model.Retry);
-            modelControls = new GameObject("ModelControls", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(LayoutElement));
+            modelControls = new GameObject("ModelControls", typeof(RectTransform), typeof(GridLayoutGroup), typeof(LayoutElement));
             modelControls.transform.SetParent(elementList.parent, false);
-            var layout = modelControls.GetComponent<VerticalLayoutGroup>();
-            layout.spacing = 8;
-            layout.childControlHeight = true;
-            layout.childForceExpandHeight = false;
+            // Seven examination buttons fit the panel as a grid instead of a column the viewport cuts off.
+            var layout = modelControls.GetComponent<GridLayoutGroup>();
+            int columns = MuseumExperienceConfiguration.Current.ModelControlColumns;
+            layout.spacing = new Vector2(8, 8);
+            layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            layout.constraintCount = columns;
+            layout.cellSize = new Vector2((((RectTransform)elementList).sizeDelta.x - layout.spacing.x * (columns - 1)) / columns, 52);
             ModelButton(MuseumInterfaceText.Get("rotate_left"), modelControls.transform, () => model.Rotate(new Vector2(-15, 0)));
             ModelButton(MuseumInterfaceText.Get("rotate_right"), modelControls.transform, () => model.Rotate(new Vector2(15, 0)));
             ModelButton(MuseumInterfaceText.Get("rotate_up"), modelControls.transform, () => model.Rotate(new Vector2(0, -15)));
@@ -370,8 +398,11 @@ namespace MusiyoBetsknate.Museum
             if (narration == null) return;
             bool paused = interaction.State == InteractionState.Paused;
             bool selected = interaction.SelectedElement?.has_narration == true && !paused;
-            narrationText.gameObject.SetActive(selected);
-            narrationText.text = narration.Status + "\n" + narration.Transcription + (string.IsNullOrEmpty(narration.Attribution) ? "" : "\n" + narration.Attribution);
+            bool silent = interaction.SelectedElement != null && !interaction.SelectedElement.has_narration && !paused
+                && interaction.State != InteractionState.Reading;
+            narrationText.gameObject.SetActive(selected || silent);
+            narrationText.text = silent ? MuseumInterfaceText.Get("narration_not_published")
+                : narration.Status + "\n" + narration.Transcription + (string.IsNullOrEmpty(narration.Attribution) ? "" : "\n" + narration.Attribution);
             narrationControls.SetActive(selected && narration.CanPlay);
             audioPauseButton.GetComponentInChildren<TMP_Text>().text = narration.State == NarrationState.Playing
                 ? MuseumInterfaceText.Get("pause_narration_keyboard") : MuseumInterfaceText.Get("resume_narration_keyboard");
