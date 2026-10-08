@@ -18,10 +18,16 @@ namespace MusiyoBetsknate.Museum
         private InputAction keyboardLook;
         private InputAction sprint;
         private InputAction capture;
+        private MuseumExperienceConfiguration configuration;
         private float pitch;
         private float verticalSpeed;
+        private Vector3 planarVelocity;
         private bool captured;
+        private bool lockObserved;
         public float LookSensitivity => lookSensitivity;
+        public Vector3 PlanarVelocity => planarVelocity;
+        /// <summary>Unscaled time of the last pause caused by the browser releasing the pointer.</summary>
+        public float PointerReleasePauseTime { get; private set; } = float.NegativeInfinity;
 
         public void Configure(InputActionAsset asset, Camera camera, MuseumInteraction state)
         { inputActions = asset; viewCamera = camera; interaction = state; }
@@ -29,6 +35,9 @@ namespace MusiyoBetsknate.Museum
         private void Awake()
         {
             body = GetComponent<CharacterController>();
+            configuration = MuseumExperienceConfiguration.Current;
+            // Unity ignores moves shorter than minMoveDistance, which swallows walking at high frame rates.
+            body.minMoveDistance = 0;
             if (viewCamera == null) viewCamera = GetComponentInChildren<Camera>();
             if (inputActions == null) return;
             actions = Instantiate(inputActions);
@@ -43,7 +52,20 @@ namespace MusiyoBetsknate.Museum
         private void OnDisable() { if (actions != null) actions.Disable(); CapturePointer(false); }
         private void OnDestroy() { if (actions != null) Destroy(actions); }
 
-        public void SetSensitivity(float value) => lookSensitivity = Mathf.Clamp(value, .02f, 1);
+        public void SetSensitivity(float value)
+        {
+            var settings = MuseumExperienceConfiguration.Current;
+            if (MuseumExperienceConfiguration.Finite(value))
+                lookSensitivity = Mathf.Clamp(value, settings.MinimumSensitivity, settings.MaximumSensitivity);
+        }
+
+        /// <summary>Eases horizontal velocity toward the requested one; stopping or reversing uses the deceleration rate.</summary>
+        public static Vector3 StepVelocity(Vector3 current, Vector3 target, float acceleration, float deceleration, float elapsed)
+        {
+            if (!MuseumExperienceConfiguration.Finite(elapsed) || elapsed <= 0) return current;
+            bool speedingUp = target.sqrMagnitude > current.sqrMagnitude && Vector3.Dot(target, current) >= 0;
+            return Vector3.MoveTowards(current, target, (speedingUp ? acceleration : deceleration) * elapsed);
+        }
 
         public bool FocusPoint(PointAnchor anchor)
         {
@@ -65,6 +87,7 @@ namespace MusiyoBetsknate.Museum
                 pitch = -Mathf.Atan2(target.y, new Vector2(target.x, target.z).magnitude) * Mathf.Rad2Deg;
                 viewCamera.transform.localRotation = Quaternion.Euler(pitch, 0, 0);
                 verticalSpeed = 0;
+                planarVelocity = Vector3.zero;
                 body.enabled = true;
                 CapturePointer(false);
                 return true;
@@ -75,6 +98,7 @@ namespace MusiyoBetsknate.Museum
         public void CapturePointer(bool value)
         {
             captured = value;
+            lockObserved = false;
             Cursor.lockState = value ? CursorLockMode.Locked : CursorLockMode.None;
             Cursor.visible = !value;
         }
@@ -82,6 +106,7 @@ namespace MusiyoBetsknate.Museum
         private void Update()
         {
             if (actions == null || body == null || viewCamera == null) return;
+            DetectReleasedPointer();
             bool blocked = interaction != null && (interaction.BlocksMovement
                 || interaction.GetComponent<MuseumWayfinding>()?.MenuOpen == true);
             bool choosing = interaction != null && interaction.State == InteractionState.PointFocus;
@@ -92,18 +117,41 @@ namespace MusiyoBetsknate.Museum
             if (!blocked)
             {
                 var delta = captured ? look.ReadValue<Vector2>() * lookSensitivity : Vector2.zero;
-                if (!choosing) delta += keyboardLook.ReadValue<Vector2>() * (70 * Time.deltaTime);
+                if (!choosing) delta += keyboardLook.ReadValue<Vector2>() * (configuration.KeyboardLookSpeed * Time.deltaTime);
                 transform.Rotate(Vector3.up, delta.x, Space.World);
-                pitch = Mathf.Clamp(pitch - delta.y, -80, 80);
+                pitch = Mathf.Clamp(pitch - delta.y, -configuration.MaximumPitch, configuration.MaximumPitch);
                 viewCamera.transform.localRotation = Quaternion.Euler(pitch, 0, 0);
             }
-            var input = blocked || choosing ? Vector2.zero : Vector2.ClampMagnitude(move.ReadValue<Vector2>(), 1);
-            float speed = sprint.IsPressed() ? 3 : 2;
+            if (blocked || choosing) planarVelocity = Vector3.zero; // Menus, reading and pauses stop at once.
+            else
+            {
+                var input = Vector2.ClampMagnitude(move.ReadValue<Vector2>(), 1);
+                float speed = sprint.IsPressed() ? configuration.SprintSpeed : configuration.WalkSpeed;
+                var target = (transform.forward * input.y + transform.right * input.x) * speed;
+                planarVelocity = StepVelocity(planarVelocity, target, configuration.Acceleration, configuration.Deceleration, Time.deltaTime);
+            }
             if (body.isGrounded && verticalSpeed < 0) verticalSpeed = -1;
             verticalSpeed += Physics.gravity.y * Time.deltaTime;
-            var displacement = (transform.forward * input.y + transform.right * input.x) * speed;
-            displacement.y = verticalSpeed;
-            body.Move(displacement * Time.deltaTime);
+            var before = transform.position;
+            body.Move((planarVelocity + Vector3.up * verticalSpeed) * Time.deltaTime);
+            // Keep the eased velocity consistent with walls so sliding does not build up hidden speed.
+            if (Time.deltaTime > 0 && (body.collisionFlags & CollisionFlags.Sides) != 0)
+            {
+                var moved = (transform.position - before) / Time.deltaTime;
+                planarVelocity = Vector3.ClampMagnitude(new Vector3(moved.x, 0, moved.z), planarVelocity.magnitude);
+            }
+        }
+
+        /// <summary>Browsers release pointer lock on Escape without always delivering the key, so treat that as a pause.</summary>
+        private void DetectReleasedPointer()
+        {
+            if (!captured || Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) return;
+            if (Cursor.lockState == CursorLockMode.Locked) { lockObserved = true; return; }
+            if (!lockObserved) return;
+            CapturePointer(false);
+            if (interaction == null || interaction.BlocksMovement) return;
+            interaction.SetPaused(true);
+            PointerReleasePauseTime = Time.unscaledTime;
         }
     }
 }
