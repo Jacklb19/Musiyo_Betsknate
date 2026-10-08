@@ -24,6 +24,8 @@ namespace MusiyoBetsknate.Museum
         private System.Collections.Generic.IReadOnlyList<SubtitleCue> cues = Array.Empty<SubtitleCue>();
         private DateTimeOffset expiration;
         private bool pausedByVisit;
+        private bool pausedByDistance;
+        private Transform visitor;
         public NarrationState State { get; private set; }
         public string Status { get; private set; } = "";
         public string Transcription { get; private set; } = "";
@@ -37,6 +39,13 @@ namespace MusiyoBetsknate.Museum
         public AudioSource ContextSource => source;
         public event Action Changed;
         public event Action SubtitleChanged;
+        public bool PausedByDistance => pausedByDistance;
+
+        public void Configure(Transform visitorTransform) => visitor = visitorTransform;
+
+        /// <summary>Hysteresis: leave beyond radius plus margin, return inside the radius, so the edge never stutters.</summary>
+        public static bool IsAway(float distance, float radius, float margin, bool wasAway)
+            => wasAway ? distance > radius : distance > radius + margin;
 
         private void Awake()
         {
@@ -80,24 +89,26 @@ namespace MusiyoBetsknate.Museum
         public void TogglePause()
         {
             if (!CanPlay || interaction.State == InteractionState.Paused) return;
-            if (State == NarrationState.Playing) { source.Pause(); SetState(NarrationState.Paused, "Narración en pausa."); }
-            else if (State == NarrationState.Paused) { source.UnPause(); SetState(NarrationState.Playing, "Reproduciendo narración."); }
+            pausedByDistance = false;
+            if (State == NarrationState.Playing) { source.Pause(); SetState(NarrationState.Paused, MuseumInterfaceText.Get("narration_paused")); }
+            else if (State == NarrationState.Paused) { source.UnPause(); SetState(NarrationState.Playing, MuseumInterfaceText.Get("narration_playing")); }
             else Repeat();
         }
         public void Repeat()
         {
             if (!CanPlay || interaction.State == InteractionState.Paused) return;
+            pausedByDistance = false;
             source.Stop();
             source.Play();
-            SetState(NarrationState.Playing, "Reproduciendo narración.");
+            SetState(NarrationState.Playing, MuseumInterfaceText.Get("narration_playing"));
             UpdateSubtitle();
         }
         private void OnInteractionChanged()
         {
             if (interaction.State == InteractionState.Paused && State == NarrationState.Playing)
-            { pausedByVisit = true; source.Pause(); SetState(NarrationState.Paused, "Narración en pausa."); }
+            { pausedByVisit = true; source.Pause(); SetState(NarrationState.Paused, MuseumInterfaceText.Get("narration_paused")); }
             else if (interaction.State != InteractionState.Paused && pausedByVisit && CanPlay)
-            { pausedByVisit = false; source.UnPause(); SetState(NarrationState.Playing, "Reproduciendo narración."); }
+            { pausedByVisit = false; source.UnPause(); SetState(NarrationState.Playing, MuseumInterfaceText.Get("narration_playing")); }
         }
         private void Update()
         {
@@ -105,12 +116,36 @@ namespace MusiyoBetsknate.Museum
             if (DateTimeOffset.UtcNow >= expiration)
             {
                 Clear();
-                SetState(NarrationState.Unavailable, "El acceso a la narración venció. Reintenta para comprobar su disponibilidad.");
+                SetState(NarrationState.Unavailable, MuseumInterfaceText.Get("narration_expired"));
                 return;
             }
+            FollowVisitorDistance();
             if (State == NarrationState.Playing && !source.isPlaying)
-                SetState(NarrationState.Finished, "Narración finalizada. Puedes repetirla.");
+                SetState(NarrationState.Finished, MuseumInterfaceText.Get("narration_finished"));
             UpdateSubtitle();
+        }
+        /// <summary>Walking away from the point pauses its narration; coming back resumes it where it stopped.</summary>
+        private void FollowVisitorDistance()
+        {
+            var point = interaction.ActivePoint;
+            if (visitor == null || point == null || interaction.State == InteractionState.Paused) return;
+            var offset = point.Anchor.transform.position - visitor.position;
+            offset.y = 0;
+            bool away = IsAway(offset.magnitude, point.Anchor.ActivationRadius,
+                MuseumExperienceConfiguration.Current.NarrationLeaveMargin, pausedByDistance);
+            if (away && !pausedByDistance && State == NarrationState.Playing)
+            {
+                pausedByDistance = true;
+                source.Pause();
+                SetState(NarrationState.Paused, MuseumInterfaceText.Get("narration_paused_away"));
+            }
+            else if (!away && pausedByDistance)
+            {
+                pausedByDistance = false;
+                if (State != NarrationState.Paused) return;
+                source.UnPause();
+                SetState(NarrationState.Playing, MuseumInterfaceText.Get("narration_playing"));
+            }
         }
         private void UpdateSubtitle()
         {
@@ -122,7 +157,7 @@ namespace MusiyoBetsknate.Museum
 
         private IEnumerator Load(string slug)
         {
-            SetState(NarrationState.Loading, "Cargando narración…");
+            SetState(NarrationState.Loading, MuseumInterfaceText.Get("narration_loading"));
             request = UnityWebRequest.Get(loader.ApiBase + "/elements/" + Uri.EscapeDataString(slug));
             request.timeout = 15;
             yield return request.SendWebRequest();
@@ -134,8 +169,8 @@ namespace MusiyoBetsknate.Museum
             if (narration == null) { Unavailable(); yield break; }
             Transcription = narration.transcription;
             Attribution = string.Join("\n", new[] {
-                string.IsNullOrEmpty(narration.credit) ? null : "Crédito: " + narration.credit,
-                string.IsNullOrEmpty(narration.provenance) ? null : "Procedencia: " + narration.provenance }.Where(value => !string.IsNullOrEmpty(value)));
+                string.IsNullOrEmpty(narration.credit) ? null : MuseumInterfaceText.Format("narration_credit", narration.credit),
+                string.IsNullOrEmpty(narration.provenance) ? null : MuseumInterfaceText.Format("narration_provenance", narration.provenance) }.Where(value => !string.IsNullOrEmpty(value)));
             UpdateSubtitle();
             Changed?.Invoke();
             request = AccessRequest(narration.id);
@@ -178,7 +213,7 @@ namespace MusiyoBetsknate.Museum
             source.transform.position = interaction.ActivePoint.Anchor.LookTarget.position;
             source.clip = clip;
             source.Play();
-            SetState(NarrationState.Playing, "Reproduciendo narración.");
+            SetState(NarrationState.Playing, MuseumInterfaceText.Get("narration_playing"));
             OnInteractionChanged();
             var subtitles = element.resources.FirstOrDefault(resource => resource.id == narration.subtitles_resource_id
                 && resource.kind == "subtitles" && resource.mime == "text/vtt");
@@ -210,7 +245,7 @@ namespace MusiyoBetsknate.Museum
             => new UnityWebRequest(loader.ApiBase + "/resources/" + Uri.EscapeDataString(id) + "/access?schema_version=1", "POST")
             { downloadHandler = new DownloadHandlerBuffer(), timeout = 15 };
         private void Unavailable()
-        { loading = null; SetState(NarrationState.Unavailable, "La narración no está disponible. Puedes leer su transcripción y continuar la visita."); }
+        { loading = null; SetState(NarrationState.Unavailable, MuseumInterfaceText.Get("narration_unavailable")); }
         private void DisposeRequest()
         { request?.Abort(); request?.Dispose(); request = null; }
         private void DisposeSubtitlesRequest()
@@ -233,6 +268,7 @@ namespace MusiyoBetsknate.Museum
             }
             cues = Array.Empty<SubtitleCue>();
             pausedByVisit = false;
+            pausedByDistance = false;
             Transcription = Attribution = "";
             UpdateSubtitle();
             SetState(NarrationState.Idle, "");
