@@ -37,6 +37,7 @@ namespace MusiyoBetsknate.Museum
         private MenuPage page;
         private bool wasVisible;
         private bool wasEntry;
+        private TourLoadState lastLoadState;
         private InputSystemUIInputModule navigationModule;
         private InputActionReference suspendedNavigation;
 
@@ -232,8 +233,11 @@ namespace MusiyoBetsknate.Museum
                 Cursor.visible = true;
                 var wayfinding = interaction.GetComponent<MuseumWayfinding>();
                 if (wayfinding != null && wayfinding.MenuOpen) wayfinding.CloseMenu();
-                if (!wasVisible || entry != wasEntry || !SelectionInsideMenu()) SelectFirst();
+                // Loading picks a fallback; once the tour settles, "Explore" becomes the first choice again.
+                bool loadSettled = loader.State != lastLoadState && page == MenuPage.Home;
+                if (!wasVisible || entry != wasEntry || loadSettled || !SelectionInsideMenu()) SelectFirst();
             }
+            lastLoadState = loader.State;
             SuspendModuleNavigation(visible);
             wasVisible = visible;
             wasEntry = entry;

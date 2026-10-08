@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.EventSystems;
@@ -28,6 +29,14 @@ namespace MusiyoBetsknate.Museum
         public Vector3 PlanarVelocity => planarVelocity;
         /// <summary>Unscaled time of the last pause caused by the browser releasing the pointer.</summary>
         public float PointerReleasePauseTime { get; private set; } = float.NegativeInfinity;
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [DllImport("__Internal")]
+        private static extern int MusiyoIsPointerLocked();
+        private static bool PointerLocked => MusiyoIsPointerLocked() == 1;
+#else
+        private static bool PointerLocked => Cursor.lockState == CursorLockMode.Locked;
+#endif
 
         public void Configure(InputActionAsset asset, Camera camera, MuseumInteraction state)
         { inputActions = asset; viewCamera = camera; interaction = state; }
@@ -116,7 +125,7 @@ namespace MusiyoBetsknate.Museum
                 CapturePointer(true);
             if (!blocked)
             {
-                var delta = captured ? look.ReadValue<Vector2>() * lookSensitivity : Vector2.zero;
+                var delta = captured && PointerLocked ? look.ReadValue<Vector2>() * lookSensitivity : Vector2.zero;
                 if (!choosing) delta += keyboardLook.ReadValue<Vector2>() * (configuration.KeyboardLookSpeed * Time.deltaTime);
                 transform.Rotate(Vector3.up, delta.x, Space.World);
                 pitch = Mathf.Clamp(pitch - delta.y, -configuration.MaximumPitch, configuration.MaximumPitch);
@@ -146,7 +155,7 @@ namespace MusiyoBetsknate.Museum
         private void DetectReleasedPointer()
         {
             if (!captured || Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) return;
-            if (Cursor.lockState == CursorLockMode.Locked) { lockObserved = true; return; }
+            if (PointerLocked) { lockObserved = true; return; }
             if (!lockObserved) return;
             CapturePointer(false);
             if (interaction == null || interaction.BlocksMovement) return;
