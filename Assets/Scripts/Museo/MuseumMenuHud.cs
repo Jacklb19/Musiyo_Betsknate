@@ -2,6 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 namespace MusiyoBetsknate.Museum
@@ -36,6 +37,8 @@ namespace MusiyoBetsknate.Museum
         private MenuPage page;
         private bool wasVisible;
         private bool wasEntry;
+        private InputSystemUIInputModule navigationModule;
+        private InputActionReference suspendedNavigation;
 
         public void Configure(MuseumVisitFlow visit, MuseumInteraction state, TourLoader tourLoader,
             MuseumVisitorPreferences visitorPreferences, Button buttonTemplate, TMP_Text textTemplate, Slider sliderTemplate)
@@ -64,7 +67,7 @@ namespace MusiyoBetsknate.Museum
             description = Text(textTemplate, card.transform, "MenuDescription", configuration.BodySize, configuration.BodySize * 4);
             home = Page("Home", card.transform);
             begin = Action(buttonTemplate, home.transform, "explore_museum", () => { preferences.Save(); flow.BeginVisit(); });
-            resume = Action(buttonTemplate, home.transform, "resume", () => { preferences.Save(); interaction.SetPaused(false); });
+            resume = Action(buttonTemplate, home.transform, "resume_visit", () => { preferences.Save(); interaction.SetPaused(false); });
             settingsButton = Action(buttonTemplate, home.transform, "settings", () => ShowPage(MenuPage.Settings));
             Action(buttonTemplate, home.transform, "controls", () => ShowPage(MenuPage.Controls));
             mainMenu = Action(buttonTemplate, home.transform, "main_menu", flow.ReturnToMenu);
@@ -122,7 +125,7 @@ namespace MusiyoBetsknate.Museum
             label.enableAutoSizing = false;
             label.overflowMode = TextOverflowModes.Truncate;
             label.color = MuseumExperienceConfiguration.ColorValue(configuration.TextColor);
-            var element = label.GetComponent<LayoutElement>() ?? label.gameObject.AddComponent<LayoutElement>();
+            if (!label.TryGetComponent<LayoutElement>(out var element)) element = label.gameObject.AddComponent<LayoutElement>();
             element.minHeight = 0;
             element.preferredHeight = height;
             return label;
@@ -134,6 +137,7 @@ namespace MusiyoBetsknate.Museum
             button.gameObject.SetActive(true);
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(action);
+            button.navigation = new Navigation { mode = Navigation.Mode.None };
             button.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Get(key);
             button.GetComponentInChildren<TMP_Text>().fontSize = configuration.BodySize;
             button.GetComponentInChildren<TMP_Text>().color = MuseumExperienceConfiguration.ColorValue(configuration.TextColor);
@@ -141,7 +145,7 @@ namespace MusiyoBetsknate.Museum
             colors.normalColor = MuseumExperienceConfiguration.ColorValue(configuration.PanelColor);
             colors.highlightedColor = colors.selectedColor = MuseumExperienceConfiguration.ColorValue(configuration.SelectedColor);
             button.colors = colors;
-            var element = button.GetComponent<LayoutElement>() ?? button.gameObject.AddComponent<LayoutElement>();
+            if (!button.TryGetComponent<LayoutElement>(out var element)) element = button.gameObject.AddComponent<LayoutElement>();
             element.preferredHeight = configuration.ButtonHeight;
             element.minHeight = configuration.ButtonHeight;
             return button;
@@ -152,11 +156,15 @@ namespace MusiyoBetsknate.Museum
             slider.name = key;
             slider.gameObject.SetActive(true);
             slider.onValueChanged.RemoveAllListeners();
+            slider.navigation = new Navigation { mode = Navigation.Mode.None };
+            var sliderColors = slider.colors;
+            sliderColors.selectedColor = MuseumExperienceConfiguration.ColorValue(configuration.SelectedColor);
+            slider.colors = sliderColors;
             slider.minValue = minimum;
             slider.maxValue = maximum;
             slider.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Get(key);
             slider.GetComponentInChildren<TMP_Text>().color = MuseumExperienceConfiguration.ColorValue(configuration.TextColor);
-            var element = slider.GetComponent<LayoutElement>() ?? slider.gameObject.AddComponent<LayoutElement>();
+            if (!slider.TryGetComponent<LayoutElement>(out var element)) element = slider.gameObject.AddComponent<LayoutElement>();
             element.preferredHeight = configuration.ButtonHeight * 1.5f;
             element.minHeight = element.preferredHeight;
             return slider;
@@ -226,6 +234,7 @@ namespace MusiyoBetsknate.Museum
                 if (wayfinding != null && wayfinding.MenuOpen) wayfinding.CloseMenu();
                 if (!wasVisible || entry != wasEntry || !SelectionInsideMenu()) SelectFirst();
             }
+            SuspendModuleNavigation(visible);
             wasVisible = visible;
             wasEntry = entry;
         }
@@ -237,9 +246,52 @@ namespace MusiyoBetsknate.Museum
             if (!overlayGroup.interactable || keyboard == null) return;
             if (page != MenuPage.Home && (keyboard.backspaceKey.wasPressedThisFrame
                     || flow.Phase == VisitPhase.Menu && keyboard.escapeKey.wasPressedThisFrame)) { ShowPage(MenuPage.Home); return; }
+            int step = keyboard.downArrowKey.wasPressedThisFrame || keyboard.sKey.wasPressedThisFrame
+                || keyboard.tabKey.wasPressedThisFrame && !keyboard.shiftKey.isPressed ? 1
+                : keyboard.upArrowKey.wasPressedThisFrame || keyboard.wKey.wasPressedThisFrame
+                || keyboard.tabKey.wasPressedThisFrame && keyboard.shiftKey.isPressed ? -1 : 0;
             // A mouse click on the backdrop clears the selection; any navigation key brings the focus back.
-            if (!SelectionInsideMenu() && (keyboard.upArrowKey.wasPressedThisFrame || keyboard.downArrowKey.wasPressedThisFrame
-                    || keyboard.tabKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame)) SelectFirst();
+            if (!SelectionInsideMenu())
+            {
+                if (step != 0 || keyboard.enterKey.wasPressedThisFrame) SelectFirst();
+                return;
+            }
+            if (step != 0) MoveSelection(step);
+            int adjust = keyboard.rightArrowKey.wasPressedThisFrame || keyboard.dKey.wasPressedThisFrame ? 1
+                : keyboard.leftArrowKey.wasPressedThisFrame || keyboard.aKey.wasPressedThisFrame ? -1 : 0;
+            var slider = EventSystem.current.currentSelectedGameObject.GetComponent<Slider>();
+            if (adjust != 0 && slider != null)
+                slider.value += adjust * configuration.SliderStep * (slider.maxValue - slider.minValue);
+        }
+        /// <summary>Keyboard order follows the visible page layout; it wraps at both ends.</summary>
+        private void MoveSelection(int step)
+        {
+            var current = EventSystem.current.currentSelectedGameObject;
+            var page = home.activeSelf ? home : settings.activeSelf ? settings : controls;
+            var options = new System.Collections.Generic.List<Selectable>();
+            foreach (var option in page.GetComponentsInChildren<Selectable>())
+                if (option.IsInteractable() && option.gameObject.activeInHierarchy) options.Add(option);
+            if (options.Count == 0) return;
+            int index = options.FindIndex(option => option.gameObject == current);
+            index = index < 0 ? 0 : (index + step + options.Count) % options.Count;
+            EventSystem.current.SetSelectedGameObject(options[index].gameObject);
+        }
+        /// <summary>The menu owns arrow keys while open, so the UI module's held-axis navigation cannot move twice.</summary>
+        private void SuspendModuleNavigation(bool suspend)
+        {
+            if (suspend && navigationModule == null && EventSystem.current != null)
+            {
+                navigationModule = EventSystem.current.GetComponent<InputSystemUIInputModule>();
+                if (navigationModule == null) return;
+                suspendedNavigation = navigationModule.move;
+                navigationModule.move = null;
+            }
+            else if (!suspend && navigationModule != null)
+            {
+                navigationModule.move = suspendedNavigation;
+                navigationModule = null;
+                suspendedNavigation = null;
+            }
         }
         private bool SelectionInsideMenu()
         {
@@ -263,7 +315,11 @@ namespace MusiyoBetsknate.Museum
             ShowPage(MenuPage.Home);
             return true;
         }
-        private void OnDisable() { if (preferences != null) preferences.Save(); }
+        private void OnDisable()
+        {
+            SuspendModuleNavigation(false);
+            if (preferences != null) preferences.Save();
+        }
         private void OnDestroy()
         {
             if (flow != null) flow.Changed -= Refresh;

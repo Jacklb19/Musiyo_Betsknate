@@ -55,7 +55,8 @@ namespace MusiyoBetsknate.Tests
         [TestCase("\"entry_menu_fade_share\": 0.4", "\"entry_menu_fade_share\": 1")]
         [TestCase("\"maximum_pitch\": 80.0", "\"maximum_pitch\": 90")]
         [TestCase("\"deceleration\": 12.0", "\"deceleration\": -1")]
-        [TestCase("#44312B", "invalid-color")]
+        [TestCase("#9C5B1F", "invalid-color")]
+        [TestCase("\"slider_step\": 0.05", "\"slider_step\": 0")]
         public void InvalidExperienceConfigurationFailsWithADiagnostic(string before, string after)
         {
             var json = Resources.Load<TextAsset>("MuseumExperienceConfiguration").text;

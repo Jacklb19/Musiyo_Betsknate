@@ -18,11 +18,12 @@
   "menu_padding": 36,
   "menu_spacing": 16,
   "button_height": 58,
+  "slider_step": 0.05,
   "title_size": 42,
   "body_size": 24,
   "backdrop_color": "#120A0DEB",
   "panel_color": "#120A0DF5",
   "text_color": "#F6EFE4",
   "accent_color": "#E3A83B",
-  "selected_color": "#44312B"
+  "selected_color": "#9C5B1F"
 }
