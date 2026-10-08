@@ -43,7 +43,8 @@ namespace MusiyoBetsknate.Museum
         private Button narrationRetryButton;
         private Slider volumeSlider;
         private Button subtitlesButton;
-        private bool showSubtitles = true;
+        private MuseumVisitorPreferences preferences;
+        private MuseumVisitFlow visitFlow;
         private MuseumArrival arrival;
         private MuseumGuide guide;
         private MuseumFarewell farewell;
@@ -56,6 +57,10 @@ namespace MusiyoBetsknate.Museum
         private void Awake()
         {
             if (interaction == null) return;
+            preferences = MuseumVisitorPreferences.Load(MuseumExperienceConfiguration.Current,
+                PlayerPrefs.GetString(MuseumVisitorPreferences.StorageKey, ""));
+            visitFlow = interaction.GetComponent<MuseumVisitFlow>();
+            if (visitFlow == null) visitFlow = interaction.gameObject.AddComponent<MuseumVisitFlow>();
             model = interaction.GetComponent<MuseumModelPresenter>();
             if (model == null) model = interaction.gameObject.AddComponent<MuseumModelPresenter>();
             if (visitor != null) model.Configure(visitor.GetComponentInChildren<Camera>(), visitor.transform);
@@ -78,12 +83,17 @@ namespace MusiyoBetsknate.Museum
             if (farewell == null) farewell = interaction.gameObject.AddComponent<MuseumFarewell>();
             farewell.Configure(visitorTransform);
             CreateStationInterface();
+            gameObject.AddComponent<MuseumMenuHud>().Configure(visitFlow, interaction, loader, preferences,
+                detailButton, panelText, sensitivitySlider);
+            ApplyPreferences();
         }
 
         private void OnEnable()
         {
             loader.Changed += Refresh;
             interaction.Changed += Refresh;
+            visitFlow.Changed += Refresh;
+            preferences.Changed += ApplyPreferences;
             if (arrival != null) arrival.Changed += Refresh;
             if (guide != null) guide.Changed += Refresh;
             if (farewell != null) farewell.Changed += Refresh;
@@ -99,8 +109,8 @@ namespace MusiyoBetsknate.Museum
             detailButton.onClick.AddListener(OpenDetail);
             if (visitor != null && sensitivitySlider != null)
             {
-                sensitivitySlider.value = visitor.LookSensitivity;
-                sensitivitySlider.onValueChanged.AddListener(visitor.SetSensitivity);
+                sensitivitySlider.SetValueWithoutNotify(preferences.Sensitivity);
+                sensitivitySlider.onValueChanged.AddListener(preferences.SetSensitivity);
             }
             Refresh();
         }
@@ -109,6 +119,8 @@ namespace MusiyoBetsknate.Museum
         {
             loader.Changed -= Refresh;
             interaction.Changed -= Refresh;
+            visitFlow.Changed -= Refresh;
+            preferences.Changed -= ApplyPreferences;
             if (arrival != null) arrival.Changed -= Refresh;
             if (guide != null) guide.Changed -= Refresh;
             if (farewell != null) farewell.Changed -= Refresh;
@@ -122,7 +134,8 @@ namespace MusiyoBetsknate.Museum
             closeButton.onClick.RemoveListener(interaction.Back);
             pauseButton.onClick.RemoveListener(TogglePause);
             detailButton.onClick.RemoveListener(OpenDetail);
-            if (visitor != null && sensitivitySlider != null) sensitivitySlider.onValueChanged.RemoveListener(visitor.SetSensitivity);
+            if (visitor != null && sensitivitySlider != null) sensitivitySlider.onValueChanged.RemoveListener(preferences.SetSensitivity);
+            preferences.Save();
             CancelDetail();
         }
 
@@ -147,8 +160,8 @@ namespace MusiyoBetsknate.Museum
             RefreshNarrationInterface();
             RefreshStationInterface();
             pauseButton.GetComponentInChildren<TMP_Text>().text = paused ? MuseumInterfaceText.Get("resume") : MuseumInterfaceText.Get("pause");
-            if (sensitivitySlider != null) sensitivitySlider.gameObject.SetActive(paused);
-            panel.SetActive(interaction.State != InteractionState.Exploration);
+            if (sensitivitySlider != null) sensitivitySlider.gameObject.SetActive(false);
+            panel.SetActive(!visitFlow.BlocksInput && !paused && interaction.State != InteractionState.Exploration);
             if (interaction.State == InteractionState.Exploration || paused)
             {
                 CancelDetail();
@@ -335,8 +348,8 @@ namespace MusiyoBetsknate.Museum
             volumeSlider.maxValue = 1;
             volumeSlider.value = narration.Volume;
             volumeSlider.onValueChanged.RemoveAllListeners();
-            volumeSlider.onValueChanged.AddListener(narration.SetVolume);
-            subtitlesButton = ModelButton(MuseumInterfaceText.Get("hide_subtitles"), elementList.parent, () => { showSubtitles = !showSubtitles; RefreshSubtitle(); });
+            volumeSlider.onValueChanged.AddListener(preferences.SetVolume);
+            subtitlesButton = ModelButton(MuseumInterfaceText.Get("hide_subtitles"), elementList.parent, () => preferences.SetSubtitles(!preferences.Subtitles));
         }
 
         private void RefreshNarrationInterface()
@@ -351,8 +364,8 @@ namespace MusiyoBetsknate.Museum
                 ? MuseumInterfaceText.Get("pause_narration_keyboard") : MuseumInterfaceText.Get("resume_narration_keyboard");
             audioMuteButton.GetComponentInChildren<TMP_Text>().text = narration.Muted ? MuseumInterfaceText.Get("unmute_narration") : MuseumInterfaceText.Get("mute_narration");
             narrationRetryButton.gameObject.SetActive(selected && narration.State == NarrationState.Unavailable);
-            volumeSlider.gameObject.SetActive(paused);
-            subtitlesButton.gameObject.SetActive(paused);
+            volumeSlider.gameObject.SetActive(false);
+            subtitlesButton.gameObject.SetActive(false);
             RefreshSubtitle();
         }
 
@@ -405,7 +418,7 @@ namespace MusiyoBetsknate.Museum
         private void RefreshStationInterface()
         {
             if (stationText == null) return;
-            bool exploring = interaction.State == InteractionState.Exploration;
+            bool exploring = !visitFlow.BlocksInput && interaction.State == InteractionState.Exploration;
             bool welcome = arrival != null && arrival.Visible && exploring;
             welcomeCard.SetActive(welcome);
             if (welcome)
@@ -427,10 +440,19 @@ namespace MusiyoBetsknate.Museum
         private void RefreshSubtitle()
         {
             subtitleText.text = narration.Subtitle;
-            subtitleText.gameObject.SetActive(showSubtitles && !string.IsNullOrEmpty(narration.Subtitle)
-                && interaction.State != InteractionState.Paused);
+            subtitleText.gameObject.SetActive(preferences.Subtitles && !string.IsNullOrEmpty(narration.Subtitle)
+                && !visitFlow.BlocksInput && interaction.State != InteractionState.Paused);
             subtitleBackground.SetActive(subtitleText.gameObject.activeSelf);
-            subtitlesButton.GetComponentInChildren<TMP_Text>().text = showSubtitles ? MuseumInterfaceText.Get("hide_subtitles") : MuseumInterfaceText.Get("show_subtitles");
+            subtitlesButton.GetComponentInChildren<TMP_Text>().text = preferences.Subtitles ? MuseumInterfaceText.Get("hide_subtitles") : MuseumInterfaceText.Get("show_subtitles");
+        }
+
+        private void ApplyPreferences()
+        {
+            visitor?.SetSensitivity(preferences.Sensitivity);
+            sensitivitySlider?.SetValueWithoutNotify(preferences.Sensitivity);
+            volumeSlider?.SetValueWithoutNotify(preferences.Volume);
+            narration?.SetVolume(preferences.Volume);
+            RefreshSubtitle();
         }
     }
 }

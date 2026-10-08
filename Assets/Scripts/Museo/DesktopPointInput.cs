@@ -89,6 +89,13 @@ namespace MusiyoBetsknate.Museum
 
         private void Update()
         {
+            var flow = GetComponent<MuseumVisitFlow>();
+            if (flow != null && flow.BlocksInput)
+            {
+                ResetFocus();
+                return;
+            }
+            if (flow != null && flow.InputConsumedThisFrame) return;
 #if ENABLE_INPUT_SYSTEM
             var keyboard = Keyboard.current;
             var wayfinding = GetComponent<MuseumWayfinding>();
@@ -98,11 +105,13 @@ namespace MusiyoBetsknate.Museum
                 if (keyboard.escapeKey.wasPressedThisFrame)
                 {
                     if (wayfinding?.MenuOpen == true) { wayfinding.CloseMenu(); return; }
+                    if (flow != null && flow.Menu != null && flow.Menu.Back()) return;
                     interaction.SetPaused(interaction.State != InteractionState.Paused);
+                    return;
                 }
                 if (wayfinding?.MenuOpen == true) return;
-                if (keyboard.backspaceKey.wasPressedThisFrame) interaction.Back();
                 if (interaction.State == InteractionState.Paused) return;
+                if (keyboard.backspaceKey.wasPressedThisFrame) interaction.Back();
                 if (interaction.State == InteractionState.Exploration && keyboard.tabKey.wasPressedThisFrame)
                     Cycle(keyboard.shiftKey.isPressed ? -1 : 1);
                 if (keyboard.enterKey.wasPressedThisFrame)

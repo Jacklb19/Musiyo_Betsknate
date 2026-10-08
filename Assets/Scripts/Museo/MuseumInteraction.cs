@@ -17,7 +17,8 @@ namespace MusiyoBetsknate.Museum
         public TourPoint ActivePoint { get; private set; }
         public ElementSummaryContractV1 SelectedElement { get; private set; }
         public ActivationSource LastSource { get; private set; }
-        public bool BlocksMovement => State == InteractionState.Reading || State == InteractionState.ModelExamination
+        public bool BlocksMovement => GetComponent<MuseumVisitFlow>()?.BlocksInput == true
+            || State == InteractionState.Reading || State == InteractionState.ModelExamination
             || State == InteractionState.GuideQuestion || State == InteractionState.Paused;
         public event Action Changed;
         public event Action<ElementSummaryContractV1> ElementChanged;
@@ -41,7 +42,7 @@ namespace MusiyoBetsknate.Museum
         public bool Activate(TourPoint point, ActivationSource source)
         {
             Connect();
-            if (State == InteractionState.Paused || point == null || !point.HasContent
+            if (GetComponent<MuseumVisitFlow>()?.BlocksInput == true || State == InteractionState.Paused || point == null || !point.HasContent
                 || Runtime.Contract == null || Runtime.FindPoint(point.Anchor.Key) != point) return false;
             string method = source == ActivationSource.Proximity ? "proximity" : source == ActivationSource.Gaze ? "gaze" : "keyboard";
             if (source != ActivationSource.DeepLink && !point.Supports(method)) return false;
@@ -89,7 +90,7 @@ namespace MusiyoBetsknate.Museum
         public bool OpenGuide()
         {
             Connect();
-            if (State != InteractionState.Exploration || Runtime.Contract == null || Runtime.Guide == null) return false;
+            if (BlocksMovement || State != InteractionState.Exploration || Runtime.Contract == null || Runtime.Guide == null) return false;
             State = InteractionState.GuideQuestion;
             Changed?.Invoke();
             return true;

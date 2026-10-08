@@ -41,6 +41,27 @@
     "resume_narration_keyboard": "Reanudar narración (Espacio)",
     "unmute_narration": "Activar sonido (M)",
     "return_to_catalog": "Volver al catálogo",
-    "start_visit": "Comenzar la visita (Enter)"
+    "start_visit": "Comenzar la visita (Enter)",
+    "explore_museum": "Explorar museo",
+    "settings": "Configuración",
+    "controls": "Controles",
+    "main_menu": "Menú principal",
+    "retry_tour": "Reintentar contenido",
+    "mouse_sensitivity": "Sensibilidad del ratón",
+    "reset_settings": "Restablecer ajustes",
+    "back_to_menu": "Volver al menú",
+    "resume_visit": "Continuar visita",
+    "museum_menu_title": "Museo virtual",
+    "menu_description": "Una visita para explorar a tu ritmo. Sigue la ruta sugerida o elige tu propio camino.",
+    "settings_description": "Ajusta la mirada, la narración y los subtítulos. Tus preferencias se guardan en este dispositivo.",
+    "controls_description": "Puedes recorrer el museo con teclado y ratón.",
+    "tour_loading": "Cargando recorrido…",
+    "tour_invalid_service": "La dirección del servicio no es válida.",
+    "tour_unavailable": "No fue posible cargar el contenido. Puedes seguir recorriendo el museo y reintentar.",
+    "tour_incompatible": "El recorrido recibido no es compatible.",
+    "tour_ready": "Recorrido disponible. Exploración libre · ruta sugerida de unos {0} minutos.",
+    "menu_loading": "Preparando el museo. Podrás entrar en cuanto el contenido esté listo.",
+    "pause_menu_description":"La visita está en pausa. Puedes continuar, cambiar los ajustes o volver al menú.",
+    "menu_controls": "WASD o flechas: caminar · Mayús: caminar más rápido\nClic en el museo y ratón: mirar · IJKL: mirar con teclado\nTab: elegir un punto · Enter: activar · E: punto cercano\nF: ficha · X: examinar modelo · Retroceso: cerrar\nEspacio: pausar audio · R: repetir · M: silencio\nH: orientación · G: guía en rango · Esc: pausa\nEn el menú: flechas para elegir y Enter para confirmar."
   }
 }
