@@ -11,6 +11,7 @@ namespace MusiyoBetsknate.Museum
     public enum NarrationState { Idle, Loading, Playing, Paused, Finished, Unavailable }
 
     [RequireComponent(typeof(MuseumInteraction), typeof(TourLoader))]
+    [RequireComponent(typeof(MuseumPointPresence))]
     public sealed class MuseumNarration : MonoBehaviour
     {
         private MuseumInteraction interaction;
@@ -25,7 +26,7 @@ namespace MusiyoBetsknate.Museum
         private DateTimeOffset expiration;
         private bool pausedByVisit;
         private bool pausedByDistance;
-        private Transform visitor;
+        private MuseumPointPresence presence;
         public NarrationState State { get; private set; }
         public string Status { get; private set; } = "";
         public string Transcription { get; private set; } = "";
@@ -41,16 +42,11 @@ namespace MusiyoBetsknate.Museum
         public event Action SubtitleChanged;
         public bool PausedByDistance => pausedByDistance;
 
-        public void Configure(Transform visitorTransform) => visitor = visitorTransform;
-
-        /// <summary>Hysteresis: leave beyond radius plus margin, return inside the radius, so the edge never stutters.</summary>
-        public static bool IsAway(float distance, float radius, float margin, bool wasAway)
-            => wasAway ? distance > radius : distance > radius + margin;
-
         private void Awake()
         {
             interaction = GetComponent<MuseumInteraction>();
             loader = GetComponent<TourLoader>();
+            presence = GetComponent<MuseumPointPresence>();
             var audioObject = new GameObject("ContextNarration");
             audioObject.transform.SetParent(transform, false);
             source = audioObject.AddComponent<AudioSource>();
@@ -66,12 +62,14 @@ namespace MusiyoBetsknate.Museum
         {
             interaction.ElementChanged += Select;
             interaction.Changed += OnInteractionChanged;
+            presence.Changed += OnPresenceChanged;
             Select(interaction.SelectedElement);
         }
         private void OnDisable()
         {
             interaction.ElementChanged -= Select;
             interaction.Changed -= OnInteractionChanged;
+            presence.Changed -= OnPresenceChanged;
             Clear();
         }
         private void OnDestroy() { if (source != null) Destroy(source.gameObject); }
@@ -119,20 +117,13 @@ namespace MusiyoBetsknate.Museum
                 SetState(NarrationState.Unavailable, MuseumInterfaceText.Get("narration_expired"));
                 return;
             }
-            FollowVisitorDistance();
             if (State == NarrationState.Playing && !source.isPlaying)
                 SetState(NarrationState.Finished, MuseumInterfaceText.Get("narration_finished"));
             UpdateSubtitle();
         }
         /// <summary>Walking away from the point pauses its narration; coming back resumes it where it stopped.</summary>
-        private void FollowVisitorDistance()
+        private void OnPresenceChanged(bool away)
         {
-            var point = interaction.ActivePoint;
-            if (visitor == null || point == null || interaction.State == InteractionState.Paused) return;
-            var offset = point.Anchor.transform.position - visitor.position;
-            offset.y = 0;
-            bool away = IsAway(offset.magnitude, point.Anchor.ActivationRadius,
-                MuseumExperienceConfiguration.Current.NarrationLeaveMargin, pausedByDistance);
             if (away && !pausedByDistance && State == NarrationState.Playing)
             {
                 pausedByDistance = true;
@@ -215,6 +206,7 @@ namespace MusiyoBetsknate.Museum
             source.Play();
             SetState(NarrationState.Playing, MuseumInterfaceText.Get("narration_playing"));
             OnInteractionChanged();
+            if (presence.Away) OnPresenceChanged(true);
             var subtitles = element.resources.FirstOrDefault(resource => resource.id == narration.subtitles_resource_id
                 && resource.kind == "subtitles" && resource.mime == "text/vtt");
             if (subtitles != null) subtitlesLoading = StartCoroutine(LoadSubtitles(subtitles.id));

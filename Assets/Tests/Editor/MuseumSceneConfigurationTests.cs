@@ -46,6 +46,23 @@ namespace MusiyoBetsknate.Tests
                 foreach (var field in new[] { "loader", "interaction", "pointInput", "statusText", "focusText", "panelText",
                     "panel", "elementList", "elementTemplate", "retryButton", "closeButton", "pauseButton", "detailButton", "sensitivitySlider", "visitor" })
                     Assert.That(serialized.FindProperty(field).objectReferenceValue, Is.Not.Null, field);
+                var stands = runtime.GetComponentsInChildren<PointLectern>(true);
+                Assert.That(stands.Length, Is.EqualTo(5), "The characters room has one reading stand per pedestal.");
+                var served = new System.Collections.Generic.HashSet<string>();
+                foreach (var stand in stands)
+                {
+                    Assert.That(stand.Point, Is.Not.Null, stand.name);
+                    Assert.That(served.Add(stand.Point.Key), Is.True, "Two stands serve " + stand.Point.Key);
+                    Assert.That(stand.Point.Key, Does.StartWith("punto.personajes."));
+                    Assert.That(stand.BoardSize.x, Is.InRange(.4f, .8f), stand.name);
+                    Assert.That(stand.BoardSize.y, Is.InRange(.5f, 1), stand.name);
+                    Assert.That(stand.Board.position.y, Is.InRange(.6f, 1), "The reading surface starts at lectern height.");
+                    var toPoint = stand.Point.transform.position - stand.transform.position;
+                    toPoint.y = 0;
+                    Assert.That(toPoint.magnitude, Is.InRange(.8f, 1.6f), stand.name);
+                    Assert.That(Vector3.Dot(stand.Facing, toPoint.normalized), Is.LessThan(.5f), "The board does not face its own exhibit.");
+                    Assert.That(-stand.Board.forward.y, Is.GreaterThan(.2f), "The board leans up toward the reader.");
+                }
                 var font = runtime.GetComponentInChildren<TMP_Text>(true).font;
                 foreach (char character in "ëñšÿáéíóúü") Assert.That(font.HasCharacter(character, false, true), Is.True, character.ToString());
                 var ui = runtime.GetComponentInChildren<InputSystemUIInputModule>(true);

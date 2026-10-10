@@ -50,7 +50,7 @@ namespace MusiyoBetsknate.Tests
             Assert.That(preferences.Sensitivity, Is.EqualTo(settings.DefaultSensitivity));
         }
 
-        [TestCase("\"schema_version\": 1", "\"schema_version\": 2")]
+        [TestCase("\"schema_version\": 2", "\"schema_version\": 3")]
         [TestCase("\"entry_fade_seconds\": 1.1", "\"entry_fade_seconds\": 0")]
         [TestCase("\"entry_menu_fade_share\": 0.4", "\"entry_menu_fade_share\": 1")]
         [TestCase("\"maximum_pitch\": 80.0", "\"maximum_pitch\": 90")]
@@ -59,6 +59,9 @@ namespace MusiyoBetsknate.Tests
         [TestCase("\"slider_step\": 0.05", "\"slider_step\": 0")]
         [TestCase("\"panel_scroll_step\": 0.25", "\"panel_scroll_step\": 2")]
         [TestCase("\"model_control_columns\": 2", "\"model_control_columns\": 0")]
+        [TestCase("\"lectern_float_distance\": 0.35", "\"lectern_float_distance\": 0")]
+        [TestCase("\"lectern_follow_seconds\": 0.18", "\"lectern_follow_seconds\": -1")]
+        [TestCase("#E3A83B40", "not-a-color")]
         public void InvalidExperienceConfigurationFailsWithADiagnostic(string before, string after)
         {
             var json = Resources.Load<TextAsset>("MuseumExperienceConfiguration").text;

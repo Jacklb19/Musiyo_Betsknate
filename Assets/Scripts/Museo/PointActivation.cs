@@ -36,10 +36,18 @@ namespace MusiyoBetsknate.Museum
     public static class PointActivation
     {
         public static bool IsInRange(TourPoint point, Vector3 visitor)
+            => point.Anchor.DistanceTo(visitor) <= point.Anchor.ActivationRadius;
+
+        /// <summary>The visitor looks toward the exhibit or toward the furniture attached to its point.</summary>
+        public static bool IsFacing(TourPoint point, Transform eye, float maxDistance, float maxAngle)
         {
-            var difference = point.Anchor.transform.position - visitor;
-            difference.y = 0;
-            return difference.sqrMagnitude <= point.Anchor.ActivationRadius * point.Anchor.ActivationRadius;
+            if (IsVisible(point, eye, maxDistance, maxAngle)) return true;
+            var station = point != null && eye != null ? point.Anchor.Station : null;
+            if (station == null) return false;
+            var offset = station.position - eye.position;
+            var forward = eye.forward;
+            offset.y = forward.y = 0;
+            return offset.sqrMagnitude <= maxDistance * maxDistance && Vector3.Angle(forward, offset) <= maxAngle;
         }
 
         public static bool IsVisible(TourPoint point, Transform eye, float maxDistance, float maxAngle)

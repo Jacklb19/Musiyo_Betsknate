@@ -10,6 +10,7 @@ namespace MusiyoBetsknate.Museum
         private MuseumInteraction interaction;
         private TourLoader loader;
         private DesktopVisitorController visitor;
+        private MuseumPointPresence presence;
         private bool applying;
         private string pendingQuery;
 
@@ -22,6 +23,8 @@ namespace MusiyoBetsknate.Museum
         private static extern void MusiyoReturnToCatalog(string tour);
         [DllImport("__Internal")]
         private static extern void MusiyoKeepKeyboardInCanvas();
+        [DllImport("__Internal")]
+        private static extern void MusiyoPointPresence(string tour, string point, string element, string presence);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
@@ -39,6 +42,7 @@ namespace MusiyoBetsknate.Museum
             interaction = GetComponent<MuseumInteraction>();
             loader = GetComponent<TourLoader>();
             visitor = FindAnyObjectByType<DesktopVisitorController>();
+            if (!TryGetComponent(out presence)) presence = gameObject.AddComponent<MuseumPointPresence>();
         }
 
         private void OnEnable()
@@ -46,12 +50,14 @@ namespace MusiyoBetsknate.Museum
             if (loader == null || interaction == null) return;
             loader.Changed += OnLoaded;
             interaction.Changed += NotifySelection;
+            if (presence != null) presence.Changed += NotifyPresence;
         }
 
         private void OnDisable()
         {
             if (loader != null) loader.Changed -= OnLoaded;
             if (interaction != null) interaction.Changed -= NotifySelection;
+            if (presence != null) presence.Changed -= NotifyPresence;
         }
 
         private void OnLoaded()
@@ -88,7 +94,11 @@ namespace MusiyoBetsknate.Museum
             applying = true;
             try
             {
-                if (visitor != null && !visitor.FocusPoint(point.Anchor)) return;
+                // A point with a reading stand is entered where the exhibit and the stand are both in view.
+                var stand = GetComponent<MuseumLecternDisplay>()?.Find(point);
+                if (visitor != null && !(stand != null
+                    ? visitor.FocusPoint(point.Anchor, stand.ViewingSpot(MuseumExperienceConfiguration.Current.LecternViewingDistance), stand.ViewTarget)
+                    : visitor.FocusPoint(point.Anchor))) return;
                 if (interaction.State == InteractionState.Paused) interaction.SetPaused(false);
                 GetComponent<MuseumVisitFlow>()?.EnterImmediately();
                 if (!interaction.Activate(point, ActivationSource.DeepLink)) return;
@@ -117,6 +127,18 @@ namespace MusiyoBetsknate.Museum
             else MusiyoClearSelection(interaction.Runtime.TourKey);
 #endif
         }
+
+        /// <summary>Tells the page whether the visitor is still with the active point, so its detail can follow.</summary>
+        private void NotifyPresence(bool away)
+        {
+            if (applying || loader.State != TourLoadState.Ready || interaction.ActivePoint == null) return;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            MusiyoPointPresence(interaction.Runtime.TourKey, interaction.ActivePoint.Anchor.Key,
+                interaction.SelectedElement?.slug, PresenceValue(away));
+#endif
+        }
+
+        public static string PresenceValue(bool away) => away ? "away" : "near";
 
         public static string Parameter(string query, string name)
         {

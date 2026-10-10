@@ -41,134 +41,126 @@ namespace MusiyoBetsknate.Museum
         private InputSystemUIInputModule navigationModule;
         private InputActionReference suspendedNavigation;
 
+        [SerializeField] private MuseumMenuView viewPrefab;
+        private MuseumMenuView view;
+        private bool bound;
+        private readonly System.Collections.Generic.List<System.Action> removeListeners = new();
+        public MuseumMenuView View => view;
+
         public void Configure(MuseumVisitFlow visit, MuseumInteraction state, TourLoader tourLoader,
-            MuseumVisitorPreferences visitorPreferences, Button buttonTemplate, TMP_Text textTemplate, Slider sliderTemplate)
+            MuseumVisitorPreferences visitorPreferences, MuseumMenuView prefab = null)
         {
+            if (visit == null || state == null || tourLoader == null || visitorPreferences == null)
+                throw new System.ArgumentException("Museum menu requires flow, interaction, loader and preferences.");
+            Unbind();
+            if (flow != null && flow.Menu == this) flow.Menu = null;
             flow = visit; interaction = state; loader = tourLoader; preferences = visitorPreferences;
             configuration = MuseumExperienceConfiguration.Current;
+            if (view == null)
+            {
+                var existing = GetComponentsInChildren<MuseumMenuView>(true);
+                if (existing.Length > 1) throw new System.InvalidOperationException("Multiple museum menu roots found.");
+                if (existing.Length == 1) view = existing[0];
+                else
+                {
+                    var source = prefab != null ? prefab : viewPrefab != null ? viewPrefab
+                        : Resources.Load<MuseumMenuView>(MuseumMenuView.ResourceName);
+                    if (source == null) throw new System.InvalidOperationException("Missing MuseumMenuRoot prefab. Restore Assets/_Musiyo/UI/Resources/MuseumMenuRoot.prefab or assign a menu prefab.");
+                    source.ValidateReferences();
+                    view = Instantiate(source, transform, false);
+                    view.name = MuseumMenuView.ResourceName;
+                }
+            }
+            view.ValidateReferences();
+            overlay = view.Overlay.gameObject;
+            overlayGroup = view.Overlay;
+            fade = view.Transition;
+            settings = view.Settings.gameObject;
+            controls = view.Controls.gameObject;
+            begin = view.Main.Primary;
+            resume = view.Pause.Primary;
+            mainMenu = view.Pause.MainMenu;
+            sensitivity = view.Settings.Sensitivity;
+            volume = view.Settings.Volume;
+            subtitles = view.Settings.Subtitles;
+            settingsBack = view.Settings.Back;
+            controlsBack = view.Controls.Back;
+            sensitivity.minValue = configuration.MinimumSensitivity;
+            sensitivity.maxValue = configuration.MaximumSensitivity;
+            volume.minValue = 0; volume.maxValue = 1;
             flow.Menu = this;
-            overlay = new GameObject("MuseumMenu", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
-            overlayGroup = overlay.GetComponent<CanvasGroup>();
-            overlay.transform.SetParent(transform, false);
-            Stretch((RectTransform)overlay.transform);
-            overlay.GetComponent<Image>().color = MuseumExperienceConfiguration.ColorValue(configuration.BackdropColor);
-            var card = new GameObject("MenuCard", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup));
-            card.transform.SetParent(overlay.transform, false);
-            var rect = (RectTransform)card.transform;
-            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f);
-            rect.sizeDelta = new Vector2(configuration.MenuWidth, configuration.MenuHeight);
-            card.GetComponent<Image>().color = MuseumExperienceConfiguration.ColorValue(configuration.PanelColor);
-            var layout = card.GetComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(configuration.MenuPadding, configuration.MenuPadding, configuration.MenuPadding, configuration.MenuPadding);
-            layout.spacing = configuration.MenuSpacing;
-            layout.childControlWidth = layout.childControlHeight = true;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = false;
-            title = Text(textTemplate, card.transform, "MenuTitle", configuration.TitleSize, configuration.TitleSize * 3);
-            description = Text(textTemplate, card.transform, "MenuDescription", configuration.BodySize, configuration.BodySize * 4);
-            home = Page("Home", card.transform);
-            begin = Action(buttonTemplate, home.transform, "explore_museum", () => { preferences.Save(); flow.BeginVisit(); });
-            resume = Action(buttonTemplate, home.transform, "resume_visit", () => { preferences.Save(); interaction.SetPaused(false); });
-            settingsButton = Action(buttonTemplate, home.transform, "settings", () => ShowPage(MenuPage.Settings));
-            Action(buttonTemplate, home.transform, "controls", () => ShowPage(MenuPage.Controls));
-            mainMenu = Action(buttonTemplate, home.transform, "main_menu", flow.ReturnToMenu);
-            retry = Action(buttonTemplate, home.transform, "retry_tour", loader.Reload);
-#if UNITY_WEBGL && !UNITY_EDITOR
-            Action(buttonTemplate, home.transform, "return_to_catalog", () => interaction.GetComponent<MuseumWebBridge>()?.ReturnToCatalog());
-#endif
-            settings = Page("Settings", card.transform);
-            sensitivity = SettingSlider(sliderTemplate, settings.transform, "mouse_sensitivity", configuration.MinimumSensitivity, configuration.MaximumSensitivity);
+            if (isActiveAndEnabled) Bind();
+        }
+
+        private void Bind()
+        {
+            if (bound || view == null) return;
+            bound = true;
+            view.gameObject.SetActive(true);
+            foreach (var label in view.GetComponentsInChildren<MuseumInterfaceLabel>(true)) label.RefreshText();
+            foreach (var binding in view.GetComponentsInChildren<MuseumMenuThemeBinding>(true)) binding.Apply();
+            Listen(begin, BeginVisit);
+            Listen(resume, ResumeVisit);
+            Listen(mainMenu, flow.ReturnToMenu);
+            foreach (var homePage in new[] { view.Main, view.Pause })
+            {
+                Listen(homePage.Settings, OpenSettings);
+                Listen(homePage.Controls, OpenControls);
+                Listen(homePage.Retry, loader.Reload);
+                Listen(homePage.Catalog, ReturnToCatalog);
+            }
+            Listen(subtitles, ToggleSubtitles);
+            Listen(view.Settings.Reset, preferences.Reset);
+            Listen(settingsBack, OpenHome);
+            Listen(controlsBack, OpenHome);
             sensitivity.onValueChanged.AddListener(preferences.SetSensitivity);
-            volume = SettingSlider(sliderTemplate, settings.transform, "narration_volume", 0, 1);
             volume.onValueChanged.AddListener(preferences.SetVolume);
-            subtitles = Action(buttonTemplate, settings.transform, "hide_subtitles", () => preferences.SetSubtitles(!preferences.Subtitles));
-            Action(buttonTemplate, settings.transform, "reset_settings", preferences.Reset);
-            settingsBack = Action(buttonTemplate, settings.transform, "back_to_menu", () => ShowPage(MenuPage.Home));
-            controls = Page("Controls", card.transform);
-            var help = Text(textTemplate, controls.transform, "ControlInstructions", configuration.BodySize, configuration.BodySize * 11);
-            help.text = MuseumInterfaceText.Get("menu_controls");
-            controlsBack = Action(buttonTemplate, controls.transform, "back_to_menu", () => ShowPage(MenuPage.Home));
-            var transition = new GameObject("EntryFade", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
-            transition.transform.SetParent(transform, false);
-            Stretch((RectTransform)transition.transform);
-            transition.GetComponent<Image>().color = MuseumExperienceConfiguration.ColorValue(configuration.PanelColor);
-            fade = transition.GetComponent<CanvasGroup>();
-            fade.alpha = 0;
             flow.Changed += Refresh;
             interaction.Changed += Refresh;
             loader.Changed += Refresh;
             preferences.Changed += SyncSettings;
-            SyncSettings();
-            Refresh();
+            SyncSettings(); Refresh();
         }
 
-        private static void Stretch(RectTransform rect)
-        { rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one; rect.offsetMin = rect.offsetMax = Vector2.zero; }
-
-        private GameObject Page(string name, Transform parent)
+        private void Listen(Button button, UnityEngine.Events.UnityAction callback)
         {
-            var result = new GameObject(name, typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(LayoutElement));
-            result.transform.SetParent(parent, false);
-            var layout = result.GetComponent<VerticalLayoutGroup>();
-            layout.spacing = configuration.MenuSpacing;
-            layout.childControlHeight = layout.childControlWidth = true;
-            layout.childForceExpandHeight = false;
-            return result;
+            button.onClick.AddListener(callback);
+            removeListeners.Add(() => { if (button != null) button.onClick.RemoveListener(callback); });
         }
-        private TMP_Text Text(TMP_Text template, Transform parent, string name, float size, float height)
+        private void Unbind()
         {
-            var label = Instantiate(template, parent);
-            label.name = name;
-            label.gameObject.SetActive(true);
-            label.raycastTarget = false;
-            label.alignment = TextAlignmentOptions.TopLeft;
-            label.fontSize = size;
-            label.enableAutoSizing = false;
-            label.overflowMode = TextOverflowModes.Truncate;
-            label.color = MuseumExperienceConfiguration.ColorValue(configuration.TextColor);
-            if (!label.TryGetComponent<LayoutElement>(out var element)) element = label.gameObject.AddComponent<LayoutElement>();
-            element.minHeight = 0;
-            element.preferredHeight = height;
-            return label;
+            SuspendModuleNavigation(false);
+            if (!bound) return;
+            foreach (var remove in removeListeners) remove();
+            removeListeners.Clear();
+            sensitivity.onValueChanged.RemoveListener(preferences.SetSensitivity);
+            volume.onValueChanged.RemoveListener(preferences.SetVolume);
+            flow.Changed -= Refresh; interaction.Changed -= Refresh; loader.Changed -= Refresh;
+            preferences.Changed -= SyncSettings;
+            bound = false;
         }
-        private Button Action(Button template, Transform parent, string key, UnityEngine.Events.UnityAction action)
+        private void BeginVisit() { preferences.Save(); if (loader.State != TourLoadState.Loading) flow.BeginVisit(); }
+        private void ResumeVisit() { preferences.Save(); interaction.SetPaused(false); }
+        private void OpenSettings() => ShowPage(MenuPage.Settings);
+        private void OpenControls() => ShowPage(MenuPage.Controls);
+        private void OpenHome() => ShowPage(MenuPage.Home);
+        private void ToggleSubtitles() => preferences.SetSubtitles(!preferences.Subtitles);
+        private void ReturnToCatalog()
         {
-            var button = Instantiate(template, parent);
-            button.name = key;
-            button.gameObject.SetActive(true);
-            button.onClick.RemoveAllListeners();
-            button.onClick.AddListener(action);
-            button.navigation = new Navigation { mode = Navigation.Mode.None };
-            button.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Get(key);
-            button.GetComponentInChildren<TMP_Text>().fontSize = configuration.BodySize;
-            button.GetComponentInChildren<TMP_Text>().color = MuseumExperienceConfiguration.ColorValue(configuration.TextColor);
-            var colors = button.colors;
-            colors.normalColor = MuseumExperienceConfiguration.ColorValue(configuration.PanelColor);
-            colors.highlightedColor = colors.selectedColor = MuseumExperienceConfiguration.ColorValue(configuration.SelectedColor);
-            button.colors = colors;
-            if (!button.TryGetComponent<LayoutElement>(out var element)) element = button.gameObject.AddComponent<LayoutElement>();
-            element.preferredHeight = configuration.ButtonHeight;
-            element.minHeight = configuration.ButtonHeight;
-            return button;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            interaction.GetComponent<MuseumWebBridge>()?.ReturnToCatalog();
+#endif
         }
-        private Slider SettingSlider(Slider template, Transform parent, string key, float minimum, float maximum)
+        private static bool CanReturnToCatalog
         {
-            var slider = Instantiate(template, parent);
-            slider.name = key;
-            slider.gameObject.SetActive(true);
-            slider.onValueChanged.RemoveAllListeners();
-            slider.navigation = new Navigation { mode = Navigation.Mode.None };
-            var sliderColors = slider.colors;
-            sliderColors.selectedColor = MuseumExperienceConfiguration.ColorValue(configuration.SelectedColor);
-            slider.colors = sliderColors;
-            slider.minValue = minimum;
-            slider.maxValue = maximum;
-            slider.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Get(key);
-            slider.GetComponentInChildren<TMP_Text>().color = MuseumExperienceConfiguration.ColorValue(configuration.TextColor);
-            if (!slider.TryGetComponent<LayoutElement>(out var element)) element = slider.gameObject.AddComponent<LayoutElement>();
-            element.preferredHeight = configuration.ButtonHeight * 1.5f;
-            element.minHeight = element.preferredHeight;
-            return slider;
+            get
+            {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                return true;
+#else
+                return false;
+#endif
+            }
         }
         private void SyncSettings()
         {
@@ -186,7 +178,9 @@ namespace MusiyoBetsknate.Museum
         private void SelectFirst()
         {
             if (EventSystem.current == null) return;
-            EventSystem.current.SetSelectedGameObject(FirstSelectable());
+            var selected = FirstSelectable();
+            EventSystem.current.SetSelectedGameObject(selected);
+            KeepFocusVisible(selected);
         }
         private GameObject FirstSelectable()
         {
@@ -198,7 +192,7 @@ namespace MusiyoBetsknate.Museum
         }
         private void Refresh()
         {
-            if (flow == null) return;
+            if (!bound) return;
             bool entering = flow.Phase == VisitPhase.Entering;
             bool visible = flow.Phase == VisitPhase.Menu || !entering && interaction.State == InteractionState.Paused;
             overlay.SetActive(visible || entering);
@@ -209,14 +203,26 @@ namespace MusiyoBetsknate.Museum
             if (!visible) page = MenuPage.Home;
             // Enter or Escape that closed the menu must not also activate a point or reopen the pause.
             if (wasVisible && !visible) flow.ConsumeInputThisFrame();
-            home.SetActive(page == MenuPage.Home);
+            bool entry = flow.Phase == VisitPhase.Menu;
+            home = entry ? view.Main.gameObject : view.Pause.gameObject;
+            var homeView = entry ? view.Main : view.Pause;
+            retry = homeView.Retry;
+            settingsButton = homeView.Settings;
+            view.Main.gameObject.SetActive(page == MenuPage.Home && entry);
+            view.Pause.gameObject.SetActive(page == MenuPage.Home && !entry);
+            var currentPage = page == MenuPage.Settings ? view.Settings : page == MenuPage.Controls ? view.Controls : homeView;
+            title = currentPage.Title;
+            description = currentPage.Description;
             settings.SetActive(page == MenuPage.Settings);
             controls.SetActive(page == MenuPage.Controls);
-            bool entry = flow.Phase == VisitPhase.Menu;
             begin.gameObject.SetActive(entry);
             resume.gameObject.SetActive(!entry);
             mainMenu.gameObject.SetActive(!entry);
-            retry.gameObject.SetActive(loader.State == TourLoadState.Unavailable);
+            foreach (var homePage in new[] { view.Main, view.Pause })
+            {
+                homePage.Retry.gameObject.SetActive(loader.State == TourLoadState.Unavailable);
+                homePage.Catalog.gameObject.SetActive(CanReturnToCatalog);
+            }
             begin.interactable = loader.State != TourLoadState.Loading;
             begin.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Get(flow.HasStarted ? "resume_visit" : "explore_museum");
             title.text = page == MenuPage.Settings ? MuseumInterfaceText.Get("settings") : page == MenuPage.Controls ? MuseumInterfaceText.Get("controls")
@@ -227,6 +233,8 @@ namespace MusiyoBetsknate.Museum
                 : loader.State == TourLoadState.Loading ? MuseumInterfaceText.Get("menu_loading")
                 : loader.State == TourLoadState.Unavailable ? loader.Status
                 : MuseumInterfaceText.Get("menu_description");
+            // A page becoming active refreshes its neutral labels; apply preference-dependent text afterwards.
+            SyncSettings();
             if (visible)
             {
                 Cursor.lockState = CursorLockMode.None;
@@ -244,7 +252,7 @@ namespace MusiyoBetsknate.Museum
         }
         private void Update()
         {
-            if (flow == null) return;
+            if (!bound) return;
             if (flow.Phase == VisitPhase.Entering) UpdateTransition();
             var keyboard = Keyboard.current;
             if (!overlayGroup.interactable || keyboard == null) return;
@@ -279,6 +287,7 @@ namespace MusiyoBetsknate.Museum
             int index = options.FindIndex(option => option.gameObject == current);
             index = index < 0 ? 0 : (index + step + options.Count) % options.Count;
             EventSystem.current.SetSelectedGameObject(options[index].gameObject);
+            KeepFocusVisible(options[index].gameObject);
         }
         /// <summary>The menu owns arrow keys while open, so the UI module's held-axis navigation cannot move twice.</summary>
         private void SuspendModuleNavigation(bool suspend)
@@ -319,17 +328,36 @@ namespace MusiyoBetsknate.Museum
             ShowPage(MenuPage.Home);
             return true;
         }
+        /// <summary>Scroll the authored page just enough to reveal keyboard focus.</summary>
+        private void KeepFocusVisible(GameObject selected)
+        {
+            if (selected == null) return;
+            var current = page == MenuPage.Settings ? view.Settings : page == MenuPage.Controls ? view.Controls
+                : flow.Phase == VisitPhase.Menu ? view.Main : view.Pause;
+            var scroll = current.Scroll;
+            Canvas.ForceUpdateCanvases();
+            var viewport = scroll.viewport;
+            var bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, selected.transform);
+            float delta = bounds.max.y > viewport.rect.yMax ? viewport.rect.yMax - bounds.max.y
+                : bounds.min.y < viewport.rect.yMin ? viewport.rect.yMin - bounds.min.y : 0;
+            if (Mathf.Abs(delta) > 0) scroll.content.anchoredPosition += new Vector2(0, delta);
+        }
+        private void OnEnable() => Bind();
         private void OnDisable()
         {
-            SuspendModuleNavigation(false);
-            if (preferences != null) preferences.Save();
+            Unbind();
+            if (view != null) view.gameObject.SetActive(false);
+            preferences?.Save();
         }
         private void OnDestroy()
         {
-            if (flow != null) flow.Changed -= Refresh;
-            if (interaction != null) interaction.Changed -= Refresh;
-            if (loader != null) loader.Changed -= Refresh;
-            if (preferences != null) preferences.Changed -= SyncSettings;
+            Unbind();
+            if (flow != null && flow.Menu == this) flow.Menu = null;
+            if (view != null)
+            {
+                if (Application.isPlaying) Destroy(view.gameObject);
+                else DestroyImmediate(view.gameObject);
+            }
         }
     }
 }

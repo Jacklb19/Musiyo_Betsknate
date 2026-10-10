@@ -49,6 +49,8 @@ namespace MusiyoBetsknate.Museum
         private MuseumArrival arrival;
         private MuseumGuide guide;
         private MuseumFarewell farewell;
+        [SerializeField] private MuseumMenuView menuPrefab;
+        private MuseumWelcomeView welcomeView;
         private GameObject welcomeCard;
         private TMP_Text welcomeTitle;
         private TMP_Text welcomeBody;
@@ -57,6 +59,9 @@ namespace MusiyoBetsknate.Museum
         private CanvasGroup panelGroup;
         private ScrollRect panelScroll;
         private string panelSubject;
+        private string summary;
+        private MuseumLecternDisplay lectern;
+        private MuseumPointPresence presence;
 
         private void Awake()
         {
@@ -71,7 +76,11 @@ namespace MusiyoBetsknate.Museum
             CreateModelInterface();
             narration = interaction.GetComponent<MuseumNarration>();
             if (narration == null) narration = interaction.gameObject.AddComponent<MuseumNarration>();
-            narration.Configure(visitor != null ? visitor.transform : null);
+            presence = interaction.GetComponent<MuseumPointPresence>();
+            presence.Configure(visitor != null ? visitor.transform : null);
+            lectern = interaction.GetComponent<MuseumLecternDisplay>();
+            if (lectern == null) lectern = interaction.gameObject.AddComponent<MuseumLecternDisplay>();
+            lectern.Configure((RectTransform)panel.transform, visitor != null ? visitor.GetComponentInChildren<Camera>() : null);
             CreateNarrationInterface();
             var wayfinding = interaction.GetComponent<MuseumWayfinding>();
             if (wayfinding == null) wayfinding = interaction.gameObject.AddComponent<MuseumWayfinding>();
@@ -87,9 +96,11 @@ namespace MusiyoBetsknate.Museum
             farewell = interaction.GetComponent<MuseumFarewell>();
             if (farewell == null) farewell = interaction.gameObject.AddComponent<MuseumFarewell>();
             farewell.Configure(visitorTransform);
+            var menu = GetComponent<MuseumMenuHud>();
+            if (menu == null) menu = gameObject.AddComponent<MuseumMenuHud>();
+            menu.Configure(visitFlow, interaction, loader, preferences, menuPrefab);
+            welcomeView = menu.View.Welcome;
             CreateStationInterface();
-            gameObject.AddComponent<MuseumMenuHud>().Configure(visitFlow, interaction, loader, preferences,
-                detailButton, panelText, sensitivitySlider);
             ApplyPreferences();
         }
 
@@ -103,11 +114,13 @@ namespace MusiyoBetsknate.Museum
             if (guide != null) guide.Changed += Refresh;
             if (farewell != null) farewell.Changed += Refresh;
             if (model != null) model.Changed += Refresh;
+            presence.Changed += OnPresenceChanged;
             if (narration != null)
             {
                 narration.Changed += Refresh;
                 narration.SubtitleChanged += RefreshSubtitle;
             }
+            welcomeView.Dismiss.onClick.AddListener(arrival.Dismiss);
             retryButton.onClick.AddListener(loader.Reload);
             closeButton.onClick.AddListener(interaction.Back);
             pauseButton.onClick.AddListener(TogglePause);
@@ -130,11 +143,13 @@ namespace MusiyoBetsknate.Museum
             if (guide != null) guide.Changed -= Refresh;
             if (farewell != null) farewell.Changed -= Refresh;
             if (model != null) model.Changed -= Refresh;
+            presence.Changed -= OnPresenceChanged;
             if (narration != null)
             {
                 narration.Changed -= Refresh;
                 narration.SubtitleChanged -= RefreshSubtitle;
             }
+            welcomeView.Dismiss.onClick.RemoveListener(arrival.Dismiss);
             retryButton.onClick.RemoveListener(loader.Reload);
             closeButton.onClick.RemoveListener(interaction.Back);
             pauseButton.onClick.RemoveListener(TogglePause);
@@ -169,6 +184,7 @@ namespace MusiyoBetsknate.Museum
 
         private void TogglePause() => interaction.SetPaused(interaction.State != InteractionState.Paused);
         private void OpenDetail() => interaction.OpenDetail();
+        private void OnPresenceChanged(bool away) => Refresh();
 
         private void Update()
         {
@@ -194,8 +210,17 @@ namespace MusiyoBetsknate.Museum
             pauseButton.GetComponentInChildren<TMP_Text>().text = paused ? MuseumInterfaceText.Get("resume") : MuseumInterfaceText.Get("pause");
             if (sensitivitySlider != null) sensitivitySlider.gameObject.SetActive(false);
             bool showPanel = !visitFlow.BlocksInput && !paused && interaction.State != InteractionState.Exploration;
-            if (showPanel && !panel.activeSelf) PanelGroup().alpha = 0; // Update fades the point panel in.
-            panel.SetActive(showPanel);
+            // A reading stand folds its screen while the visitor is away from the point and unfolds it on return.
+            bool onStand = lectern.Find(interaction.ActivePoint) != null;
+            if (onStand && presence.Away) showPanel = false;
+            if (!showPanel) lectern.Hide();
+            else
+            {
+                // The stand unfolds the panel itself; on the screen, Update fades it in.
+                if (onStand) PanelGroup().alpha = 1;
+                else if (!panel.activeSelf || lectern.InWorld) PanelGroup().alpha = 0;
+                lectern.Show(interaction.ActivePoint);
+            }
             // A new point, element or state starts reading from the top instead of a previous scroll offset.
             string subject = interaction.ActivePoint?.Anchor.Key + "/" + interaction.SelectedElement?.slug + "/" + interaction.State;
             if (subject != panelSubject && PanelScroll() != null) panelScroll.verticalNormalizedPosition = 1;
@@ -204,8 +229,10 @@ namespace MusiyoBetsknate.Museum
             {
                 CancelDetail();
                 requestedSlug = null;
-                detail = null;
+                detail = summary = null;
             }
+            // A folding screen keeps what it was showing until it has closed.
+            if (!showPanel && lectern.InWorld) return;
             foreach (Transform child in elementList)
                 if (child.gameObject != elementTemplate.gameObject)
                 { child.gameObject.SetActive(false); Destroy(child.gameObject); }
@@ -231,34 +258,35 @@ namespace MusiyoBetsknate.Museum
                     var button = Instantiate(elementTemplate, elementList);
                     button.name = "ElementChoice";
                     button.gameObject.SetActive(true);
-                    button.GetComponentInChildren<TMP_Text>().text = point.Content.elements[index].title;
+                    button.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Format("element_choice_item",
+                        index + 1, point.Content.elements[index].title);
                     button.onClick.AddListener(() => interaction.SelectElement(selectedIndex));
-                    if (index == 0 && EventSystem.current != null) EventSystem.current.SetSelectedGameObject(button.gameObject);
+                    // By a stand the visitor keeps walking, so the list takes no keyboard focus: its numbers choose.
+                    if (index == 0 && interaction.HoldsVisitor && EventSystem.current != null)
+                        EventSystem.current.SetSelectedGameObject(button.gameObject);
                 }
                 return;
             }
             var element = interaction.SelectedElement;
             if (element == null) return;
-            if (interaction.State != InteractionState.Reading)
+            // The element's own description is read as soon as it is chosen; F opens its complete text.
+            if (requestedSlug != element.slug)
             {
                 CancelDetail();
-                requestedSlug = null;
-                detail = null;
-                panelText.text = point.Content.name + "\n" + element.title + (interaction.State == InteractionState.ModelExamination
-                    ? MuseumInterfaceText.Get("examination_controls")
-                    : MuseumInterfaceText.Get("detail_controls"));
+                requestedSlug = element.slug;
+                detail = summary = null;
+                reading = StartCoroutine(LoadDetail(element.slug));
+            }
+            if (interaction.State != InteractionState.Reading)
+            {
+                panelText.text = point.Content.name + "\n" + element.title
+                    + (string.IsNullOrEmpty(summary) ? "" : "\n\n" + summary)
+                    + (interaction.State == InteractionState.ModelExamination
+                        ? MuseumInterfaceText.Get("examination_controls")
+                        : MuseumInterfaceText.Get("detail_controls"));
                 return;
             }
             panelText.text = detail ?? MuseumInterfaceText.Get("detail_loading");
-#if UNITY_WEBGL && !UNITY_EDITOR
-            panelText.text = MuseumInterfaceText.Get("detail_web");
-            return;
-#else
-            if (requestedSlug == element.slug) return;
-            CancelDetail();
-            requestedSlug = element.slug;
-            reading = StartCoroutine(LoadDetail(element.slug));
-#endif
         }
 
         private IEnumerator LoadDetail(string slug)
@@ -271,9 +299,10 @@ namespace MusiyoBetsknate.Museum
             detailRequest.Dispose();
             detailRequest = null;
             reading = null;
-            if (!success || !ElementText.TryFormat(slug, json, out var formatted))
+            if (!success || !ElementText.TryFormat(slug, json, out var formatted, out var description))
             { detail = MuseumInterfaceText.Get("detail_unavailable"); Refresh(); yield break; }
             detail = formatted;
+            summary = description;
             Refresh();
         }
 
@@ -434,28 +463,9 @@ namespace MusiyoBetsknate.Museum
             returnRect.anchoredPosition = new Vector2(24, -280);
             returnRect.sizeDelta = new Vector2(280, 52);
 
-            welcomeCard = new GameObject("WelcomeCard", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup));
-            welcomeCard.transform.SetParent(transform, false);
-            var cardRect = (RectTransform)welcomeCard.transform;
-            cardRect.anchorMin = cardRect.anchorMax = new Vector2(.5f, .5f);
-            cardRect.pivot = new Vector2(.5f, .5f);
-            cardRect.anchoredPosition = new Vector2(0, 40);
-            cardRect.sizeDelta = new Vector2(820, 460);
-            welcomeCard.GetComponent<Image>().color = new Color(.06f, .12f, .11f, .97f);
-            var layout = welcomeCard.GetComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(28, 28, 24, 24);
-            layout.spacing = 16;
-            layout.childControlWidth = layout.childControlHeight = true;
-            layout.childForceExpandHeight = false;
-            welcomeTitle = Instantiate(panelText, welcomeCard.transform);
-            welcomeTitle.name = "WelcomeTitle";
-            welcomeTitle.fontSize = 36;
-            welcomeTitle.GetComponent<LayoutElement>().minHeight = 0;
-            welcomeBody = Instantiate(panelText, welcomeCard.transform);
-            welcomeBody.name = "WelcomeBody";
-            welcomeBody.fontSize = 24;
-            welcomeBody.GetComponent<LayoutElement>().minHeight = 0;
-            ModelButton(MuseumInterfaceText.Get("start_visit"), welcomeCard.transform, arrival.Dismiss);
+            welcomeCard = welcomeView.gameObject;
+            welcomeTitle = welcomeView.Title;
+            welcomeBody = welcomeView.Body;
             welcomeCard.SetActive(false);
         }
 
@@ -476,6 +486,9 @@ namespace MusiyoBetsknate.Museum
                 if (guide != null && !string.IsNullOrEmpty(guide.Prompt)) prompt = guide.Prompt;
                 if (farewell != null && farewell.AtEnd) prompt = string.IsNullOrEmpty(prompt) ? farewell.Message : prompt + "\n" + farewell.Message;
             }
+            // The examined model fills the view, so its keys stay readable even with the stand out of sight.
+            if (!visitFlow.BlocksInput && interaction.State == InteractionState.ModelExamination && lectern.InWorld)
+                prompt = MuseumInterfaceText.Get("examination_controls").Trim();
             stationText.text = prompt;
             stationText.gameObject.SetActive(!string.IsNullOrEmpty(prompt));
             returnButton.gameObject.SetActive(exploring && !welcome && farewell != null && farewell.AtEnd && farewell.CanReturn);

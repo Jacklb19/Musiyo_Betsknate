@@ -153,6 +153,37 @@ namespace MusiyoBetsknate.Tests
         }
 
         [Test]
+        public void PresenceLeavesBeyondTheMarginReturnsInsideTheRadiusAndResetsPerPoint()
+        {
+            var presence = root.AddComponent<MuseumPointPresence>();
+            var changes = new System.Collections.Generic.List<bool>();
+            presence.Changed += changes.Add;
+            float radius = first.Anchor.ActivationRadius, margin = MuseumExperienceConfiguration.Current.PointLeaveMargin;
+            presence.Step(Vector3.forward * (radius + margin + 1));
+            Assert.That(changes, Is.Empty, "Without an active point there is nothing to leave.");
+            Assert.That(interaction.Activate(first, ActivationSource.Keyboard), Is.True);
+            presence.Step(Vector3.forward * (radius + margin * .5f));
+            Assert.That(presence.Away, Is.False, "Between the radius and the margin the visitor is still near.");
+            presence.Step(Vector3.forward * (radius + margin + .1f) + Vector3.up * 5);
+            Assert.That(presence.Away, Is.True, "Height is ignored; only the floor distance counts.");
+            interaction.SetPaused(true);
+            presence.Step(Vector3.zero);
+            Assert.That(presence.Away, Is.True, "A paused visit keeps its presence.");
+            interaction.SetPaused(false);
+            presence.Step(Vector3.forward * (radius + .1f));
+            Assert.That(presence.Away, Is.True, "Returning halfway stays away.");
+            presence.Step(Vector3.forward * (radius - .1f));
+            Assert.That(changes, Is.EqualTo(new[] { true, false }));
+            presence.Step(Vector3.forward * (radius + margin + 1));
+            interaction.Close();
+            Assert.That(interaction.Activate(second, ActivationSource.Keyboard), Is.True);
+            presence.Step(Vector3.zero);
+            Assert.That(presence.Away, Is.False, "A newly activated point starts near.");
+            Assert.That(MuseumWebBridge.PresenceValue(true), Is.EqualTo("away"));
+            Assert.That(MuseumWebBridge.PresenceValue(false), Is.EqualTo("near"));
+        }
+
+        [Test]
         public void RefreshRemovesStaleSelection()
         {
             interaction.Activate(first, ActivationSource.Keyboard);
