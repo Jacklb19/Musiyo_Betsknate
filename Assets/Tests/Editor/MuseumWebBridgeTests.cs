@@ -35,6 +35,19 @@ namespace MusiyoBetsknate.Tests
             Assert.That(ReturnToCatalogContractV1.TryParse(json.Replace("\"museum-main\"", "\"museum-main\",\"point_key\":\"stale\""), out _), Is.False);
         }
 
+        [Test]
+        public void PointPresenceUsesItsOwnVersionedMessage()
+        {
+            const string json = "{\"source\":\"musiyo-unity\",\"type\":\"point_presence\",\"version\":1,\"data\":"
+                + "{\"tour_key\":\"tour-test\",\"point_key\":\"point-01\",\"element_slug\":null,\"presence\":\"away\"}}";
+            Assert.That(PointPresenceContractV1.TryParse(json, out var message), Is.True);
+            Assert.That(message.data.presence, Is.EqualTo("away"));
+            Assert.That(PointPresenceContractV1.TryParse(json.Replace("\"away\"", "\"near\""), out _), Is.True);
+            Assert.That(PointPresenceContractV1.TryParse(json.Replace("\"away\"", "\"nearby\""), out _), Is.False);
+            Assert.That(PointPresenceContractV1.TryParse(json.Replace("\"version\":1", "\"version\":true"), out _), Is.False);
+            Assert.That(SelectionClearedContractV1.TryParse(json, out _), Is.False, "Presence is not a cleared selection.");
+        }
+
         [TestCase(null)]
         [TestCase("")]
         public void EmptyNetworkResponsesAreRejected(string json)

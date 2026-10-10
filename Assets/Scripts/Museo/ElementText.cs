@@ -7,9 +7,14 @@ namespace MusiyoBetsknate.Museum
     public static class ElementText
     {
         public static bool TryFormat(string selectedSlug, string json, out string text)
+            => TryFormat(selectedSlug, json, out text, out _);
+
+        /// <summary>Formats the complete detail and also returns the short description that introduces it.</summary>
+        public static bool TryFormat(string selectedSlug, string json, out string text, out string description)
         {
-            text = null;
+            text = description = null;
             if (!ElementContractV1.TryParse(json, out var element) || element.slug != selectedSlug) return false;
+            description = element.description;
             var output = new StringBuilder().AppendLine(element.title).AppendLine().AppendLine(element.description);
             foreach (var block in element.blocks ?? Array.Empty<TextBlockContractV1>())
             {

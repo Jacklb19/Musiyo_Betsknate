@@ -77,12 +77,17 @@ namespace MusiyoBetsknate.Museum
         }
 
         public bool FocusPoint(PointAnchor anchor)
+            => anchor != null && FocusPoint(anchor, null, anchor.LookTarget.position);
+
+        /// <summary>Stands on the preferred floor spot when it is free, otherwise around the point, and looks at the target.</summary>
+        public bool FocusPoint(PointAnchor anchor, Vector3? preferredSpot, Vector3 lookAt)
         {
             if (anchor == null || body == null || viewCamera == null) return false;
-            for (int index = 0; index < 8; index++)
+            for (int index = preferredSpot.HasValue ? -1 : 0; index < 8; index++)
             {
                 var direction = Quaternion.Euler(0, index * 45, 0) * -anchor.transform.forward;
-                var center = anchor.transform.position + direction * 1.2f + Vector3.up * (body.height * .5f + .02f);
+                var floor = index < 0 ? preferredSpot.Value : anchor.transform.position + direction * 1.2f;
+                var center = floor + Vector3.up * (body.height * .5f + .02f);
                 float half = Mathf.Max(0, body.height * .5f - body.radius);
                 bool obstructed = false;
                 foreach (var obstacle in Physics.OverlapCapsule(center + Vector3.up * half, center - Vector3.up * half,
@@ -91,7 +96,7 @@ namespace MusiyoBetsknate.Museum
                 if (obstructed) continue;
                 body.enabled = false;
                 transform.position = center - body.center;
-                var target = anchor.LookTarget.position - viewCamera.transform.position;
+                var target = lookAt - viewCamera.transform.position;
                 transform.rotation = Quaternion.Euler(0, Mathf.Atan2(target.x, target.z) * Mathf.Rad2Deg, 0);
                 pitch = -Mathf.Atan2(target.y, new Vector2(target.x, target.z).magnitude) * Mathf.Rad2Deg;
                 viewCamera.transform.localRotation = Quaternion.Euler(pitch, 0, 0);
@@ -118,7 +123,7 @@ namespace MusiyoBetsknate.Museum
             DetectReleasedPointer();
             bool blocked = interaction != null && (interaction.BlocksMovement
                 || interaction.GetComponent<MuseumWayfinding>()?.MenuOpen == true);
-            bool choosing = interaction != null && interaction.State == InteractionState.PointFocus;
+            bool choosing = interaction != null && interaction.HoldsVisitor;
             if (blocked || choosing || Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
                 CapturePointer(false);
             else if (capture.WasPressedThisFrame() && (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject()))
@@ -131,7 +136,7 @@ namespace MusiyoBetsknate.Museum
                 pitch = Mathf.Clamp(pitch - delta.y, -configuration.MaximumPitch, configuration.MaximumPitch);
                 viewCamera.transform.localRotation = Quaternion.Euler(pitch, 0, 0);
             }
-            if (blocked || choosing) planarVelocity = Vector3.zero; // Menus, reading and pauses stop at once.
+            if (blocked || choosing) planarVelocity = Vector3.zero; // Menus, on-screen panels and pauses stop at once.
             else
             {
                 var input = Vector2.ClampMagnitude(move.ReadValue<Vector2>(), 1);
