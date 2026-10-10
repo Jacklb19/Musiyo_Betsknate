@@ -33,11 +33,6 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("maximum_sensitivity")] public float MaximumSensitivity;
         [JsonProperty("default_volume")] public float DefaultVolume;
         [JsonProperty("default_subtitles")] public bool DefaultSubtitles;
-        [JsonProperty("menu_width")] public float MenuWidth;
-        [JsonProperty("menu_height")] public float MenuHeight;
-        [JsonProperty("menu_padding")] public int MenuPadding;
-        [JsonProperty("menu_spacing")] public float MenuSpacing;
-        [JsonProperty("button_height")] public float ButtonHeight;
         [JsonProperty("slider_step")] public float SliderStep;
         [JsonProperty("title_size")] public float TitleSize;
         [JsonProperty("body_size")] public float BodySize;
@@ -64,7 +59,7 @@ namespace MusiyoBetsknate.Museum
         public static MuseumExperienceConfiguration Parse(string json)
         {
             var result = JsonConvert.DeserializeObject<MuseumExperienceConfiguration>(json);
-            if (result == null || result.SchemaVersion != 1 || !Positive(result.EntryFadeSeconds)
+            if (result == null || result.SchemaVersion != 2 || !Positive(result.EntryFadeSeconds)
                 || !Positive(result.PanelFadeSeconds) || !Positive(result.PanelScrollStep) || result.PanelScrollStep > 1
                 || result.ModelControlColumns < 1 || !Positive(result.EntryMenuFadeShare) || result.EntryMenuFadeShare >= 1
                 || !Positive(result.WalkSpeed) || !Positive(result.SprintSpeed) || result.SprintSpeed < result.WalkSpeed
@@ -78,8 +73,6 @@ namespace MusiyoBetsknate.Museum
                 || !Finite(result.DefaultSensitivity) || result.DefaultSensitivity < result.MinimumSensitivity
                 || result.DefaultSensitivity > result.MaximumSensitivity || !Finite(result.DefaultVolume)
                 || result.DefaultVolume < 0 || result.DefaultVolume > 1
-                || !Positive(result.MenuWidth) || !Positive(result.MenuHeight) || result.MenuPadding < 0
-                || !Positive(result.MenuSpacing) || !Positive(result.ButtonHeight)
                 || !Positive(result.SliderStep) || result.SliderStep > 1
                 || !Positive(result.TitleSize) || !Positive(result.BodySize))
                 throw new InvalidOperationException("Invalid museum experience configuration.");

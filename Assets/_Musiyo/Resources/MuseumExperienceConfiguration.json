@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "entry_fade_seconds": 1.1,
   "entry_menu_fade_share": 0.4,
   "panel_fade_seconds": 0.2,
@@ -23,11 +23,6 @@
   "maximum_sensitivity": 1.0,
   "default_volume": 0.8,
   "default_subtitles": true,
-  "menu_width": 660,
-  "menu_height": 820,
-  "menu_padding": 36,
-  "menu_spacing": 16,
-  "button_height": 58,
   "slider_step": 0.05,
   "title_size": 42,
   "body_size": 24,

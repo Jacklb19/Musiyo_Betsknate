@@ -49,6 +49,8 @@ namespace MusiyoBetsknate.Museum
         private MuseumArrival arrival;
         private MuseumGuide guide;
         private MuseumFarewell farewell;
+        [SerializeField] private MuseumMenuView menuPrefab;
+        private MuseumWelcomeView welcomeView;
         private GameObject welcomeCard;
         private TMP_Text welcomeTitle;
         private TMP_Text welcomeBody;
@@ -94,9 +96,11 @@ namespace MusiyoBetsknate.Museum
             farewell = interaction.GetComponent<MuseumFarewell>();
             if (farewell == null) farewell = interaction.gameObject.AddComponent<MuseumFarewell>();
             farewell.Configure(visitorTransform);
+            var menu = GetComponent<MuseumMenuHud>();
+            if (menu == null) menu = gameObject.AddComponent<MuseumMenuHud>();
+            menu.Configure(visitFlow, interaction, loader, preferences, menuPrefab);
+            welcomeView = menu.View.Welcome;
             CreateStationInterface();
-            gameObject.AddComponent<MuseumMenuHud>().Configure(visitFlow, interaction, loader, preferences,
-                detailButton, panelText, sensitivitySlider);
             ApplyPreferences();
         }
 
@@ -116,6 +120,7 @@ namespace MusiyoBetsknate.Museum
                 narration.Changed += Refresh;
                 narration.SubtitleChanged += RefreshSubtitle;
             }
+            welcomeView.Dismiss.onClick.AddListener(arrival.Dismiss);
             retryButton.onClick.AddListener(loader.Reload);
             closeButton.onClick.AddListener(interaction.Back);
             pauseButton.onClick.AddListener(TogglePause);
@@ -144,6 +149,7 @@ namespace MusiyoBetsknate.Museum
                 narration.Changed -= Refresh;
                 narration.SubtitleChanged -= RefreshSubtitle;
             }
+            welcomeView.Dismiss.onClick.RemoveListener(arrival.Dismiss);
             retryButton.onClick.RemoveListener(loader.Reload);
             closeButton.onClick.RemoveListener(interaction.Back);
             pauseButton.onClick.RemoveListener(TogglePause);
@@ -457,28 +463,9 @@ namespace MusiyoBetsknate.Museum
             returnRect.anchoredPosition = new Vector2(24, -280);
             returnRect.sizeDelta = new Vector2(280, 52);
 
-            welcomeCard = new GameObject("WelcomeCard", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup));
-            welcomeCard.transform.SetParent(transform, false);
-            var cardRect = (RectTransform)welcomeCard.transform;
-            cardRect.anchorMin = cardRect.anchorMax = new Vector2(.5f, .5f);
-            cardRect.pivot = new Vector2(.5f, .5f);
-            cardRect.anchoredPosition = new Vector2(0, 40);
-            cardRect.sizeDelta = new Vector2(820, 460);
-            welcomeCard.GetComponent<Image>().color = new Color(.06f, .12f, .11f, .97f);
-            var layout = welcomeCard.GetComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(28, 28, 24, 24);
-            layout.spacing = 16;
-            layout.childControlWidth = layout.childControlHeight = true;
-            layout.childForceExpandHeight = false;
-            welcomeTitle = Instantiate(panelText, welcomeCard.transform);
-            welcomeTitle.name = "WelcomeTitle";
-            welcomeTitle.fontSize = 36;
-            welcomeTitle.GetComponent<LayoutElement>().minHeight = 0;
-            welcomeBody = Instantiate(panelText, welcomeCard.transform);
-            welcomeBody.name = "WelcomeBody";
-            welcomeBody.fontSize = 24;
-            welcomeBody.GetComponent<LayoutElement>().minHeight = 0;
-            ModelButton(MuseumInterfaceText.Get("start_visit"), welcomeCard.transform, arrival.Dismiss);
+            welcomeCard = welcomeView.gameObject;
+            welcomeTitle = welcomeView.Title;
+            welcomeBody = welcomeView.Body;
             welcomeCard.SetActive(false);
         }
 
