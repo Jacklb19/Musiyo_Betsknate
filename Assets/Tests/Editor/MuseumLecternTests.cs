@@ -2,6 +2,7 @@ using MusiyoBetsknate.Museum;
 using MusiyoBetsknate.Museo;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace MusiyoBetsknate.Tests
 {
@@ -139,6 +140,95 @@ namespace MusiyoBetsknate.Tests
             var before = display.Surface.rotation;
             display.Advance(1);
             Assert.That(Quaternion.Angle(display.Surface.rotation, before), Is.LessThan(.01f), "Right above the stand it keeps its heading.");
+        }
+
+        private Button AddControl(Transform parent, Vector2 position, Vector2 size)
+        {
+            var control = new GameObject("Control", typeof(RectTransform), typeof(Image), typeof(Button));
+            control.transform.SetParent(parent, false);
+            var rect = (RectTransform)control.transform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+            return control.GetComponent<Button>();
+        }
+
+        private static Vector3 Centre(Component control)
+        {
+            var rect = (RectTransform)control.transform;
+            return rect.TransformPoint(rect.rect.center);
+        }
+
+        [Test]
+        public void LookingAtAControlOfTheFloatingScreenAndPressingChoosesIt()
+        {
+            var first = AddControl(panel, new Vector2(0, 200), new Vector2(400, 60));
+            var second = AddControl(panel, new Vector2(0, 100), new Vector2(400, 60));
+            int chosen = 0;
+            first.onClick.AddListener(() => chosen = 1);
+            second.onClick.AddListener(() => chosen = 2);
+            display.Show(withStand);
+            display.Advance(MuseumExperienceConfiguration.Current.LecternUnfoldSeconds * .5f);
+            Ray Toward(Component control) => new Ray(eye.position, Centre(control) - eye.position);
+            Assert.That(display.ControlAt(Toward(first)), Is.Null, "A screen that is still unfolding takes no pointer.");
+            display.Advance(1);
+
+            display.Aim(Toward(second));
+            Assert.That(display.Aimed, Is.SameAs(second));
+            var mark = (RectTransform)display.Surface.Find("PointerMark");
+            Assert.That(mark.gameObject.activeSelf, Is.True, "The aimed control is marked.");
+            Assert.That(Vector3.Distance(Centre(mark), Centre(second)), Is.LessThan(.001f));
+            Assert.That(mark.GetSiblingIndex(), Is.GreaterThan(panel.GetSiblingIndex()), "The mark is drawn over the panel.");
+            Assert.That(chosen, Is.EqualTo(0), "Looking alone chooses nothing.");
+            Assert.That(display.Press(), Is.True);
+            Assert.That(chosen, Is.EqualTo(2));
+
+            // The screen turns with the visitor, so the pointer keeps working from another side of the stand.
+            eye.position = new Vector3(7, 1.5f, 1);
+            display.Advance(10);
+            display.Aim(Toward(first));
+            Assert.That(display.Aimed, Is.SameAs(first));
+            display.Press();
+            Assert.That(chosen, Is.EqualTo(1));
+
+            display.Aim(new Ray(eye.position, Centre(first) + Vector3.up - eye.position));
+            Assert.That(display.Aimed, Is.Null, "Beside the control the pointer rests on nothing.");
+            Assert.That(mark.gameObject.activeSelf, Is.False);
+            Assert.That(display.Press(), Is.False);
+            var behind = Centre(first) + display.Surface.forward;
+            Assert.That(display.ControlAt(new Ray(behind, Centre(first) - behind)), Is.Null, "The back of the screen is not its reading side.");
+
+            first.interactable = false;
+            Assert.That(display.ControlAt(Toward(first)), Is.Null, "A disabled control cannot be chosen.");
+            first.interactable = true;
+            display.Aim(Toward(first));
+            display.Hide();
+            display.Advance(0);
+            Assert.That(display.Aimed, Is.Null, "A folding screen lets go of the pointer.");
+            Assert.That(display.ControlAt(Toward(first)), Is.Null);
+
+            display.Show(withoutStand);
+            Assert.That(display.ControlAt(Toward(first)), Is.Null, "A panel on the screen is used with the cursor, not the pointer.");
+        }
+
+        [Test]
+        public void TheScrolledOutPartOfTheScreenTakesNoPointer()
+        {
+            var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D)).GetComponent<RectTransform>();
+            viewport.SetParent(panel, false);
+            viewport.anchorMin = viewport.anchorMax = viewport.pivot = new Vector2(.5f, .5f);
+            viewport.sizeDelta = new Vector2(400, 200);
+            var inside = AddControl(viewport, new Vector2(0, 50), new Vector2(300, 60));
+            var cut = AddControl(viewport, new Vector2(0, -110), new Vector2(300, 60));
+            var outside = AddControl(viewport, new Vector2(0, -200), new Vector2(300, 60));
+            display.Show(withStand);
+            display.Advance(1);
+            Ray Toward(Vector3 spot) => new Ray(eye.position, spot - eye.position);
+            Assert.That(display.ControlAt(Toward(Centre(inside))), Is.SameAs(inside));
+            Assert.That(display.ControlAt(Toward(Centre(outside))), Is.Null);
+            var cutRect = (RectTransform)cut.transform;
+            Assert.That(display.ControlAt(Toward(cutRect.TransformPoint(new Vector3(0, 20, 0)))), Is.SameAs(cut), "Its visible strip can be chosen.");
+            Assert.That(display.ControlAt(Toward(cutRect.TransformPoint(new Vector3(0, -20, 0)))), Is.Null, "Its hidden strip cannot.");
         }
 
         [Test]

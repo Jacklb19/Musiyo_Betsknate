@@ -15,6 +15,7 @@ namespace MusiyoBetsknate.Museum
         private TourPoint keyboardPoint;
         private readonly DwellActivation proximityDwell = new DwellActivation();
         private readonly DwellActivation gazeDwell = new DwellActivation();
+        private bool pointerWasCaptured;
         public TourPoint FocusedPoint => keyboardPoint;
         public float GazeProgress => gazeDwell.Progress;
 
@@ -87,8 +88,27 @@ namespace MusiyoBetsknate.Museum
                 interaction.Activate(keyboardPoint, ActivationSource.Keyboard);
         }
 
+        /// <summary>
+        /// With the mouse captured, the centre of the view is the pointer: it aims at the floating screen and a click chooses.
+        /// </summary>
+        private void PointAtScreen()
+        {
+            var display = GetComponent<MuseumLecternDisplay>();
+            if (display == null) return;
+            bool captured = Cursor.lockState == CursorLockMode.Locked;
+            // The click that captures the mouse only starts looking around; it chooses nothing.
+            bool pointing = captured && pointerWasCaptured && viewCamera != null && !interaction.BlocksMovement;
+            pointerWasCaptured = captured;
+            if (!pointing) { display.ClearAim(); return; }
+            display.Aim(new Ray(viewCamera.transform.position, viewCamera.transform.forward));
+#if ENABLE_INPUT_SYSTEM
+            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) display.Press();
+#endif
+        }
+
         private void Update()
         {
+            PointAtScreen();
             var flow = GetComponent<MuseumVisitFlow>();
             if (flow != null && flow.BlocksInput)
             {

@@ -35,5 +35,6 @@
   "panel_color": "#120A0DF5",
   "text_color": "#F6EFE4",
   "accent_color": "#E3A83B",
-  "selected_color": "#9C5B1F"
+  "selected_color": "#9C5B1F",
+  "pointer_color": "#E3A83B40"
 }
