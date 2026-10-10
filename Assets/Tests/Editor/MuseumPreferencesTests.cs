@@ -59,6 +59,8 @@ namespace MusiyoBetsknate.Tests
         [TestCase("\"slider_step\": 0.05", "\"slider_step\": 0")]
         [TestCase("\"panel_scroll_step\": 0.25", "\"panel_scroll_step\": 2")]
         [TestCase("\"model_control_columns\": 2", "\"model_control_columns\": 0")]
+        [TestCase("\"lectern_float_distance\": 0.35", "\"lectern_float_distance\": 0")]
+        [TestCase("\"lectern_follow_seconds\": 0.18", "\"lectern_follow_seconds\": -1")]
         public void InvalidExperienceConfigurationFailsWithADiagnostic(string before, string after)
         {
             var json = Resources.Load<TextAsset>("MuseumExperienceConfiguration").text;

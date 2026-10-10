@@ -25,6 +25,9 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("lectern_screen_width")] public float LecternScreenWidth;
         [JsonProperty("lectern_unfold_seconds")] public float LecternUnfoldSeconds;
         [JsonProperty("lectern_viewing_distance")] public float LecternViewingDistance;
+        [JsonProperty("lectern_float_height")] public float LecternFloatHeight;
+        [JsonProperty("lectern_float_distance")] public float LecternFloatDistance;
+        [JsonProperty("lectern_follow_seconds")] public float LecternFollowSeconds;
         [JsonProperty("default_sensitivity")] public float DefaultSensitivity;
         [JsonProperty("minimum_sensitivity")] public float MinimumSensitivity;
         [JsonProperty("maximum_sensitivity")] public float MaximumSensitivity;
@@ -67,6 +70,8 @@ namespace MusiyoBetsknate.Museum
                 || !Positive(result.Acceleration) || !Positive(result.Deceleration)
                 || !Positive(result.PointLeaveMargin) || !Positive(result.LecternScreenWidth)
                 || !Positive(result.LecternUnfoldSeconds) || !Positive(result.LecternViewingDistance)
+                || !Positive(result.LecternFloatHeight) || !Positive(result.LecternFloatDistance)
+                || !Positive(result.LecternFollowSeconds)
                 || !Positive(result.KeyboardLookSpeed) || !Positive(result.MaximumPitch) || result.MaximumPitch >= 90
                 || !Positive(result.MinimumSensitivity) || !Positive(result.MaximumSensitivity)
                 || !Finite(result.DefaultSensitivity) || result.DefaultSensitivity < result.MinimumSensitivity

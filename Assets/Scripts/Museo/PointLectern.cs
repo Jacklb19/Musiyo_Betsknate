@@ -20,7 +20,14 @@ namespace MusiyoBetsknate.Museum
             point = anchor;
             board = surface;
             boardSize = size;
+            if (point != null) point.Attach(transform);
         }
+
+        private void OnEnable() { if (point != null) point.Attach(transform); }
+        private void OnDisable() { if (point != null && point.Station == transform) point.Attach(null); }
+
+        /// <summary>Middle of the reading surface.</summary>
+        public Vector3 BoardCentre => board.position + board.up * (boardSize.y * .5f);
 
         /// <summary>Horizontal direction from the board toward the visitor who reads it.</summary>
         public Vector3 Facing
@@ -42,7 +49,7 @@ namespace MusiyoBetsknate.Museum
         }
 
         /// <summary>Point to look at from the viewing spot: halfway between the exhibit and the middle of the board.</summary>
-        public Vector3 ViewTarget => (point.LookTarget.position + board.position + board.up * (boardSize.y * .5f)) * .5f;
+        public Vector3 ViewTarget => (point.LookTarget.position + BoardCentre) * .5f;
 
         /// <summary>
         /// Finds the reading surface of a stand mesh: the largest flat face that leans upward toward the reader.

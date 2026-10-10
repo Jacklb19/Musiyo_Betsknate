@@ -43,9 +43,7 @@ namespace MusiyoBetsknate.Museum
         {
             Track();
             if (tracked == null || interaction.State == InteractionState.Paused) return;
-            var offset = tracked.Anchor.transform.position - visitorPosition;
-            offset.y = 0;
-            bool away = IsAway(offset.magnitude, tracked.Anchor.ActivationRadius,
+            bool away = IsAway(tracked.Anchor.DistanceTo(visitorPosition), tracked.Anchor.ActivationRadius,
                 MuseumExperienceConfiguration.Current.PointLeaveMargin, Away);
             if (away == Away) return;
             Away = away;

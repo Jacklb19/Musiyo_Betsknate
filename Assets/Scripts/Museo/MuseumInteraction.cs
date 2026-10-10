@@ -17,9 +17,14 @@ namespace MusiyoBetsknate.Museum
         public TourPoint ActivePoint { get; private set; }
         public ElementSummaryContractV1 SelectedElement { get; private set; }
         public ActivationSource LastSource { get; private set; }
+        /// <summary>The detail of the active point floats by its reading stand in the museum instead of covering the screen.</summary>
+        public bool DetailInWorld => GetComponent<MuseumLecternDisplay>()?.Find(ActivePoint) != null;
+        /// <summary>A detail in the museum is read while walking; one on the screen stops the visitor.</summary>
         public bool BlocksMovement => GetComponent<MuseumVisitFlow>()?.BlocksInput == true
-            || State == InteractionState.Reading || State == InteractionState.ModelExamination
+            || (State == InteractionState.Reading && !DetailInWorld) || State == InteractionState.ModelExamination
             || State == InteractionState.GuideQuestion || State == InteractionState.Paused;
+        /// <summary>Choosing among the elements of a point holds the visitor only while the list covers the screen.</summary>
+        public bool HoldsVisitor => State == InteractionState.PointFocus && !DetailInWorld;
         public event Action Changed;
         public event Action<ElementSummaryContractV1> ElementChanged;
         public TourRuntime Runtime => GetComponent<TourRuntime>();

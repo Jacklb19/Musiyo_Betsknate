@@ -4,13 +4,12 @@ using UnityEngine.UI;
 namespace MusiyoBetsknate.Museum
 {
     /// <summary>
-    /// Carries the point panel into the museum: it unfolds from the reading stand of the active point
-    /// and stays on the screen only for points that have no stand.
+    /// Carries the point panel into the museum: it unfolds in front of the reading stand of the active point,
+    /// floats there turned toward the visitor, and stays on the screen only for points that have no stand.
     /// </summary>
     public sealed class MuseumLecternDisplay : MonoBehaviour
     {
         private const float Border = 6;
-        private const float SurfaceGap = .02f;
         private RectTransform panel;
         private Transform screenParent;
         private int screenSibling;
@@ -19,13 +18,15 @@ namespace MusiyoBetsknate.Museum
         private CanvasGroup group;
         private GraphicRaycaster raycaster;
         private PointLectern[] stands;
+        private Transform viewer;
+        private float heading;
         private bool open;
 
         /// <summary>Stand that currently carries the panel, or null while the panel is on the screen.</summary>
         public PointLectern Host { get; private set; }
         public bool InWorld => Host != null;
         public bool Open => open;
-        /// <summary>0 folded on the board, 1 completely unfolded.</summary>
+        /// <summary>0 folded away, 1 completely unfolded.</summary>
         public float Openness { get; private set; }
         public RectTransform Surface => surface;
 
@@ -47,6 +48,7 @@ namespace MusiyoBetsknate.Museum
             var canvas = root.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
             canvas.worldCamera = viewCamera;
+            viewer = viewCamera != null ? viewCamera.transform : null;
             group = root.GetComponent<CanvasGroup>();
             raycaster = root.GetComponent<GraphicRaycaster>();
             var frame = new GameObject("Frame", typeof(RectTransform), typeof(Image));
@@ -71,7 +73,7 @@ namespace MusiyoBetsknate.Museum
             return null;
         }
 
-        /// <summary>Shows the panel for the point: unfolding from its stand, or on the screen when it has none.</summary>
+        /// <summary>Shows the panel for the point: unfolding by its stand, or on the screen when it has none.</summary>
         public void Show(TourPoint point)
         {
             var stand = Find(point);
@@ -105,9 +107,18 @@ namespace MusiyoBetsknate.Museum
                 panel.anchorMin = panel.anchorMax = panel.pivot = new Vector2(.5f, 0);
                 panel.anchoredPosition = new Vector2(0, Border);
                 panel.gameObject.SetActive(true);
-                surface.SetPositionAndRotation(stand.Board.position - stand.Board.forward * SurfaceGap, stand.Board.rotation);
+                heading = HeadingToViewer();
             }
             Apply();
+        }
+
+        /// <summary>Compass angle from the stand toward the visitor; the reading side of the board when nobody is watching.</summary>
+        private float HeadingToViewer()
+        {
+            var direction = viewer != null ? viewer.position - Host.BoardCentre : Host.Facing;
+            direction.y = 0;
+            // Right above the stand there is no side to turn to, so the screen keeps its heading.
+            return direction.sqrMagnitude < .01f ? heading : Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
         }
 
         private void Update() => Advance(Time.unscaledDeltaTime);
@@ -117,8 +128,11 @@ namespace MusiyoBetsknate.Museum
         {
             if (surface == null) return;
             float target = open && InWorld ? 1 : 0;
-            Openness = Mathf.MoveTowards(Openness, target,
-                Mathf.Max(0, elapsed) / MuseumExperienceConfiguration.Current.LecternUnfoldSeconds);
+            var settings = MuseumExperienceConfiguration.Current;
+            Openness = Mathf.MoveTowards(Openness, target, Mathf.Max(0, elapsed) / settings.LecternUnfoldSeconds);
+            // The screen keeps turning toward the visitor, eased so it does not jitter with every step.
+            if (InWorld)
+                heading = Mathf.LerpAngle(heading, HeadingToViewer(), 1 - Mathf.Exp(-Mathf.Max(0, elapsed) / settings.LecternFollowSeconds));
             Apply();
         }
 
@@ -127,9 +141,15 @@ namespace MusiyoBetsknate.Museum
             bool visible = InWorld && Openness > 0;
             if (surface.gameObject.activeSelf != visible) surface.gameObject.SetActive(visible);
             if (!visible) return;
+            var settings = MuseumExperienceConfiguration.Current;
+            // It floats in front of the stand, on the side the visitor is on, upright and facing them.
+            var toViewer = Quaternion.Euler(0, heading, 0) * Vector3.forward;
+            var centre = Host.BoardCentre;
+            centre.y = Host.transform.position.y + settings.LecternFloatHeight;
+            surface.SetPositionAndRotation(centre + toViewer * settings.LecternFloatDistance, Quaternion.LookRotation(-toViewer, Vector3.up));
             float eased = Mathf.SmoothStep(0, 1, Openness);
-            float scale = MuseumExperienceConfiguration.Current.LecternScreenWidth / surface.sizeDelta.x;
-            // The screen rises from the lower edge that rests on the board.
+            float scale = settings.LecternScreenWidth / surface.sizeDelta.x;
+            // The screen rises from its lower edge.
             surface.localScale = new Vector3(scale, scale * eased, scale);
             group.alpha = eased;
             // A captured pointer stays where it was locked, so its clicks must not land on the screen.
