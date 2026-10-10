@@ -94,7 +94,11 @@ namespace MusiyoBetsknate.Museum
             applying = true;
             try
             {
-                if (visitor != null && !visitor.FocusPoint(point.Anchor)) return;
+                // A point with a reading stand is entered where the exhibit and the stand are both in view.
+                var stand = GetComponent<MuseumLecternDisplay>()?.Find(point);
+                if (visitor != null && !(stand != null
+                    ? visitor.FocusPoint(point.Anchor, stand.ViewingSpot(MuseumExperienceConfiguration.Current.LecternViewingDistance), stand.ViewTarget)
+                    : visitor.FocusPoint(point.Anchor))) return;
                 if (interaction.State == InteractionState.Paused) interaction.SetPaused(false);
                 GetComponent<MuseumVisitFlow>()?.EnterImmediately();
                 if (!interaction.Activate(point, ActivationSource.DeepLink)) return;
