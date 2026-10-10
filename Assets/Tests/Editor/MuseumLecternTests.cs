@@ -9,6 +9,8 @@ namespace MusiyoBetsknate.Tests
     {
         private GameObject root;
         private TourRuntime runtime;
+        private MuseumInteraction interaction;
+        private Transform eye;
         private TourPoint withStand;
         private TourPoint withoutStand;
         private PointLectern stand;
@@ -21,18 +23,20 @@ namespace MusiyoBetsknate.Tests
         {
             root = new GameObject("LecternTest");
             runtime = root.AddComponent<TourRuntime>();
+            interaction = root.AddComponent<MuseumInteraction>();
             var room = new GameObject("Room");
             room.transform.SetParent(root.transform);
             room.AddComponent<RoomAnchor>().Configure("room.test");
             withStand = CreatePoint(room.transform, "first", new Vector3(4, 0, 2));
             withoutStand = CreatePoint(room.transform, "second", new Vector3(-4, 0, 2));
-            var elements = new[] { new ElementSummaryContractV1 { slug = "one", title = "One" } };
+            var elements = new[] { new ElementSummaryContractV1 { slug = "one", title = "One" },
+                new ElementSummaryContractV1 { slug = "two", title = "Two" } };
             var contract = new TourContractV1 { schema_version = 1,
                 tour = new TourMetadataContractV1 { key = "museum-main", name = "Test" },
                 rooms = new[] { new RoomContractV1 { key = "room.test", name = "Test", order = 0,
                     points = new[] {
-                        new PointContractV1 { key = "first", name = "First", order = 0, activation = new[] { "keyboard" }, elements = elements },
-                        new PointContractV1 { key = "second", name = "Second", order = 1, activation = new[] { "keyboard" }, elements = elements }
+                        new PointContractV1 { key = "first", name = "First", order = 0, activation = new[] { "keyboard", "proximity" }, elements = elements },
+                        new PointContractV1 { key = "second", name = "Second", order = 1, activation = new[] { "keyboard", "proximity" }, elements = elements }
                     } } }
             };
             Assert.That(runtime.Apply(contract, out var error), Is.True, error);
@@ -55,8 +59,12 @@ namespace MusiyoBetsknate.Tests
             panel.anchoredPosition = new Vector2(-24, -124);
             panel.sizeDelta = new Vector2(540, 740);
             panel.gameObject.SetActive(false);
+            // The visitor starts on the reading side of the board, two metres from the stand.
+            eye = new GameObject("Eye", typeof(Camera)).transform;
+            eye.SetParent(root.transform);
+            eye.position = new Vector3(5, 1.65f, -1);
             display = root.AddComponent<MuseumLecternDisplay>();
-            display.Configure(panel, null);
+            display.Configure(panel, eye.GetComponent<Camera>());
         }
 
         private static TourPoint CreatePoint(Transform room, string key, Vector3 position)
@@ -74,29 +82,117 @@ namespace MusiyoBetsknate.Tests
         [TearDown] public void TearDown() => Object.DestroyImmediate(root);
 
         [Test]
-        public void ThePanelUnfoldsFromTheStandOfItsPointAndFoldsBackOntoIt()
+        public void ThePanelUnfoldsInFrontOfTheStandOfItsPointAndFoldsAway()
         {
-            float seconds = MuseumExperienceConfiguration.Current.LecternUnfoldSeconds;
+            var settings = MuseumExperienceConfiguration.Current;
+            float seconds = settings.LecternUnfoldSeconds;
             display.Show(withStand);
             Assert.That(display.Host, Is.SameAs(stand));
             Assert.That(panel.parent, Is.SameAs(display.Surface), "The panel is carried by the screen of the stand.");
-            Assert.That(display.Surface.gameObject.activeSelf, Is.False, "It starts folded on the board.");
+            Assert.That(display.Surface.gameObject.activeSelf, Is.False, "It starts folded away.");
             display.Advance(seconds * .5f);
             Assert.That(display.Openness, Is.EqualTo(.5f).Within(.001f));
             Assert.That(display.Surface.gameObject.activeSelf, Is.True);
-            Assert.That(display.Surface.localScale.y, Is.LessThan(display.Surface.localScale.x), "It rises from the board instead of popping in.");
+            Assert.That(display.Surface.localScale.y, Is.LessThan(display.Surface.localScale.x), "It rises instead of popping in.");
             display.Advance(seconds);
             Assert.That(display.Openness, Is.EqualTo(1));
             float width = display.Surface.sizeDelta.x * display.Surface.localScale.x;
-            Assert.That(width, Is.EqualTo(MuseumExperienceConfiguration.Current.LecternScreenWidth).Within(.001f));
-            Assert.That(Quaternion.Angle(display.Surface.rotation, stand.Board.rotation), Is.LessThan(.01f));
-            Assert.That(Vector3.Distance(display.Surface.position, stand.Board.position), Is.LessThan(.05f));
+            Assert.That(width, Is.EqualTo(settings.LecternScreenWidth).Within(.001f));
+            Assert.That(Vector3.Angle(display.Surface.up, Vector3.up), Is.LessThan(.01f), "The floating screen is upright.");
+            Assert.That(Vector3.Angle(display.Surface.forward, Vector3.forward), Is.LessThan(.01f), "It is read from the visitor's side.");
+            var expected = stand.BoardCentre + Vector3.back * settings.LecternFloatDistance;
+            expected.y = stand.transform.position.y + settings.LecternFloatHeight;
+            Assert.That(Vector3.Distance(display.Surface.position, expected), Is.LessThan(.001f), "It floats in front of the stand.");
 
             display.Hide();
             Assert.That(panel.gameObject.activeSelf, Is.True, "The folding screen keeps its content until it has closed.");
             display.Advance(seconds * 2);
             Assert.That(display.Openness, Is.EqualTo(0));
             Assert.That(display.Surface.gameObject.activeSelf, Is.False);
+        }
+
+        [Test]
+        public void TheFloatingScreenKeepsTurningTowardTheVisitor()
+        {
+            var settings = MuseumExperienceConfiguration.Current;
+            display.Show(withStand);
+            display.Advance(1);
+            foreach (var position in new[] { new Vector3(8, 1.65f, 1), new Vector3(5, 1.65f, 4), new Vector3(3, 1.65f, -1) })
+            {
+                eye.position = position;
+                display.Advance(settings.LecternFollowSeconds * .5f);
+                var toVisitor = position - display.Surface.position;
+                toVisitor.y = 0;
+                Assert.That(Vector3.Angle(-display.Surface.forward, toVisitor), Is.GreaterThan(1), "It turns smoothly, not in one frame.");
+                display.Advance(settings.LecternFollowSeconds * 40);
+                var axis = stand.BoardCentre;
+                var fromStand = position - axis;
+                fromStand.y = 0;
+                Assert.That(Vector3.Angle(-display.Surface.forward, fromStand), Is.LessThan(.5f), "The screen faces the visitor.");
+                var offset = display.Surface.position - axis;
+                offset.y = 0;
+                Assert.That(offset.magnitude, Is.EqualTo(settings.LecternFloatDistance).Within(.001f));
+                Assert.That(Vector3.Angle(offset, fromStand), Is.LessThan(.5f), "It stays on the visitor's side of the stand.");
+                Assert.That(Vector3.Angle(display.Surface.up, Vector3.up), Is.LessThan(.01f));
+            }
+            eye.position = stand.BoardCentre + Vector3.up;
+            var before = display.Surface.rotation;
+            display.Advance(1);
+            Assert.That(Quaternion.Angle(display.Surface.rotation, before), Is.LessThan(.01f), "Right above the stand it keeps its heading.");
+        }
+
+        [Test]
+        public void ADetailByAStandLeavesTheVisitorFreeToWalk()
+        {
+            Assert.That(interaction.Activate(withStand, ActivationSource.Proximity), Is.True);
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.PointFocus));
+            Assert.That(interaction.DetailInWorld, Is.True);
+            Assert.That(interaction.HoldsVisitor, Is.False, "Choosing an element by the stand does not stop the visitor.");
+            Assert.That(interaction.SelectElement(1), Is.True);
+            Assert.That(interaction.OpenDetail(), Is.True);
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.Reading));
+            Assert.That(interaction.BlocksMovement, Is.False, "The complete text floats in the museum, so it is read while walking.");
+            interaction.SetPaused(true);
+            Assert.That(interaction.BlocksMovement, Is.True);
+            interaction.SetPaused(false);
+
+            Assert.That(interaction.Activate(withoutStand, ActivationSource.Proximity), Is.True);
+            Assert.That(interaction.DetailInWorld, Is.False);
+            Assert.That(interaction.HoldsVisitor, Is.True, "A list on the screen holds the visitor until an element is chosen.");
+            interaction.SelectElement(0);
+            interaction.OpenDetail();
+            Assert.That(interaction.BlocksMovement, Is.True, "A complete text on the screen stops the visitor.");
+        }
+
+        [Test]
+        public void StandingByTheStandIsBeingAtThePoint()
+        {
+            float radius = withStand.Anchor.ActivationRadius;
+            // In front of the stand, out of reach of the exhibit itself.
+            var byTheStand = stand.transform.position + new Vector3(1.2f, 0, -.6f);
+            Assert.That(Vector3.Distance(byTheStand, withStand.Anchor.transform.position), Is.GreaterThan(radius));
+            Assert.That(PointActivation.IsInRange(withStand, byTheStand), Is.True);
+            Assert.That(withStand.Anchor.DistanceTo(byTheStand + Vector3.up * 3), Is.EqualTo(withStand.Anchor.DistanceTo(byTheStand)).Within(.001f));
+            Assert.That(PointActivation.IsInRange(withoutStand, withoutStand.Anchor.transform.position + Vector3.right * (radius + .1f)), Is.False);
+            Assert.That(PointActivation.IsInRange(withoutStand, withoutStand.Anchor.transform.position + Vector3.right * (radius - .1f)), Is.True);
+
+            // Between the exhibit and the stand, looking at the stand with the exhibit behind.
+            eye.position = new Vector3(4.6f, 1.65f, 1.4f);
+            eye.rotation = Quaternion.LookRotation(new Vector3(1, 0, -1));
+            Assert.That(PointActivation.IsVisible(withStand, eye, 4, 60), Is.False);
+            Assert.That(PointActivation.IsFacing(withStand, eye, 4, 60), Is.True, "Looking at the stand counts as facing the point.");
+            eye.rotation = Quaternion.LookRotation(new Vector3(1, 0, 1));
+            Assert.That(PointActivation.IsFacing(withStand, eye, 4, 60), Is.False);
+
+            var presence = root.AddComponent<MuseumPointPresence>();
+            interaction.Activate(withStand, ActivationSource.Proximity);
+            float margin = MuseumExperienceConfiguration.Current.PointLeaveMargin;
+            presence.Step(stand.transform.position + Vector3.right * (radius + margin - .1f));
+            Assert.That(presence.Away, Is.False, "The stand side of the point is still the point.");
+            presence.Step(stand.transform.position + Vector3.right * (radius + margin + .1f));
+            Assert.That(presence.Away, Is.True);
+            presence.Step(byTheStand);
+            Assert.That(presence.Away, Is.False, "Coming back to the stand is coming back to the point.");
         }
 
         [Test]

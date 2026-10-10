@@ -130,24 +130,28 @@ namespace MusiyoBetsknate.Museum
                 if (keyboard.rKey.wasPressedThisFrame) narration?.Repeat();
                 if (keyboard.spaceKey.wasPressedThisFrame) narration?.TogglePause();
                 if (keyboard.mKey.wasPressedThisFrame) narration?.ToggleMute();
-                if (keyboard.digit1Key.wasPressedThisFrame) interaction.SelectElement(0);
-                if (keyboard.digit2Key.wasPressedThisFrame) interaction.SelectElement(1);
-                if (keyboard.digit3Key.wasPressedThisFrame) interaction.SelectElement(2);
+                for (int digit = 0; digit < 9; digit++)
+                    if (keyboard[Key.Digit1 + digit].wasPressedThisFrame) interaction.SelectElement(digit);
             }
 #endif
             if (GetComponent<MuseumWayfinding>()?.MenuOpen == true) return;
             if (visitor == null || viewCamera == null || interaction.Runtime.Contract == null) return;
-            if (interaction.State != InteractionState.Exploration) return;
+            bool exploring = interaction.State == InteractionState.Exploration;
+            // Once the visitor has stepped out of the active point, approaching another one opens it.
+            bool left = interaction.ActivePoint != null && !interaction.BlocksMovement && !interaction.HoldsVisitor
+                && !PointActivation.IsInRange(interaction.ActivePoint, visitor.position);
+            if (!exploring && !left) return;
             TourPoint nearestPoint = null;
             TourPoint gazePoint = null;
             float nearestDistance = float.PositiveInfinity;
             float gazeAngle = float.PositiveInfinity;
             foreach (var point in interaction.Runtime.OrderedPoints)
             {
-                if (!point.HasContent) continue;
-                var distance = (point.Anchor.transform.position - visitor.position).sqrMagnitude;
+                if (!point.HasContent || point == interaction.ActivePoint) continue;
+                var distance = point.Anchor.DistanceTo(visitor.position);
                 if (point.Supports("proximity") && PointActivation.IsInRange(point, visitor.position) && distance < nearestDistance)
                 { nearestPoint = point; nearestDistance = distance; }
+                if (!exploring) continue;
                 var angle = Vector3.Angle(viewCamera.transform.forward, point.Anchor.LookTarget.position - viewCamera.transform.position);
                 if (point.Supports("gaze") && angle < gazeAngle && PointActivation.IsVisible(point, viewCamera.transform, 4, 6))
                 { gazePoint = point; gazeAngle = angle; }
@@ -156,7 +160,7 @@ namespace MusiyoBetsknate.Museum
             if (keyboard != null && keyboard.eKey.wasPressedThisFrame && nearestPoint != null)
             { interaction.Activate(nearestPoint, ActivationSource.Proximity); return; }
 #endif
-            bool facing = nearestPoint != null && PointActivation.IsVisible(nearestPoint, viewCamera.transform, 4, 60);
+            bool facing = nearestPoint != null && PointActivation.IsFacing(nearestPoint, viewCamera.transform, 4, 60);
             if (proximityDwell.Step(nearestPoint != null ? nearestPoint.Anchor.Key : null, facing, Time.unscaledDeltaTime, .8f))
             { interaction.Activate(nearestPoint, ActivationSource.Proximity); return; }
             if (gazeDwell.Step(gazePoint != null ? gazePoint.Anchor.Key : null, gazePoint != null, Time.unscaledDeltaTime, 1.2f))

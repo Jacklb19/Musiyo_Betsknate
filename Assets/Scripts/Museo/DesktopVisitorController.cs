@@ -123,7 +123,7 @@ namespace MusiyoBetsknate.Museum
             DetectReleasedPointer();
             bool blocked = interaction != null && (interaction.BlocksMovement
                 || interaction.GetComponent<MuseumWayfinding>()?.MenuOpen == true);
-            bool choosing = interaction != null && interaction.State == InteractionState.PointFocus;
+            bool choosing = interaction != null && interaction.HoldsVisitor;
             if (blocked || choosing || Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
                 CapturePointer(false);
             else if (capture.WasPressedThisFrame() && (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject()))
@@ -136,7 +136,7 @@ namespace MusiyoBetsknate.Museum
                 pitch = Mathf.Clamp(pitch - delta.y, -configuration.MaximumPitch, configuration.MaximumPitch);
                 viewCamera.transform.localRotation = Quaternion.Euler(pitch, 0, 0);
             }
-            if (blocked || choosing) planarVelocity = Vector3.zero; // Menus, reading and pauses stop at once.
+            if (blocked || choosing) planarVelocity = Vector3.zero; // Menus, on-screen panels and pauses stop at once.
             else
             {
                 var input = Vector2.ClampMagnitude(move.ReadValue<Vector2>(), 1);

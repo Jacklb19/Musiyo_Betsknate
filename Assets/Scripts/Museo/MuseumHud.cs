@@ -252,9 +252,12 @@ namespace MusiyoBetsknate.Museum
                     var button = Instantiate(elementTemplate, elementList);
                     button.name = "ElementChoice";
                     button.gameObject.SetActive(true);
-                    button.GetComponentInChildren<TMP_Text>().text = point.Content.elements[index].title;
+                    button.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Format("element_choice_item",
+                        index + 1, point.Content.elements[index].title);
                     button.onClick.AddListener(() => interaction.SelectElement(selectedIndex));
-                    if (index == 0 && EventSystem.current != null) EventSystem.current.SetSelectedGameObject(button.gameObject);
+                    // By a stand the visitor keeps walking, so the list takes no keyboard focus: its numbers choose.
+                    if (index == 0 && interaction.HoldsVisitor && EventSystem.current != null)
+                        EventSystem.current.SetSelectedGameObject(button.gameObject);
                 }
                 return;
             }
