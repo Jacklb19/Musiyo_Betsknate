@@ -19,7 +19,6 @@
     "examination_controls": "\nFlechas: rotar · + / −: acercar o alejar · Inicio: restablecer\nF: ficha · Retroceso: salir del examen · Re Pág / Av Pág: desplazar",
     "detail_controls": "\nF: leer ficha · Retroceso: cerrar · Re Pág / Av Pág: desplazar",
     "detail_loading": "Cargando ficha…",
-    "detail_web": "La ficha seleccionada está disponible debajo del recorrido. Pulsa Volver para continuar la visita.",
     "detail_unavailable": "La ficha no está disponible. Puedes cerrar y seguir recorriendo el museo.",
     "examine_model": "Examinar modelo (X)",
     "retry_model": "Reintentar modelo",

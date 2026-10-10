@@ -77,12 +77,17 @@ namespace MusiyoBetsknate.Museum
         }
 
         public bool FocusPoint(PointAnchor anchor)
+            => anchor != null && FocusPoint(anchor, null, anchor.LookTarget.position);
+
+        /// <summary>Stands on the preferred floor spot when it is free, otherwise around the point, and looks at the target.</summary>
+        public bool FocusPoint(PointAnchor anchor, Vector3? preferredSpot, Vector3 lookAt)
         {
             if (anchor == null || body == null || viewCamera == null) return false;
-            for (int index = 0; index < 8; index++)
+            for (int index = preferredSpot.HasValue ? -1 : 0; index < 8; index++)
             {
                 var direction = Quaternion.Euler(0, index * 45, 0) * -anchor.transform.forward;
-                var center = anchor.transform.position + direction * 1.2f + Vector3.up * (body.height * .5f + .02f);
+                var floor = index < 0 ? preferredSpot.Value : anchor.transform.position + direction * 1.2f;
+                var center = floor + Vector3.up * (body.height * .5f + .02f);
                 float half = Mathf.Max(0, body.height * .5f - body.radius);
                 bool obstructed = false;
                 foreach (var obstacle in Physics.OverlapCapsule(center + Vector3.up * half, center - Vector3.up * half,
@@ -91,7 +96,7 @@ namespace MusiyoBetsknate.Museum
                 if (obstructed) continue;
                 body.enabled = false;
                 transform.position = center - body.center;
-                var target = anchor.LookTarget.position - viewCamera.transform.position;
+                var target = lookAt - viewCamera.transform.position;
                 transform.rotation = Quaternion.Euler(0, Mathf.Atan2(target.x, target.z) * Mathf.Rad2Deg, 0);
                 pitch = -Mathf.Atan2(target.y, new Vector2(target.x, target.z).magnitude) * Mathf.Rad2Deg;
                 viewCamera.transform.localRotation = Quaternion.Euler(pitch, 0, 0);
