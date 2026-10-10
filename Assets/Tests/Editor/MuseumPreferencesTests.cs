@@ -50,7 +50,7 @@ namespace MusiyoBetsknate.Tests
             Assert.That(preferences.Sensitivity, Is.EqualTo(settings.DefaultSensitivity));
         }
 
-        [TestCase("\"schema_version\": 1", "\"schema_version\": 2")]
+        [TestCase("\"schema_version\": 2", "\"schema_version\": 3")]
         [TestCase("\"entry_fade_seconds\": 1.1", "\"entry_fade_seconds\": 0")]
         [TestCase("\"entry_menu_fade_share\": 0.4", "\"entry_menu_fade_share\": 1")]
         [TestCase("\"maximum_pitch\": 80.0", "\"maximum_pitch\": 90")]
