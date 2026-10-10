@@ -46,6 +46,7 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("text_color")] public string TextColor;
         [JsonProperty("accent_color")] public string AccentColor;
         [JsonProperty("selected_color")] public string SelectedColor;
+        [JsonProperty("pointer_color")] public string PointerColor;
         private static MuseumExperienceConfiguration current;
 
         public static MuseumExperienceConfiguration Current
@@ -84,7 +85,7 @@ namespace MusiyoBetsknate.Museum
                 throw new InvalidOperationException("Invalid museum experience configuration.");
             ColorValue(result.BackdropColor); ColorValue(result.PanelColor);
             ColorValue(result.TextColor); ColorValue(result.AccentColor);
-            ColorValue(result.SelectedColor);
+            ColorValue(result.SelectedColor); ColorValue(result.PointerColor);
             return result;
         }
 
