@@ -45,6 +45,8 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("text_color")] public string TextColor;
         [JsonProperty("accent_color")] public string AccentColor;
         [JsonProperty("selected_color")] public string SelectedColor;
+        [JsonProperty("muted_text_color")] public string MutedTextColor = "#C2CCBE";
+        [JsonProperty("secondary_accent_color")] public string SecondaryAccentColor = "#B86850";
         [JsonProperty("pointer_color")] public string PointerColor;
         private static MuseumExperienceConfiguration current;
 
@@ -84,6 +86,7 @@ namespace MusiyoBetsknate.Museum
             ColorValue(result.BackdropColor); ColorValue(result.EntryBackdropColor); ColorValue(result.PanelColor);
             ColorValue(result.TextColor); ColorValue(result.AccentColor);
             ColorValue(result.SelectedColor); ColorValue(result.PointerColor);
+            ColorValue(result.MutedTextColor); ColorValue(result.SecondaryAccentColor);
             return result;
         }
 

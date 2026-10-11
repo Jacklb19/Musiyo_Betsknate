@@ -238,6 +238,8 @@ namespace MusiyoBetsknate.Museum
         private void Refresh()
         {
             if (!bound) return;
+            Canvas.ForceUpdateCanvases();
+            view.GetComponent<MuseumMenuLayout>()?.Apply();
             bool entering = flow.Phase == VisitPhase.Entering;
             bool visible = flow.Phase == VisitPhase.Menu || !entering && interaction.State == InteractionState.Paused;
             overlay.SetActive(visible || entering);
@@ -376,6 +378,7 @@ namespace MusiyoBetsknate.Museum
             var current = page == MenuPage.Settings ? view.Settings : page == MenuPage.Controls ? view.Controls
                 : flow.Phase == VisitPhase.Menu ? view.Main : view.Pause;
             var scroll = current.Scroll;
+            if (!selected.transform.IsChildOf(scroll.content)) return;
             Canvas.ForceUpdateCanvases();
             var viewport = scroll.viewport;
             var bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, selected.transform);

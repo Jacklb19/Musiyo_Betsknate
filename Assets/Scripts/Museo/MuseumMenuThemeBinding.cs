@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 namespace MusiyoBetsknate.Museum
 {
-    public enum MuseumMenuColorToken { None, Backdrop, Panel, Text, Accent }
+    public enum MuseumMenuColorToken { None, Backdrop, Panel, Text, Accent, MutedText, SecondaryAccent }
     public enum MuseumMenuFontToken { None, Body, Title }
 
     /// <summary>Only explicitly bound style properties use configuration. All other properties remain authored.</summary>
@@ -16,6 +16,7 @@ namespace MusiyoBetsknate.Museum
         public MuseumMenuFontToken FontToken;
         [Tooltip("Overrides only selectable normal/highlighted/selected colors using PanelColor/SelectedColor.")]
         public bool BindSelectableColors;
+        public bool PrimaryAction;
 
         private void OnEnable() => Apply();
         public void Apply()
@@ -25,7 +26,9 @@ namespace MusiyoBetsknate.Museum
             {
                 var color = ColorToken == MuseumMenuColorToken.Backdrop ? settings.BackdropColor
                     : ColorToken == MuseumMenuColorToken.Panel ? settings.PanelColor
-                    : ColorToken == MuseumMenuColorToken.Accent ? settings.AccentColor : settings.TextColor;
+                    : ColorToken == MuseumMenuColorToken.Accent ? settings.AccentColor
+                    : ColorToken == MuseumMenuColorToken.MutedText ? settings.MutedTextColor
+                    : ColorToken == MuseumMenuColorToken.SecondaryAccent ? settings.SecondaryAccentColor : settings.TextColor;
                 graphic.color = MuseumExperienceConfiguration.ColorValue(color);
             }
             if (FontToken != MuseumMenuFontToken.None && TryGetComponent<TMP_Text>(out var text))
@@ -33,8 +36,13 @@ namespace MusiyoBetsknate.Museum
             if (BindSelectableColors && TryGetComponent<Selectable>(out var selectable))
             {
                 var colors = selectable.colors;
-                colors.normalColor = MuseumExperienceConfiguration.ColorValue(selectable is Slider ? settings.TextColor : settings.PanelColor);
-                colors.highlightedColor = colors.selectedColor = MuseumExperienceConfiguration.ColorValue(settings.SelectedColor);
+                colors.normalColor = MuseumExperienceConfiguration.ColorValue(selectable is Slider ? settings.TextColor : PrimaryAction ? settings.AccentColor : settings.PanelColor);
+                colors.highlightedColor = colors.selectedColor = PrimaryAction
+                    ? Color.Lerp(MuseumExperienceConfiguration.ColorValue(settings.AccentColor), Color.white, .15f)
+                    : MuseumExperienceConfiguration.ColorValue(settings.SelectedColor);
+                colors.pressedColor = colors.normalColor * new Color(.8f, .8f, .8f, 1);
+                colors.disabledColor = new Color(.3f, .4f, .36f, .6f);
+                colors.fadeDuration = .12f;
                 selectable.colors = colors;
             }
         }

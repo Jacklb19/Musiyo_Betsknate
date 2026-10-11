@@ -51,7 +51,7 @@
     "reset_settings": "Restablecer ajustes",
     "back_to_menu": "Volver al menú",
     "resume_visit": "Continuar visita",
-    "museum_menu_title": "Museo virtual",
+    "museum_menu_title": "Musiyo Bëtsknaté",
     "menu_description": "Una visita para explorar a tu ritmo. Sigue la ruta sugerida o elige tu propio camino.",
     "settings_description": "Ajusta la mirada, la narración y los subtítulos. Tus preferencias se guardan en este dispositivo.",
     "controls_description": "Elige una acción y pulsa la tecla que quieras asignarle. Los cambios se guardan en este dispositivo.",
@@ -152,6 +152,7 @@
     "key_end": "Fin",
     "key_insert": "Insert",
     "key_delete": "Supr",
-    "key_capsLock": "Bloq Mayús"
+    "key_capsLock": "Bloq Mayús",
+    "menu_kicker": "MUSEO VIRTUAL"
   }
 }
