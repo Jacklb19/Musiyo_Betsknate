@@ -68,6 +68,16 @@ namespace MusiyoBetsknate.Museum
         public bool FocusPoint(PointAnchor anchor)
             => anchor != null && FocusPoint(anchor, null, anchor.LookTarget.position);
 
+        /// <summary>Height of the floor under a spot: room floors lie a few centimetres above or below their point anchors.</summary>
+        private float FloorHeight(Vector3 spot)
+        {
+            float height = spot.y, nearest = float.PositiveInfinity;
+            foreach (var hit in Physics.RaycastAll(spot + Vector3.up * body.stepOffset, Vector3.down, body.stepOffset * 2,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                if (!hit.transform.IsChildOf(transform) && hit.distance < nearest) { nearest = hit.distance; height = hit.point.y; }
+            return height;
+        }
+
         /// <summary>Stands on the preferred floor spot when it is free, otherwise around the point, and looks at the target.</summary>
         public bool FocusPoint(PointAnchor anchor, Vector3? preferredSpot, Vector3 lookAt)
         {
@@ -76,6 +86,7 @@ namespace MusiyoBetsknate.Museum
             {
                 var direction = Quaternion.Euler(0, index * 45, 0) * -anchor.transform.forward;
                 var floor = index < 0 ? preferredSpot.Value : anchor.transform.position + direction * 1.2f;
+                floor.y = FloorHeight(floor);
                 var center = floor + Vector3.up * (body.height * .5f + .02f);
                 float half = Mathf.Max(0, body.height * .5f - body.radius);
                 bool obstructed = false;

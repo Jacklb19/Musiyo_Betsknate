@@ -77,21 +77,21 @@ namespace MusiyoBetsknate.Editor
                 errors.Add("Missing MuseumBlockout root.");
                 return errors;
             }
-            var architecture = Find(scene, "NeutralArchitecture");
+            var architecture = Find(scene, MuseumDeliveryAssets.PrefabRootName);
             if (architecture == null)
-                errors.Add("Missing imported neutral architecture.");
+                errors.Add("Missing the museum architecture.");
             else
             {
                 var renderers = architecture.GetComponentsInChildren<MeshRenderer>(true);
                 if (renderers.Length < 50)
-                    errors.Add("Neutral architecture has too few mesh renderers.");
+                    errors.Add("The museum architecture has too few mesh renderers.");
                 else
                 {
                     var bounds = renderers[0].bounds;
                     foreach (var renderer in renderers) bounds.Encapsulate(renderer.bounds);
                     if (bounds.min.x > -15 || bounds.max.x < 24 ||
                         bounds.min.z > -55 || bounds.max.z < 20)
-                        errors.Add("Neutral architecture does not align with the planned room coordinates.");
+                        errors.Add("The museum architecture does not align with the planned room coordinates.");
                 }
             }
             CheckPosition(scene, "VisitorSpawn", new Vector3(0, 0, -58), errors);
@@ -116,7 +116,7 @@ namespace MusiyoBetsknate.Editor
 
             var colliders = root.GetComponentsInChildren<Collider>(true);
             if (colliders.Length < 30)
-                errors.Add("Missing blockout collision geometry.");
+                errors.Add("Missing museum collision geometry.");
             return errors;
         }
 
