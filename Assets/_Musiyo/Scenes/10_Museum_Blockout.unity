@@ -2583,7 +2583,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0f21aa2eeb6e7bf4b9e690b2c95fc29d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: MusiyoBetsknate.Runtime::MusiyoBetsknate.Museum.DesktopVisitorController
-  inputActions: {fileID: -944628639613478452, guid: 3250cf8e4f89b054db6851b018d885a1, type: 3}
   viewCamera: {fileID: 1150730070}
   lookSensitivity: 0.12
   interaction: {fileID: 612297966}
@@ -5878,6 +5877,7 @@ Transform:
   - {fileID: 560816647}
   - {fileID: 521217393}
   - {fileID: 1582768568}
+  - {fileID: 1880632498}
   m_Father: {fileID: 612297962}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1188078855
@@ -8259,6 +8259,7 @@ MonoBehaviour:
   detailButton: {fileID: 997228602}
   sensitivitySlider: {fileID: 1863169669}
   visitor: {fileID: 434408651}
+  menuPrefab: {fileID: 0}
 --- !u!114 &1695927246
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9392,6 +9393,51 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.3, y: 6, z: 1.65}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &1880632497
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1880632498}
+  - component: {fileID: 1880632499}
+  m_Layer: 0
+  m_Name: EntryViewpoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1880632498
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1880632497}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.008705278, y: -0.06975381, z: -0.0006087323, w: 0.9975261}
+  m_LocalPosition: {x: -3, y: 2.4, z: -17}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1188078854}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1880632499
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1880632497}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3c1151a4f3122194584e13d67437a865, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MusiyoBetsknate.Runtime::MusiyoBetsknate.Museum.MuseumEntryViewpoint
+  fieldOfView: 45
 --- !u!1 &1886478205
 GameObject:
   m_ObjectHideFlags: 0

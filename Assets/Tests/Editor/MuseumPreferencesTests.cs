@@ -50,7 +50,10 @@ namespace MusiyoBetsknate.Tests
             Assert.That(preferences.Sensitivity, Is.EqualTo(settings.DefaultSensitivity));
         }
 
-        [TestCase("\"schema_version\": 3", "\"schema_version\": 4")]
+        [TestCase("\"schema_version\": 4", "\"schema_version\": 5")]
+        [TestCase("\"entry_glide_seconds\": 2.6", "\"entry_glide_seconds\": 0")]
+        [TestCase("\"entry_glide_max_distance\": 12.0", "\"entry_glide_max_distance\": -1")]
+        [TestCase("#120A0D66", "see-through")]
         [TestCase("\"entry_fade_seconds\": 1.1", "\"entry_fade_seconds\": 0")]
         [TestCase("\"entry_menu_fade_share\": 0.4", "\"entry_menu_fade_share\": 1")]
         [TestCase("\"maximum_pitch\": 80.0", "\"maximum_pitch\": 90")]

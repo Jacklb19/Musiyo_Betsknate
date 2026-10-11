@@ -12,6 +12,8 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("schema_version")] public int SchemaVersion;
         [JsonProperty("entry_fade_seconds")] public float EntryFadeSeconds;
         [JsonProperty("entry_menu_fade_share")] public float EntryMenuFadeShare;
+        [JsonProperty("entry_glide_seconds")] public float EntryGlideSeconds;
+        [JsonProperty("entry_glide_max_distance")] public float EntryGlideMaxDistance;
         [JsonProperty("panel_fade_seconds")] public float PanelFadeSeconds;
         [JsonProperty("panel_scroll_step")] public float PanelScrollStep;
         [JsonProperty("model_control_columns")] public int ModelControlColumns;
@@ -38,6 +40,7 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("title_size")] public float TitleSize;
         [JsonProperty("body_size")] public float BodySize;
         [JsonProperty("backdrop_color")] public string BackdropColor;
+        [JsonProperty("entry_backdrop_color")] public string EntryBackdropColor;
         [JsonProperty("panel_color")] public string PanelColor;
         [JsonProperty("text_color")] public string TextColor;
         [JsonProperty("accent_color")] public string AccentColor;
@@ -60,9 +63,10 @@ namespace MusiyoBetsknate.Museum
         public static MuseumExperienceConfiguration Parse(string json)
         {
             var result = JsonConvert.DeserializeObject<MuseumExperienceConfiguration>(json);
-            if (result == null || result.SchemaVersion != 3 || !Positive(result.EntryFadeSeconds)
+            if (result == null || result.SchemaVersion != 4 || !Positive(result.EntryFadeSeconds)
                 || !Positive(result.PanelFadeSeconds) || !Positive(result.PanelScrollStep) || result.PanelScrollStep > 1
                 || result.ModelControlColumns < 1 || !Positive(result.EntryMenuFadeShare) || result.EntryMenuFadeShare >= 1
+                || !Positive(result.EntryGlideSeconds) || !Positive(result.EntryGlideMaxDistance)
                 || !Positive(result.WalkSpeed) || !Positive(result.SprintSpeed) || result.SprintSpeed < result.WalkSpeed
                 || !Positive(result.Acceleration) || !Positive(result.Deceleration)
                 || !Positive(result.PointLeaveMargin) || !Positive(result.LecternScreenWidth)
@@ -77,7 +81,7 @@ namespace MusiyoBetsknate.Museum
                 || !Positive(result.SliderStep) || result.SliderStep > 1 || !Positive(result.RebindTimeoutSeconds)
                 || !Positive(result.TitleSize) || !Positive(result.BodySize))
                 throw new InvalidOperationException("Invalid museum experience configuration.");
-            ColorValue(result.BackdropColor); ColorValue(result.PanelColor);
+            ColorValue(result.BackdropColor); ColorValue(result.EntryBackdropColor); ColorValue(result.PanelColor);
             ColorValue(result.TextColor); ColorValue(result.AccentColor);
             ColorValue(result.SelectedColor); ColorValue(result.PointerColor);
             return result;

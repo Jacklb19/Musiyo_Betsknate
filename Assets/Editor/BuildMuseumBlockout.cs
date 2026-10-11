@@ -57,6 +57,7 @@ namespace MusiyoBetsknate.Editor
                 var spawn = new GameObject("VisitorSpawn");
                 spawn.transform.SetParent(arrival, false);
                 spawn.transform.position = new Vector3(0, 0, -58);
+                ConfigureMuseumEntry.Add(spawn.transform);
 
                 AddPoint(arrival, "zona.llegada.tutorial", 0, -40, 2.5f);
                 AddPoint(welcome, "punto.bienvenida.mito", 0, -15.6f, 1.8f);

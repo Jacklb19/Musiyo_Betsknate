@@ -36,6 +36,16 @@ namespace MusiyoBetsknate.Tests
                 float groundClearance = bodyCenter.y - body.height * visitor.transform.lossyScale.y / 2;
                 Assert.That(groundClearance, Is.InRange(-.001f, body.stepOffset), "The capsule must start near the arrival floor without penetrating it.");
                 Assert.That(visitor.GetComponentInChildren<Camera>().transform.position.y, Is.EqualTo(1.65f).Within(.001f));
+                var viewpoints = runtime.GetComponentsInChildren<MuseumEntryViewpoint>(true);
+                Assert.That(viewpoints.Length, Is.EqualTo(1), "The entry menu is staged from one viewpoint.");
+                var entryView = viewpoints[0].transform;
+                var eyes = visitor.GetComponentInChildren<Camera>().transform.position;
+                Assert.That(Vector3.Distance(entryView.position, eyes),
+                    Is.InRange(1, MuseumExperienceConfiguration.Current.EntryGlideMaxDistance), "Close enough to glide to the visitor's eyes.");
+                Assert.That(entryView.position.y, Is.GreaterThan(1), "The viewpoint stays above the arrival floor.");
+                var welcome = System.Array.Find(runtime.GetComponentsInChildren<RoomAnchor>(true), room => room.name == "WelcomeRoom");
+                Assert.That(Vector3.Dot(entryView.forward, (welcome.transform.position - entryView.position).normalized), Is.GreaterThan(.8f),
+                    "The entry looks toward the museum.");
                 var input = new SerializedObject(visitor);
                 Assert.That(Resources.Load<UnityEngine.InputSystem.InputActionAsset>(MuseumInput.ResourceName), Is.Not.Null,
                     "The visitor reads the shared museum actions instead of a copy of its own.");
