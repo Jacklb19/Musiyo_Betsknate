@@ -275,6 +275,25 @@ namespace MusiyoBetsknate.Tests
         }
 
         [Test]
+        public void SpatialHostCentersAuthoredPagesWithinItsReadableCanvas()
+        {
+            canvas.GetComponent<Canvas>().renderMode = RenderMode.WorldSpace;
+            ((RectTransform)canvas.transform).sizeDelta = new Vector2(1024, 900);
+            var layout = menu.View.GetComponent<MuseumMenuLayout>();
+            Assert.That(layout, Is.Not.Null);
+            layout.Spatial = true;
+            layout.Apply();
+            Canvas.ForceUpdateCanvases();
+            var page = (RectTransform)menu.View.Main.transform;
+            Assert.That(page.rect.width, Is.LessThan(1024));
+            Assert.That(page.rect.height, Is.LessThan(900));
+            var center = menu.View.transform.InverseTransformPoint(page.TransformPoint(page.rect.center));
+            Assert.That(Mathf.Abs(center.x), Is.LessThan(.1f));
+            Assert.That(menu.View.GetComponentsInChildren<Canvas>(true), Is.Empty);
+            Assert.That(module.actionsAsset, Is.SameAs(MuseumInput.Current.Asset));
+        }
+
+        [Test]
         public void MissingRequiredReferenceReportsThePageAndField()
         {
             menu.View.Controls.Back = null;

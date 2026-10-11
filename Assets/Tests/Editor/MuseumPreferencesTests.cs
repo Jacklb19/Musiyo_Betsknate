@@ -1,4 +1,6 @@
 using System;
+using System.Globalization;
+using System.Text.RegularExpressions;
 using MusiyoBetsknate.Museum;
 using NUnit.Framework;
 using UnityEngine;
@@ -50,25 +52,31 @@ namespace MusiyoBetsknate.Tests
             Assert.That(preferences.Sensitivity, Is.EqualTo(settings.DefaultSensitivity));
         }
 
-        [TestCase("\"schema_version\": 4", "\"schema_version\": 5")]
-        [TestCase("\"entry_glide_seconds\": 2.6", "\"entry_glide_seconds\": 0")]
-        [TestCase("\"entry_glide_max_distance\": 12.0", "\"entry_glide_max_distance\": -1")]
-        [TestCase("#120A0D66", "see-through")]
-        [TestCase("\"entry_fade_seconds\": 1.1", "\"entry_fade_seconds\": 0")]
-        [TestCase("\"entry_menu_fade_share\": 0.4", "\"entry_menu_fade_share\": 1")]
-        [TestCase("\"maximum_pitch\": 80.0", "\"maximum_pitch\": 90")]
-        [TestCase("\"deceleration\": 12.0", "\"deceleration\": -1")]
-        [TestCase("#9C5B1F", "invalid-color")]
-        [TestCase("\"slider_step\": 0.05", "\"slider_step\": 0")]
-        [TestCase("\"panel_scroll_step\": 0.25", "\"panel_scroll_step\": 2")]
-        [TestCase("\"model_control_columns\": 2", "\"model_control_columns\": 0")]
-        [TestCase("\"lectern_float_distance\": 0.35", "\"lectern_float_distance\": 0")]
-        [TestCase("\"lectern_follow_seconds\": 0.18", "\"lectern_follow_seconds\": -1")]
-        [TestCase("#E3A83B40", "not-a-color")]
-        public void InvalidExperienceConfigurationFailsWithADiagnostic(string before, string after)
+        [TestCase("schema_version", 5)]
+        [TestCase("entry_glide_seconds", 0)]
+        [TestCase("entry_glide_max_distance", -1)]
+        [TestCase("entry_backdrop_color", "see-through")]
+        [TestCase("entry_fade_seconds", 0)]
+        [TestCase("entry_menu_fade_share", 1)]
+        [TestCase("maximum_pitch", 90)]
+        [TestCase("deceleration", -1)]
+        [TestCase("selected_color", "invalid-color")]
+        [TestCase("slider_step", 0)]
+        [TestCase("panel_scroll_step", 2)]
+        [TestCase("model_control_columns", 0)]
+        [TestCase("lectern_float_distance", 0)]
+        [TestCase("lectern_follow_seconds", -1)]
+        [TestCase("pointer_color", "not-a-color")]
+        [TestCase("muted_text_color", "invalid")]
+        [TestCase("secondary_accent_color", "invalid")]
+        public void InvalidExperienceConfigurationFailsWithADiagnostic(string property, object value)
         {
             var json = Resources.Load<TextAsset>("MuseumExperienceConfiguration").text;
-            Assert.Throws<InvalidOperationException>(() => MuseumExperienceConfiguration.Parse(json.Replace(before, after)));
+            var pattern = "\"" + property + "\"\\s*:\\s*(\"[^\"]*\"|[^,}\\s]+)";
+            Assert.That(Regex.IsMatch(json, pattern), Is.True, "The configuration field must exist before it is invalidated.");
+            var replacement = "\"" + property + "\": " + (value is string ? "\"" + value + "\"" : Convert.ToString(value, CultureInfo.InvariantCulture));
+            var invalid = Regex.Replace(json, pattern, _ => replacement);
+            Assert.Throws<InvalidOperationException>(() => MuseumExperienceConfiguration.Parse(invalid));
         }
     }
 }
