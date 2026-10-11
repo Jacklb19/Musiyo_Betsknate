@@ -1,0 +1,20 @@
+Rebinding UI sample, partial copy
+Source: Unity Input System package (com.unity.inputsystem) 1.20.0, Samples~/RebindingUI
+Copyright © 2024 Unity Technologies
+
+Licensed under the Unity Companion License for Unity-dependent projects
+(see https://unity3d.com/legal/licenses/unity_companion_license).
+
+Unless expressly provided otherwise, the Software under this license is made available strictly on an
+"AS IS" BASIS WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. Please review the license for details
+on these and other terms and conditions.
+
+Files copied unchanged, with the identifiers the package ships:
+  RebindActionUI.cs
+  InputActionExtensions.cs
+  Unity.InputSystem.RebindingUI.asmdef
+
+Not copied: the sample scene, its gameplay scripts, prefabs, materials, shader, example actions and gamepad icons.
+The sample's custom inspector is left out because it depends on files that are not copied.
+The museum drives RebindActionUI from MuseumRebindRow and keeps its own storage, texts and conflict rules.
+To refresh after a package update, copy the same three files again from the installed package.
