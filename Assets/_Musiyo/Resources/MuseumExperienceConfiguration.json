@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "entry_fade_seconds": 1.1,
   "entry_menu_fade_share": 0.4,
   "panel_fade_seconds": 0.2,
@@ -24,6 +24,7 @@
   "default_volume": 0.8,
   "default_subtitles": true,
   "slider_step": 0.05,
+  "rebind_timeout_seconds": 8.0,
   "title_size": 42,
   "body_size": 24,
   "backdrop_color": "#120A0DEB",

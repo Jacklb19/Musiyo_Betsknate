@@ -37,7 +37,8 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(groundClearance, Is.InRange(-.001f, body.stepOffset), "The capsule must start near the arrival floor without penetrating it.");
                 Assert.That(visitor.GetComponentInChildren<Camera>().transform.position.y, Is.EqualTo(1.65f).Within(.001f));
                 var input = new SerializedObject(visitor);
-                Assert.That(input.FindProperty("inputActions").objectReferenceValue, Is.Not.Null);
+                Assert.That(Resources.Load<UnityEngine.InputSystem.InputActionAsset>(MuseumInput.ResourceName), Is.Not.Null,
+                    "The visitor reads the shared museum actions instead of a copy of its own.");
                 Assert.That(input.FindProperty("viewCamera").objectReferenceValue, Is.Not.Null);
                 Assert.That(input.FindProperty("interaction").objectReferenceValue, Is.Not.Null);
                 var hud = runtime.GetComponentInChildren<MuseumHud>(true);

@@ -1,6 +1,5 @@
 using System.Runtime.InteropServices;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.EventSystems;
 
 namespace MusiyoBetsknate.Museum
@@ -8,17 +7,10 @@ namespace MusiyoBetsknate.Museum
     [RequireComponent(typeof(CharacterController))]
     public sealed class DesktopVisitorController : MonoBehaviour
     {
-        [SerializeField] private InputActionAsset inputActions;
         [SerializeField] private Camera viewCamera;
         [SerializeField, Range(.02f, 1)] private float lookSensitivity = .12f;
         [SerializeField] private MuseumInteraction interaction;
         private CharacterController body;
-        private InputActionAsset actions;
-        private InputAction move;
-        private InputAction look;
-        private InputAction keyboardLook;
-        private InputAction sprint;
-        private InputAction capture;
         private MuseumExperienceConfiguration configuration;
         private float pitch;
         private float verticalSpeed;
@@ -38,8 +30,8 @@ namespace MusiyoBetsknate.Museum
         private static bool PointerLocked => Cursor.lockState == CursorLockMode.Locked;
 #endif
 
-        public void Configure(InputActionAsset asset, Camera camera, MuseumInteraction state)
-        { inputActions = asset; viewCamera = camera; interaction = state; }
+        public void Configure(Camera camera, MuseumInteraction state)
+        { viewCamera = camera; interaction = state; }
 
         private void Awake()
         {
@@ -48,18 +40,15 @@ namespace MusiyoBetsknate.Museum
             // Unity ignores moves shorter than minMoveDistance, which swallows walking at high frame rates.
             body.minMoveDistance = 0;
             if (viewCamera == null) viewCamera = GetComponentInChildren<Camera>();
-            if (inputActions == null) return;
-            actions = Instantiate(inputActions);
-            move = actions.FindAction("Desktop/Move", true);
-            look = actions.FindAction("Desktop/Look", true);
-            keyboardLook = actions.FindAction("Desktop/KeyboardLook", true);
-            sprint = actions.FindAction("Desktop/Sprint", true);
-            capture = actions.FindAction("Desktop/CapturePointer", true);
         }
 
-        private void OnEnable() { if (actions != null) actions.Enable(); }
-        private void OnDisable() { if (actions != null) actions.Disable(); CapturePointer(false); }
-        private void OnDestroy() { if (actions != null) Destroy(actions); }
+        private void OnEnable()
+        {
+            // The visit decides when walking listens; a visitor without one simply walks.
+            if (interaction != null) MuseumInputDirector.Ensure(interaction);
+            else MuseumInput.Current.SetContext(MuseumInputContext.Visit);
+        }
+        private void OnDisable() => CapturePointer(false);
 
         public void SetSensitivity(float value)
         {
@@ -119,19 +108,20 @@ namespace MusiyoBetsknate.Museum
 
         private void Update()
         {
-            if (actions == null || body == null || viewCamera == null) return;
-            DetectReleasedPointer();
+            if (body == null || viewCamera == null) return;
+            var input = MuseumInput.Current;
+            DetectReleasedPointer(input);
             bool blocked = interaction != null && (interaction.BlocksMovement
                 || interaction.GetComponent<MuseumWayfinding>()?.MenuOpen == true);
             bool choosing = interaction != null && interaction.HoldsVisitor;
-            if (blocked || choosing || Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            if (blocked || choosing || input.Pause.WasPressedThisFrame())
                 CapturePointer(false);
-            else if (capture.WasPressedThisFrame() && (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject()))
+            else if (input.Click.WasPressedThisFrame() && (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject()))
                 CapturePointer(true);
             if (!blocked)
             {
-                var delta = captured && PointerLocked ? look.ReadValue<Vector2>() * lookSensitivity : Vector2.zero;
-                if (!choosing) delta += keyboardLook.ReadValue<Vector2>() * (configuration.KeyboardLookSpeed * Time.deltaTime);
+                var delta = captured && PointerLocked ? input.Look.ReadValue<Vector2>() * lookSensitivity : Vector2.zero;
+                if (!choosing) delta += input.KeyboardLook.ReadValue<Vector2>() * (configuration.KeyboardLookSpeed * Time.deltaTime);
                 transform.Rotate(Vector3.up, delta.x, Space.World);
                 pitch = Mathf.Clamp(pitch - delta.y, -configuration.MaximumPitch, configuration.MaximumPitch);
                 viewCamera.transform.localRotation = Quaternion.Euler(pitch, 0, 0);
@@ -139,9 +129,9 @@ namespace MusiyoBetsknate.Museum
             if (blocked || choosing) planarVelocity = Vector3.zero; // Menus, on-screen panels and pauses stop at once.
             else
             {
-                var input = Vector2.ClampMagnitude(move.ReadValue<Vector2>(), 1);
-                float speed = sprint.IsPressed() ? configuration.SprintSpeed : configuration.WalkSpeed;
-                var target = (transform.forward * input.y + transform.right * input.x) * speed;
+                var move = Vector2.ClampMagnitude(input.Move.ReadValue<Vector2>(), 1);
+                float speed = input.Sprint.IsPressed() ? configuration.SprintSpeed : configuration.WalkSpeed;
+                var target = (transform.forward * move.y + transform.right * move.x) * speed;
                 planarVelocity = StepVelocity(planarVelocity, target, configuration.Acceleration, configuration.Deceleration, Time.deltaTime);
             }
             if (body.isGrounded && verticalSpeed < 0) verticalSpeed = -1;
@@ -157,9 +147,9 @@ namespace MusiyoBetsknate.Museum
         }
 
         /// <summary>Browsers release pointer lock on Escape without always delivering the key, so treat that as a pause.</summary>
-        private void DetectReleasedPointer()
+        private void DetectReleasedPointer(MuseumInput input)
         {
-            if (!captured || Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) return;
+            if (!captured || input.Pause.WasPressedThisFrame()) return;
             if (PointerLocked) { lockObserved = true; return; }
             if (!lockObserved) return;
             CapturePointer(false);

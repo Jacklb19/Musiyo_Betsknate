@@ -1,8 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
 
 namespace MusiyoBetsknate.Museum
 {
@@ -26,6 +23,7 @@ namespace MusiyoBetsknate.Museum
         private void OnEnable()
         {
             interaction = GetComponent<MuseumInteraction>();
+            MuseumInputDirector.Ensure(interaction);
             GetComponent<TourRuntime>().Changed += ResetFocus;
             interaction.Changed += SuppressActivePoint;
         }
@@ -101,9 +99,7 @@ namespace MusiyoBetsknate.Museum
             pointerWasCaptured = captured;
             if (!pointing) { display.ClearAim(); return; }
             display.Aim(new Ray(viewCamera.transform.position, viewCamera.transform.forward));
-#if ENABLE_INPUT_SYSTEM
-            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) display.Press();
-#endif
+            if (MuseumInput.Current.Click.WasPressedThisFrame()) display.Press();
         }
 
         private void Update()
@@ -116,45 +112,45 @@ namespace MusiyoBetsknate.Museum
                 return;
             }
             if (flow != null && flow.InputConsumedThisFrame) return;
-#if ENABLE_INPUT_SYSTEM
-            var keyboard = Keyboard.current;
+            var input = MuseumInput.Current;
+            // While a new key is being chosen, and on the frame it was chosen, that key acts on nothing.
+            if (input.Capturing || input.CaptureEndedThisFrame) return;
             var wayfinding = GetComponent<MuseumWayfinding>();
-            if (keyboard != null)
+            if (input.Wayfinding.WasPressedThisFrame()) wayfinding?.ToggleMenu();
+            if (input.Pause.WasPressedThisFrame())
             {
-                if (keyboard.hKey.wasPressedThisFrame) wayfinding?.ToggleMenu();
-                if (keyboard.escapeKey.wasPressedThisFrame)
-                {
-                    if (wayfinding?.MenuOpen == true) { wayfinding.CloseMenu(); return; }
-                    if (flow != null && flow.Menu != null && flow.Menu.Back()) return;
-                    var controller = visitor != null ? visitor.GetComponent<DesktopVisitorController>() : null;
-                    // The browser may deliver Escape after it already released the pointer and paused the visit.
-                    bool justPaused = controller != null && Time.unscaledTime - controller.PointerReleasePauseTime < .3f;
-                    if (!justPaused) interaction.SetPaused(interaction.State != InteractionState.Paused);
-                    return;
-                }
-                if (wayfinding?.MenuOpen == true) return;
-                if (interaction.State == InteractionState.Paused) return;
-                if (keyboard.backspaceKey.wasPressedThisFrame) interaction.Back();
-                if (interaction.State == InteractionState.Exploration && keyboard.tabKey.wasPressedThisFrame)
-                    Cycle(keyboard.shiftKey.isPressed ? -1 : 1);
-                if (keyboard.enterKey.wasPressedThisFrame)
-                {
-                    var arrival = GetComponent<MuseumArrival>();
-                    if (arrival != null && arrival.Visible && keyboardPoint == null) arrival.Dismiss();
-                    else Confirm();
-                }
-                if (keyboard.gKey.wasPressedThisFrame) GetComponent<MuseumGuide>()?.Ask();
-                if (keyboard.fKey.wasPressedThisFrame) interaction.OpenDetail();
-                if (keyboard.xKey.wasPressedThisFrame) GetComponent<MuseumModelPresenter>()?.Examine();
-                var narration = GetComponent<MuseumNarration>();
-                if (keyboard.rKey.wasPressedThisFrame) narration?.Repeat();
-                if (keyboard.spaceKey.wasPressedThisFrame) narration?.TogglePause();
-                if (keyboard.mKey.wasPressedThisFrame) narration?.ToggleMute();
-                for (int digit = 0; digit < 9; digit++)
-                    if (keyboard[Key.Digit1 + digit].wasPressedThisFrame) interaction.SelectElement(digit);
+                if (wayfinding?.MenuOpen == true) { wayfinding.CloseMenu(); return; }
+                if (flow != null && flow.Menu != null && flow.Menu.Back()) return;
+                var controller = visitor != null ? visitor.GetComponent<DesktopVisitorController>() : null;
+                // The browser may deliver Escape after it already released the pointer and paused the visit.
+                bool justPaused = controller != null && Time.unscaledTime - controller.PointerReleasePauseTime < .3f;
+                if (!justPaused) interaction.SetPaused(interaction.State != InteractionState.Paused);
+                return;
             }
-#endif
-            if (GetComponent<MuseumWayfinding>()?.MenuOpen == true) return;
+            if (wayfinding?.MenuOpen == true) return;
+            if (interaction.State == InteractionState.Paused) return;
+            if (input.Back.WasPressedThisFrame()) interaction.Back();
+            if (interaction.State == InteractionState.Exploration)
+            {
+                // The reverse combination also contains the forward key, so it is read first.
+                if (input.Previous.WasPressedThisFrame()) Cycle(-1);
+                else if (input.Next.WasPressedThisFrame()) Cycle(1);
+            }
+            if (input.Confirm.WasPressedThisFrame())
+            {
+                var arrival = GetComponent<MuseumArrival>();
+                if (arrival != null && arrival.Visible && keyboardPoint == null) arrival.Dismiss();
+                else Confirm();
+            }
+            if (input.Guide.WasPressedThisFrame()) GetComponent<MuseumGuide>()?.Ask();
+            if (input.Detail.WasPressedThisFrame()) interaction.OpenDetail();
+            if (input.Examine.WasPressedThisFrame()) GetComponent<MuseumModelPresenter>()?.Examine();
+            var narration = GetComponent<MuseumNarration>();
+            if (input.NarrationRepeat.WasPressedThisFrame()) narration?.Repeat();
+            if (input.NarrationPause.WasPressedThisFrame()) narration?.TogglePause();
+            if (input.NarrationMute.WasPressedThisFrame()) narration?.ToggleMute();
+            if (input.ChooseElement.WasPressedThisFrame()) interaction.SelectElement(input.ChosenElement());
+            if (wayfinding?.MenuOpen == true) return;
             if (visitor == null || viewCamera == null || interaction.Runtime.Contract == null) return;
             bool exploring = interaction.State == InteractionState.Exploration;
             // Once the visitor has stepped out of the active point, approaching another one opens it.
@@ -176,10 +172,8 @@ namespace MusiyoBetsknate.Museum
                 if (point.Supports("gaze") && angle < gazeAngle && PointActivation.IsVisible(point, viewCamera.transform, 4, 6))
                 { gazePoint = point; gazeAngle = angle; }
             }
-#if ENABLE_INPUT_SYSTEM
-            if (keyboard != null && keyboard.eKey.wasPressedThisFrame && nearestPoint != null)
+            if (input.Interact.WasPressedThisFrame() && nearestPoint != null)
             { interaction.Activate(nearestPoint, ActivationSource.Proximity); return; }
-#endif
             bool facing = nearestPoint != null && PointActivation.IsFacing(nearestPoint, viewCamera.transform, 4, 60);
             if (proximityDwell.Step(nearestPoint != null ? nearestPoint.Anchor.Key : null, facing, Time.unscaledDeltaTime, .8f))
             { interaction.Activate(nearestPoint, ActivationSource.Proximity); return; }

@@ -161,25 +161,19 @@ namespace MusiyoBetsknate.Museum
                 RequestModel(interaction.ActivePoint, interaction.SelectedElement.slug);
             if (interaction.State == InteractionState.ModelExamination)
             {
-                var keyboard = Keyboard.current;
-                if (keyboard != null)
+                var input = MuseumInput.Current;
+                var direction = input.Rotate.ReadValue<Vector2>();
+                Rotate(new Vector2(direction.x, -direction.y) * (80 * Time.unscaledDeltaTime));
+                Zoom(-input.Zoom.ReadValue<float>() * Time.unscaledDeltaTime * .4f);
+                if (input.ResetPose.WasPressedThisFrame()) ResetPose();
+                if (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject())
                 {
-                    var direction = new Vector2((keyboard.rightArrowKey.isPressed ? 1 : 0) - (keyboard.leftArrowKey.isPressed ? 1 : 0),
-                        (keyboard.downArrowKey.isPressed ? 1 : 0) - (keyboard.upArrowKey.isPressed ? 1 : 0));
-                    Rotate(direction * (80 * Time.unscaledDeltaTime));
-                    if (keyboard.equalsKey.isPressed || keyboard.numpadPlusKey.isPressed) Zoom(-Time.unscaledDeltaTime * .4f);
-                    if (keyboard.minusKey.isPressed || keyboard.numpadMinusKey.isPressed) Zoom(Time.unscaledDeltaTime * .4f);
-                    if (keyboard.homeKey.wasPressedThisFrame) ResetPose();
-                }
-                var mouse = Mouse.current;
-                if (mouse != null && (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject()))
-                {
-                    if (mouse.leftButton.isPressed)
+                    if (input.Click.IsPressed())
                     {
-                        var delta = mouse.delta.ReadValue();
+                        var delta = input.Drag.ReadValue<Vector2>();
                         Rotate(new Vector2(delta.x, -delta.y) * .3f);
                     }
-                    Zoom(-mouse.scroll.ReadValue().y / 120 * .08f);
+                    Zoom(-input.ScrollWheel.ReadValue<Vector2>().y / 120 * .08f);
                 }
                 UpdatePose();
             }

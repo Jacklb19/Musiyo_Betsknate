@@ -9,6 +9,10 @@ namespace MusiyoBetsknate.Tests
 {
     public sealed class PointInputPlayTests
     {
+        // Default keys, independent of whatever this machine has saved.
+        [SetUp] public void UseDefaultInput() => MuseumInput.Replace(MuseumInput.CreateDefault());
+        [TearDown] public void ReleaseInput() => MuseumInput.Replace(null);
+
         [UnityTest]
         public IEnumerator KeyboardProximityAndGazeSelectTheSameElement()
         {

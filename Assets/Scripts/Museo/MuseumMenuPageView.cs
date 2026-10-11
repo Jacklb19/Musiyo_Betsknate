@@ -25,6 +25,11 @@ namespace MusiyoBetsknate.Museum
         public Slider Sensitivity;
         public Slider Volume;
         public TMP_Text Instructions;
+        [Tooltip("Controls page: parent of the rebinding rows created from RowPrefab.")]
+        public RectTransform Bindings;
+        public MuseumRebindRow RowPrefab;
+        public Button RestoreBindings;
+        public TMP_Text BindingStatus;
         public ScrollRect Scroll;
 
         public void ValidateReferences(MuseumMenuPageKind expected)
@@ -46,7 +51,13 @@ namespace MusiyoBetsknate.Museum
                     Require(Sensitivity, nameof(Sensitivity)); Require(Volume, nameof(Volume));
                     Require(Subtitles, nameof(Subtitles)); Require(Reset, nameof(Reset));
                 }
-                else Require(Instructions, nameof(Instructions));
+                else
+                {
+                    Require(Instructions, nameof(Instructions)); Require(Bindings, nameof(Bindings));
+                    Require(RestoreBindings, nameof(RestoreBindings)); Require(BindingStatus, nameof(BindingStatus));
+                    if (RowPrefab == null) throw new InvalidOperationException(name + ": missing menu reference " + nameof(RowPrefab) + ".");
+                    RowPrefab.ValidateReferences();
+                }
             }
             foreach (var button in GetComponentsInChildren<Button>(true))
                 if (button.GetComponentInChildren<TMP_Text>(true) == null)

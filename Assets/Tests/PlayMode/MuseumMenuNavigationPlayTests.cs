@@ -13,6 +13,10 @@ namespace MusiyoBetsknate.Tests
 {
     public sealed class MuseumMenuNavigationPlayTests : InputTestFixture
     {
+        // The shipped actions with their default keys, bound to this fixture's devices and never to saved preferences.
+        public override void Setup() { base.Setup(); MuseumInput.Replace(MuseumInput.CreateDefault()); }
+        public override void TearDown() { MuseumInput.Replace(null); base.TearDown(); }
+
         private IEnumerator Tap(KeyControl key)
         {
             Press(key); yield return null;
@@ -43,7 +47,10 @@ namespace MusiyoBetsknate.Tests
             try
             {
                 yield return null;
-                Assert.That(module.move, Is.Null);
+                var input = MuseumInput.Current;
+                Assert.That(module.actionsAsset, Is.SameAs(input.Asset));
+                Assert.That(module.move, Is.Null, "The menu moves its own focus.");
+                Assert.That(input.Move.enabled, Is.False, "Walking keys do not listen while the menu is open.");
                 Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(menu.View.Main.Primary.gameObject));
                 yield return Tap(keyboard.tabKey);
                 Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(menu.View.Main.Settings.gameObject));
@@ -71,7 +78,6 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(flow.Phase, Is.EqualTo(VisitPhase.Menu));
                 Assert.That(interaction.ActivePoint, Is.Null);
                 menu.enabled = false;
-                Assert.That(module.move, Is.Not.Null);
                 menu.enabled = true;
                 yield return null;
                 Assert.That(canvas.GetComponentsInChildren<MuseumMenuView>(true).Length, Is.EqualTo(1));
@@ -79,7 +85,6 @@ namespace MusiyoBetsknate.Tests
                 Object.Destroy(menu);
                 yield return null;
                 Assert.That(flow.Menu, Is.Null);
-                Assert.That(module.move, Is.Not.Null);
             }
             finally
             {

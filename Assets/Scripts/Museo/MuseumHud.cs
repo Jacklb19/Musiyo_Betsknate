@@ -62,6 +62,8 @@ namespace MusiyoBetsknate.Museum
         private string summary;
         private MuseumLecternDisplay lectern;
         private MuseumPointPresence presence;
+        private MuseumInput input;
+        private readonly System.Collections.Generic.List<(TMP_Text caption, string textKey)> keyedCaptions = new();
 
         private void Awake()
         {
@@ -110,6 +112,8 @@ namespace MusiyoBetsknate.Museum
             interaction.Changed += Refresh;
             visitFlow.Changed += Refresh;
             preferences.Changed += ApplyPreferences;
+            input = MuseumInput.Current;
+            input.BindingsChanged += RefreshKeys;
             if (arrival != null) arrival.Changed += Refresh;
             if (guide != null) guide.Changed += Refresh;
             if (farewell != null) farewell.Changed += Refresh;
@@ -139,6 +143,7 @@ namespace MusiyoBetsknate.Museum
             interaction.Changed -= Refresh;
             visitFlow.Changed -= Refresh;
             preferences.Changed -= ApplyPreferences;
+            if (input != null) input.BindingsChanged -= RefreshKeys;
             if (arrival != null) arrival.Changed -= Refresh;
             if (guide != null) guide.Changed -= Refresh;
             if (farewell != null) farewell.Changed -= Refresh;
@@ -168,9 +173,9 @@ namespace MusiyoBetsknate.Museum
         /// <summary>Page Up and Page Down scroll long panels; the mouse wheel stays free for model zoom.</summary>
         private void ScrollPanelWithKeyboard()
         {
-            var keyboard = Keyboard.current;
-            if (keyboard == null || !panel.activeSelf || PanelScroll() == null) return;
-            int direction = keyboard.pageDownKey.wasPressedThisFrame ? -1 : keyboard.pageUpKey.wasPressedThisFrame ? 1 : 0;
+            var scroll = MuseumInput.Current.ScrollPanel;
+            if (!scroll.WasPressedThisFrame() || !panel.activeSelf || PanelScroll() == null) return;
+            int direction = System.Math.Sign(scroll.ReadValue<float>());
             if (direction == 0) return;
             panelScroll.verticalNormalizedPosition = Mathf.Clamp01(panelScroll.verticalNormalizedPosition
                 + direction * MuseumExperienceConfiguration.Current.PanelScrollStep);
@@ -180,6 +185,14 @@ namespace MusiyoBetsknate.Museum
         {
             if (panelGroup == null && !panel.TryGetComponent(out panelGroup)) panelGroup = panel.AddComponent<CanvasGroup>();
             return panelGroup;
+        }
+
+        /// <summary>A reassigned key changes every caption and prompt that names it.</summary>
+        private void RefreshKeys()
+        {
+            foreach (var (caption, textKey) in keyedCaptions)
+                if (caption != null) caption.text = MuseumInterfaceText.Get(textKey);
+            Refresh();
         }
 
         private void TogglePause() => interaction.SetPaused(interaction.State != InteractionState.Paused);
@@ -322,8 +335,8 @@ namespace MusiyoBetsknate.Museum
             modelText.name = "ModelStatus";
             modelText.text = "";
             modelText.GetComponent<LayoutElement>().minHeight = 0;
-            examineButton = ModelButton(MuseumInterfaceText.Get("examine_model"), elementList.parent, () => model.Examine());
-            modelRetryButton = ModelButton(MuseumInterfaceText.Get("retry_model"), elementList.parent, model.Retry);
+            examineButton = ModelButton("examine_model", elementList.parent, () => model.Examine());
+            modelRetryButton = ModelButton("retry_model", elementList.parent, model.Retry);
             modelControls = new GameObject("ModelControls", typeof(RectTransform), typeof(GridLayoutGroup), typeof(LayoutElement));
             modelControls.transform.SetParent(elementList.parent, false);
             // Seven examination buttons fit the panel as a grid instead of a column the viewport cuts off.
@@ -333,20 +346,23 @@ namespace MusiyoBetsknate.Museum
             layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             layout.constraintCount = columns;
             layout.cellSize = new Vector2((((RectTransform)elementList).sizeDelta.x - layout.spacing.x * (columns - 1)) / columns, 52);
-            ModelButton(MuseumInterfaceText.Get("rotate_left"), modelControls.transform, () => model.Rotate(new Vector2(-15, 0)));
-            ModelButton(MuseumInterfaceText.Get("rotate_right"), modelControls.transform, () => model.Rotate(new Vector2(15, 0)));
-            ModelButton(MuseumInterfaceText.Get("rotate_up"), modelControls.transform, () => model.Rotate(new Vector2(0, -15)));
-            ModelButton(MuseumInterfaceText.Get("rotate_down"), modelControls.transform, () => model.Rotate(new Vector2(0, 15)));
-            ModelButton(MuseumInterfaceText.Get("zoom_in"), modelControls.transform, () => model.Zoom(-.1f));
-            ModelButton(MuseumInterfaceText.Get("zoom_out"), modelControls.transform, () => model.Zoom(.1f));
-            ModelButton(MuseumInterfaceText.Get("reset_model"), modelControls.transform, model.ResetPose);
+            ModelButton("rotate_left", modelControls.transform, () => model.Rotate(new Vector2(-15, 0)));
+            ModelButton("rotate_right", modelControls.transform, () => model.Rotate(new Vector2(15, 0)));
+            ModelButton("rotate_up", modelControls.transform, () => model.Rotate(new Vector2(0, -15)));
+            ModelButton("rotate_down", modelControls.transform, () => model.Rotate(new Vector2(0, 15)));
+            ModelButton("zoom_in", modelControls.transform, () => model.Zoom(-.1f));
+            ModelButton("zoom_out", modelControls.transform, () => model.Zoom(.1f));
+            ModelButton("reset_model", modelControls.transform, model.ResetPose);
         }
 
-        private Button ModelButton(string label, Transform parent, UnityEngine.Events.UnityAction action)
+        /// <summary>Buttons are created from interface text keys so their captions follow the keys the visitor assigned.</summary>
+        private Button ModelButton(string textKey, Transform parent, UnityEngine.Events.UnityAction action)
         {
             var button = Instantiate(detailButton, parent);
             button.name = "ModelAction";
-            button.GetComponentInChildren<TMP_Text>().text = label;
+            var caption = button.GetComponentInChildren<TMP_Text>();
+            caption.text = MuseumInterfaceText.Get(textKey);
+            keyedCaptions.Add((caption, textKey));
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(action);
             var rect = button.GetComponent<RectTransform>();
@@ -383,10 +399,10 @@ namespace MusiyoBetsknate.Museum
             layout.spacing = 8;
             layout.childControlHeight = true;
             layout.childForceExpandHeight = false;
-            audioPauseButton = ModelButton(MuseumInterfaceText.Get("pause_narration"), narrationControls.transform, narration.TogglePause);
-            ModelButton(MuseumInterfaceText.Get("repeat_narration"), narrationControls.transform, narration.Repeat);
-            audioMuteButton = ModelButton(MuseumInterfaceText.Get("mute_narration"), narrationControls.transform, narration.ToggleMute);
-            narrationRetryButton = ModelButton(MuseumInterfaceText.Get("retry_narration"), elementList.parent, narration.Retry);
+            audioPauseButton = ModelButton("pause_narration", narrationControls.transform, narration.TogglePause);
+            ModelButton("repeat_narration", narrationControls.transform, narration.Repeat);
+            audioMuteButton = ModelButton("mute_narration", narrationControls.transform, narration.ToggleMute);
+            narrationRetryButton = ModelButton("retry_narration", elementList.parent, narration.Retry);
             subtitleText = Instantiate(focusText, transform);
             subtitleText.name = "NarrationSubtitles";
             subtitleText.fontSize = 24;
@@ -419,7 +435,7 @@ namespace MusiyoBetsknate.Museum
             volumeSlider.value = narration.Volume;
             volumeSlider.onValueChanged.RemoveAllListeners();
             volumeSlider.onValueChanged.AddListener(preferences.SetVolume);
-            subtitlesButton = ModelButton(MuseumInterfaceText.Get("hide_subtitles"), elementList.parent, () => preferences.SetSubtitles(!preferences.Subtitles));
+            subtitlesButton = ModelButton("hide_subtitles", elementList.parent, () => preferences.SetSubtitles(!preferences.Subtitles));
         }
 
         private void RefreshNarrationInterface()
@@ -455,7 +471,7 @@ namespace MusiyoBetsknate.Museum
             promptRect.pivot = new Vector2(0, 1);
             promptRect.anchoredPosition = new Vector2(24, -196);
             promptRect.sizeDelta = new Vector2(1200, 80);
-            returnButton = ModelButton(MuseumInterfaceText.Get("return_to_catalog"), transform, farewell.ReturnToCatalog);
+            returnButton = ModelButton("return_to_catalog", transform, farewell.ReturnToCatalog);
             returnButton.name = "ReturnToCatalog";
             var returnRect = returnButton.GetComponent<RectTransform>();
             returnRect.anchorMin = returnRect.anchorMax = new Vector2(0, 1);

@@ -30,6 +30,7 @@ namespace MusiyoBetsknate.Tests
         {
             hadStoredPreferences = PlayerPrefs.HasKey(MuseumVisitorPreferences.StorageKey);
             storedPreferences = PlayerPrefs.GetString(MuseumVisitorPreferences.StorageKey, "");
+            MuseumInput.Replace(MuseumInput.CreateDefault());
             root = new GameObject("MenuTestRuntime");
             loader = root.AddComponent<TourLoader>();
             interaction = root.AddComponent<MuseumInteraction>();
@@ -55,6 +56,7 @@ namespace MusiyoBetsknate.Tests
             if (events != null) typeof(EventSystem).GetMethod("OnDisable", BindingFlags.Instance | BindingFlags.NonPublic)
                 .Invoke(events.GetComponent<EventSystem>(), null);
             if (events != null) UnityEngine.Object.DestroyImmediate(events);
+            MuseumInput.Replace(null);
             if (hadStoredPreferences) PlayerPrefs.SetString(MuseumVisitorPreferences.StorageKey, storedPreferences);
             else PlayerPrefs.DeleteKey(MuseumVisitorPreferences.StorageKey);
             PlayerPrefs.Save();
@@ -94,22 +96,53 @@ namespace MusiyoBetsknate.Tests
         }
 
         [Test]
-        public void DisabledPresenterUnsubscribesAndRestoresModuleNavigation()
+        public void OpenMenuKeepsWalkingSilentAndMovesItsOwnFocus()
         {
-            Assert.That(module.move, Is.Null);
+            var input = MuseumInput.Current;
+            Assert.That(input.Context, Is.EqualTo(MuseumInputContext.Menu));
+            Assert.That(module.actionsAsset, Is.SameAs(input.Asset), "The interface module reads the one runtime copy of the actions.");
+            Assert.That(module.move, Is.Null, "The menu moves its own focus, so the module must not move it a second time.");
+            Assert.That(input.Navigate.enabled, Is.True);
+            Assert.That(input.Move.enabled, Is.False);
+            Assert.That(input.Interact.enabled, Is.False);
+        }
+
+        [Test]
+        public void DisabledPresenterUnsubscribesAndReturnsWhenEnabled()
+        {
             menu.enabled = false;
             Callback("OnDisable");
-            Assert.That(module.move, Is.Not.Null);
             bool before = preferences.Subtitles;
             menu.View.Settings.Subtitles.onClick.Invoke();
             Assert.That(preferences.Subtitles, Is.EqualTo(before));
             menu.enabled = true;
             Callback("OnEnable");
-            Assert.That(module.move, Is.Null);
             menu.View.Main.Controls.onClick.Invoke();
             Assert.That(menu.View.Controls.gameObject.activeSelf, Is.True);
             Assert.That(menu.Back(), Is.True);
             Assert.That(menu.View.Main.gameObject.activeSelf, Is.True);
+        }
+
+        [Test]
+        public void ControlsPageListsEveryRebindableKeyWithItsCurrentAssignment()
+        {
+            var input = MuseumInput.Current;
+            var rows = menu.View.Controls.Bindings.GetComponentsInChildren<MuseumRebindRow>(true);
+            int rebindable = 0;
+            foreach (var binding in input.Bindings.All) if (binding.Rebindable) rebindable++;
+            Assert.That(rows.Length, Is.EqualTo(rebindable));
+            var guide = System.Array.Find(rows, row => row.Binding.Id == "guide");
+            Assert.That(guide.Action.text, Is.EqualTo(MuseumInterfaceText.Get("input_guide")));
+            Assert.That(guide.Key.text, Is.EqualTo("G"));
+            Assert.That(input.Bindings.TryRebind(input.Bindings.Find("guide"), "<Keyboard>/t", out _), Is.EqualTo(MuseumRebindResult.Applied));
+            Assert.That(guide.Key.text, Is.EqualTo("T"), "A reassigned key reaches its row.");
+            Assert.That(MuseumInterfaceText.Format("guide_prompt", "Guía"), Does.Contain("T:"), "Prompts name the key in force.");
+            menu.Configure(flow, interaction, loader, preferences);
+            Assert.That(menu.View.Controls.Bindings.GetComponentsInChildren<MuseumRebindRow>(true).Length, Is.EqualTo(rebindable),
+                "Configuring again reuses the rows.");
+            menu.View.Controls.RestoreBindings.onClick.Invoke();
+            Assert.That(guide.Key.text, Is.EqualTo("G"));
+            Assert.That(menu.View.Controls.BindingStatus.text, Is.EqualTo(MuseumInterfaceText.Get("rebind_restored")));
         }
 
         [Test]
@@ -208,12 +241,11 @@ namespace MusiyoBetsknate.Tests
         }
 
         [Test]
-        public void DestroyedPresenterRestoresNavigationAndReleasesFlowReference()
+        public void DestroyedPresenterReleasesFlowReferenceAndItsView()
         {
             Callback("OnDestroy");
             UnityEngine.Object.DestroyImmediate(menu);
             Assert.That(flow.Menu, Is.Null);
-            Assert.That(module.move, Is.Not.Null);
             Assert.That(canvas.GetComponentsInChildren<MuseumMenuView>(true), Is.Empty);
         }
 
