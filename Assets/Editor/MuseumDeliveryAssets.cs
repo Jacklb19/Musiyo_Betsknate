@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.Rendering.Universal.ShaderGUI;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -113,6 +114,7 @@ namespace MusiyoBetsknate.Editor
                     material.EnableKeyword("_NORMALMAP");
                 }
             }
+            // The simple shader keeps its default of no specular highlights, which suits the light profile.
             else if (entry.NormalTexture != null || entry.RoughnessTexture != null)
                 throw new InvalidOperationException(entry.Name + " carries detail maps its profile shader does not use.");
             if (entry.EmissionColor != null && entry.EmissionStrength > 0)
@@ -122,6 +124,9 @@ namespace MusiyoBetsknate.Editor
                 material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.BakedEmissive;
             }
             else material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+            // Finish as the pipeline's own inspector does, so Unity finds nothing to rewrite in the saved material.
+            if (shader.name == LitShader) BaseShaderGUI.SetMaterialKeywords(material, LitGUI.SetMaterialKeywords);
+            else BaseShaderGUI.SetMaterialKeywords(material, SimpleLitGUI.SetMaterialKeywords);
         }
 
         private static Color Linear(float[] value) => new Color(value[0], value[1], value[2], 1);
