@@ -7,6 +7,8 @@ namespace MusiyoBetsknate.Museum
         [SerializeField] private string key;
         [SerializeField] private Vector2 halfSize = new Vector2(5, 5);
         public string Key => key;
+        /// <summary>Half the width and depth of the room floor, in its own axes.</summary>
+        public Vector2 HalfSize => halfSize;
         public void Configure(string roomKey) => key = roomKey;
         public void ConfigureBounds(Vector2 extent) => halfSize = extent;
         public bool Contains(Vector3 visitor)

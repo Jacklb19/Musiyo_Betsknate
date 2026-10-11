@@ -30,11 +30,11 @@ namespace MusiyoBetsknate.Editor
             foreach (var child in runtime.GetComponentsInChildren<Transform>(true))
             {
                 if (child.name == RootName) throw new InvalidOperationException("Reading stands already exist; no objects were replaced.");
-                if (child.name == "NeutralArchitecture") architecture = child;
+                if (child.name == MuseumDeliveryAssets.PrefabRootName) architecture = child;
             }
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(ModelPath);
             if (architecture == null || model == null)
-                throw new InvalidOperationException("Missing the neutral architecture or the reading stand model: " + ModelPath);
+                throw new InvalidOperationException("Missing the museum architecture or the reading stand model: " + ModelPath);
 
             // Both models come from the same concept and export axes, so they share the architecture's frame.
             var root = (GameObject)PrefabUtility.InstantiatePrefab(model, scene);

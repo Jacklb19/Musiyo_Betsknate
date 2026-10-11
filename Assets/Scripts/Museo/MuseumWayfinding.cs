@@ -162,10 +162,13 @@ namespace MusiyoBetsknate.Museum
                     excluded.Add(new NavMeshBuildMarkup { root = collider.transform, ignoreFromBuild = true });
             NavMeshBuilder.CollectSources(transform, ~0, NavMeshCollectGeometry.PhysicsColliders, 0, excluded, sources);
             if (sources.Count == 0) return false;
+            // Guidance runs between rooms, so the mesh covers them and not the whole terrain around the museum.
             var bounds = new Bounds(transform.position, Vector3.one);
-            foreach (var collider in GetComponentsInChildren<Collider>())
-                if (collider.enabled && !collider.isTrigger && !(collider is CharacterController)) bounds.Encapsulate(collider.bounds);
-            bounds.Expand(4);
+            foreach (var anchor in anchors.Values)
+                foreach (var corner in new[] { new Vector3(anchor.HalfSize.x, 0, anchor.HalfSize.y), new Vector3(-anchor.HalfSize.x, 0, anchor.HalfSize.y),
+                    new Vector3(anchor.HalfSize.x, 3, -anchor.HalfSize.y), new Vector3(-anchor.HalfSize.x, 3, -anchor.HalfSize.y) })
+                    bounds.Encapsulate(anchor.transform.TransformPoint(corner));
+            bounds.Expand(8);
             navigation = NavMeshBuilder.BuildNavMeshData(settings, sources, bounds, Vector3.zero, Quaternion.identity);
             if (navigation == null) return false;
             navigationInstance = NavMesh.AddNavMeshData(navigation);
@@ -185,12 +188,19 @@ namespace MusiyoBetsknate.Museum
             corners = Array.Empty<Vector3>();
             if (!anchors.TryGetValue(roomKey, out var destination) || !EnsureNavigation()) return false;
             var filter = new NavMeshQueryFilter { agentTypeID = agentType, areaMask = NavMesh.AllAreas };
-            if (!NavMesh.SamplePosition(start, out var from, 2, filter)
-                || !NavMesh.SamplePosition(destination.transform.position, out var to, 2, filter)
-                || !NavMesh.CalculatePath(from.position, to.position, filter, path)
-                || path.status != NavMeshPathStatus.PathComplete) return false;
-            corners = path.corners;
-            return corners.Length > 1;
+            if (!NavMesh.SamplePosition(start, out var from, 2, filter)) return false;
+            // An exhibit may stand at the centre of its room, so the route may end beside any point of the room instead.
+            var targets = new List<Vector3> { destination.transform.position };
+            foreach (var point in destination.GetComponentsInChildren<PointAnchor>()) targets.Add(point.transform.position);
+            foreach (var target in targets)
+            {
+                if (!NavMesh.SamplePosition(target, out var to, 2, filter)
+                    || !NavMesh.CalculatePath(from.position, to.position, filter, path)
+                    || path.status != NavMeshPathStatus.PathComplete || path.corners.Length < 2) continue;
+                corners = path.corners;
+                return true;
+            }
+            return false;
         }
         private void RefreshPath()
         {
