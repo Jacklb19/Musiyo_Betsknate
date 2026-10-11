@@ -1,0 +1,6784 @@
+{
+  "schema_version": 1,
+  "package": "entrega_unity_20261011",
+  "variant": "delivery",
+  "provenance_note": "Provenance is read from file names and the delivery notes; the delivery carries no licence records. material_photograph: tiling surface sets named after Poly Haven texture assets, which that library publishes under CC0; colour maps ending in _musiyo were recoloured for the museum. authored_design: surface designs made for this museum.",
+  "model": {
+    "source": "exports/web/museum_v3_delivery_web.fbx",
+    "sha256": "06c93aef4f714f24ee0849a9a65af1a9ab8efeed3cebb23bffc790cca1e39676",
+    "bytes": 2532508,
+    "objects": 192,
+    "meshes": 168,
+    "triangles": 53474,
+    "equivalent_sources": [
+      {
+        "profile": "quest",
+        "source": "exports/quest/museum_v3_delivery_quest.fbx",
+        "sha256": "21ec5209ad029018835c16ea7fad05276da6206302e9b1ec93ad85c8c9f8177e",
+        "bytes": 2525676
+      },
+      {
+        "profile": "windows",
+        "source": "exports/windows/museum_v3_delivery_windows.fbx",
+        "sha256": "682689fef96705e0a815c8df02bb317b201c8e1ab6e91866d010a80ecc59435d",
+        "bytes": 2552588
+      }
+    ]
+  },
+  "textures": [
+    {
+      "file": "clay_floor_001_diff_1k_musiyo_512.jpg",
+      "sha256": "453163f7bae0397657043bcc2f40684ab90b903ef3b3d2f25df9c0b69bcd1ce7",
+      "bytes": 40125,
+      "role": "albedo",
+      "width": 512,
+      "height": 512,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/web/textures/clay_floor_001_diff_1k_musiyo.jpg",
+        "exports/quest/textures/clay_floor_001_diff_1k_musiyo.jpg"
+      ]
+    },
+    {
+      "file": "cenefa_piso_rombos_1024.png",
+      "sha256": "895db4c761a5ad45eb3dcb360993bb4210d7583df4909f3e3c1449fd5a5881c6",
+      "bytes": 112842,
+      "role": "albedo",
+      "width": 1024,
+      "height": 128,
+      "provenance": "authored_design",
+      "sources": [
+        "exports/web/textures/cenefa_piso_rombos.jpg",
+        "exports/quest/textures/cenefa_piso_rombos.jpg",
+        "exports/windows/textures/cenefa_piso_rombos.png"
+      ]
+    },
+    {
+      "file": "bark_willow_diff_1k_musiyo_512.jpg",
+      "sha256": "b3d3206819364e3afc63301153c53a9485d03899cc8b78f26165b4e923dfba1f",
+      "bytes": 85495,
+      "role": "albedo",
+      "width": 512,
+      "height": 512,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/web/textures/bark_willow_diff_1k_musiyo.jpg",
+        "exports/quest/textures/bark_willow_diff_1k_musiyo.jpg"
+      ]
+    },
+    {
+      "file": "estera_fibra_512.png",
+      "sha256": "442c1d7d4b3ffacdee879d6c328336fc81f69608b7806fdc1c95f484d1f7e606",
+      "bytes": 366467,
+      "role": "albedo",
+      "width": 512,
+      "height": 512,
+      "provenance": "authored_design",
+      "sources": [
+        "exports/web/textures/estera_fibra.jpg",
+        "exports/quest/textures/estera_fibra.jpg",
+        "exports/windows/textures/estera_fibra.png"
+      ]
+    },
+    {
+      "file": "dark_wooden_planks_diff_1k_musiyo_512.jpg",
+      "sha256": "d686df200ac204f3dc9cc3eb92bb38e689b20e7fa70e53dc1eed1874f707c806",
+      "bytes": 57291,
+      "role": "albedo",
+      "width": 512,
+      "height": 512,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/web/textures/dark_wooden_planks_diff_1k_musiyo.jpg",
+        "exports/quest/textures/dark_wooden_planks_diff_1k_musiyo.jpg"
+      ]
+    },
+    {
+      "file": "dark_wooden_planks_nor_1k_512.jpg",
+      "sha256": "46343f500fb667151068c9f2af7582a7860d93da4be4a325aea53cab734b5b6d",
+      "bytes": 29922,
+      "role": "normal",
+      "width": 512,
+      "height": 512,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/web/textures/dark_wooden_planks_nor_1k.jpg"
+      ]
+    },
+    {
+      "file": "brown_planks_05_diff_1k_musiyo_512.jpg",
+      "sha256": "47aba7b744ffdc722c3a8c738f9b3cac6ac5eb8bc57f93e42bb45e55b7f8724c",
+      "bytes": 37136,
+      "role": "albedo",
+      "width": 512,
+      "height": 512,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/web/textures/brown_planks_05_diff_1k_musiyo.jpg",
+        "exports/quest/textures/brown_planks_05_diff_1k_musiyo.jpg"
+      ]
+    },
+    {
+      "file": "thatch_roof_angled_diff_1k_musiyo_512.jpg",
+      "sha256": "e8105b9140a97d7abf922d985e973614c790638cba7681db2afc89f7110f3299",
+      "bytes": 103886,
+      "role": "albedo",
+      "width": 512,
+      "height": 512,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/web/textures/thatch_roof_angled_diff_1k_musiyo.jpg",
+        "exports/quest/textures/thatch_roof_angled_diff_1k_musiyo.jpg"
+      ]
+    },
+    {
+      "file": "thatch_roof_angled_nor_1k_512.jpg",
+      "sha256": "b9b3a18e8ed20bc5d782207a78c1ef341f69da60e4735b656e1684e4454a4f43",
+      "bytes": 101673,
+      "role": "normal",
+      "width": 512,
+      "height": 512,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/web/textures/thatch_roof_angled_nor_1k.jpg"
+      ]
+    },
+    {
+      "file": "leafy_grass_diff_1k_musiyo_512.jpg",
+      "sha256": "ca2e102efa73fad128d0b3248f0fdb97744130041e60ac0e1b57f4d185fadfc9",
+      "bytes": 84429,
+      "role": "albedo",
+      "width": 512,
+      "height": 512,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/web/textures/leafy_grass_diff_1k_musiyo.jpg",
+        "exports/quest/textures/leafy_grass_diff_1k_musiyo.jpg"
+      ]
+    },
+    {
+      "file": "cobblestone_floor_001_diff_1k_musiyo_512.jpg",
+      "sha256": "f0fe55acdd56ae0059a06ef5c7e844df402c250744725f1793d0c233d08ea3e2",
+      "bytes": 87097,
+      "role": "albedo",
+      "width": 512,
+      "height": 512,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/web/textures/cobblestone_floor_001_diff_1k_musiyo.jpg",
+        "exports/quest/textures/cobblestone_floor_001_diff_1k_musiyo.jpg"
+      ]
+    },
+    {
+      "file": "cobblestone_floor_001_nor_1k_512.jpg",
+      "sha256": "481d1da2342e8258452fb7ce7a44aecb78acd45f5ea534bfd745ca0e423fe58d",
+      "bytes": 79292,
+      "role": "normal",
+      "width": 512,
+      "height": 512,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/web/textures/cobblestone_floor_001_nor_1k.jpg"
+      ]
+    },
+    {
+      "file": "piso_bienvenida_labores_1024.jpg",
+      "sha256": "f707977a317b799803a985f4bc30f14fecb36724ad2a4e83f7de537634572f6f",
+      "bytes": 202589,
+      "role": "albedo",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "authored_design",
+      "sources": [
+        "exports/web/textures/piso_bienvenida_labores.jpg",
+        "exports/quest/textures/piso_bienvenida_labores.jpg"
+      ]
+    },
+    {
+      "file": "piso_patio_rombo_sol_1024.png",
+      "sha256": "3350d97dbdc730d80903b0a9d8499627fb5ba0de7da2467ec6cabd2f323430d8",
+      "bytes": 1449123,
+      "role": "albedo",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "authored_design",
+      "sources": [
+        "exports/web/textures/piso_patio_rombo_sol.jpg",
+        "exports/quest/textures/piso_patio_rombo_sol.jpg",
+        "exports/windows/textures/piso_patio_rombo_sol.png"
+      ]
+    },
+    {
+      "file": "clay_plaster_diff_1k_musiyo_512.jpg",
+      "sha256": "fb65113059381eace15fb9487bd4361e8016d41a7ac118f2e541876c5847d169",
+      "bytes": 19116,
+      "role": "albedo",
+      "width": 512,
+      "height": 512,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/web/textures/clay_plaster_diff_1k_musiyo.jpg",
+        "exports/quest/textures/clay_plaster_diff_1k_musiyo.jpg"
+      ]
+    },
+    {
+      "file": "clay_plaster_nor_1k_512.jpg",
+      "sha256": "1a845a7a2eba5d816f2d676e2e03632421034a5a7a4e06f9988dcf2bff544c14",
+      "bytes": 37740,
+      "role": "normal",
+      "width": 512,
+      "height": 512,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/web/textures/clay_plaster_nor_1k.jpg"
+      ]
+    },
+    {
+      "file": "dirt_floor_diff_1k_musiyo_512.jpg",
+      "sha256": "3354c48021db696b8a5e3f14b0094d6eff5a08dde1d39660f0a36159c91bd73f",
+      "bytes": 58129,
+      "role": "albedo",
+      "width": 512,
+      "height": 512,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/web/textures/dirt_floor_diff_1k_musiyo.jpg",
+        "exports/quest/textures/dirt_floor_diff_1k_musiyo.jpg"
+      ]
+    },
+    {
+      "file": "tsombiach_labores_interpretacion_2048.png",
+      "sha256": "d8d2ff4c642bd177352e014ac253bcb1c3d73cdbe9d30d2231102e7858e24534",
+      "bytes": 762272,
+      "role": "albedo",
+      "width": 2048,
+      "height": 256,
+      "provenance": "authored_design",
+      "sources": [
+        "exports/web/textures/tsombiach_labores_interpretacion.jpg",
+        "exports/quest/textures/tsombiach_labores_interpretacion.jpg",
+        "exports/windows/textures/tsombiach_labores_interpretacion.png"
+      ]
+    },
+    {
+      "file": "clay_floor_001_diff_1k_musiyo_1024.jpg",
+      "sha256": "91681e4f64ff6dfdab95f06b2ae737d283eb0f6695896f1a951f41060ccc936d",
+      "bytes": 166507,
+      "role": "albedo",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/clay_floor_001_diff_1k_musiyo.jpg"
+      ]
+    },
+    {
+      "file": "clay_floor_001_rough_1k_1024.jpg",
+      "sha256": "1472ed58e685f239676974f59f60f51a2e330a9ba022fc23d7a187890206810e",
+      "bytes": 121553,
+      "role": "roughness",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/clay_floor_001_rough_1k.jpg"
+      ]
+    },
+    {
+      "file": "clay_floor_001_nor_1k_1024.jpg",
+      "sha256": "de22f48cddc12d3c3e13361eb590eadb4828917c016c9b4df0f937ad1f0a9cf2",
+      "bytes": 72654,
+      "role": "normal",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/clay_floor_001_nor_1k.jpg"
+      ]
+    },
+    {
+      "file": "bark_willow_diff_1k_musiyo_1024.jpg",
+      "sha256": "d14f0d072b51bbf368bd0a176ec7f0c195ec6eeceebe3dbb9fbc3e4cbd32b133",
+      "bytes": 458216,
+      "role": "albedo",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/bark_willow_diff_1k_musiyo.jpg"
+      ]
+    },
+    {
+      "file": "bark_willow_rough_1k_1024.jpg",
+      "sha256": "4de7f44cbd2c787555a8504ca35fe2f036a33e4d180d0ee9b17d3c20380ac965",
+      "bytes": 372597,
+      "role": "roughness",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/bark_willow_rough_1k.jpg"
+      ]
+    },
+    {
+      "file": "bark_willow_nor_1k_1024.jpg",
+      "sha256": "9d5a771315a85c2d890526af9826843e7967ed3330da49bef7e86c3e5a6c0b6a",
+      "bytes": 1438304,
+      "role": "normal",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/bark_willow_nor_1k.jpg"
+      ]
+    },
+    {
+      "file": "dark_wooden_planks_diff_1k_musiyo_1024.jpg",
+      "sha256": "e4fb97274edb872521b8b430e11dd6f1da2a0d234f495243c13cccc06ba6e0ed",
+      "bytes": 325671,
+      "role": "albedo",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/dark_wooden_planks_diff_1k_musiyo.jpg"
+      ]
+    },
+    {
+      "file": "dark_wooden_planks_rough_1k_1024.jpg",
+      "sha256": "a10ea0b52fe395a7ad205cacfd28bd1aea48ef8545d171209f528dcf58d0a8d3",
+      "bytes": 673968,
+      "role": "roughness",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/dark_wooden_planks_rough_1k.jpg"
+      ]
+    },
+    {
+      "file": "dark_wooden_planks_nor_1k_1024.jpg",
+      "sha256": "87a7b26bc674477865d4589c6589200bfa649a6461422bf56f5600c05a470206",
+      "bytes": 658444,
+      "role": "normal",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/dark_wooden_planks_nor_1k.jpg"
+      ]
+    },
+    {
+      "file": "brown_planks_05_diff_1k_musiyo_1024.jpg",
+      "sha256": "3d1feff85eb1ca94191633e426530c20072a1904c6145547cb1eaa0fc37465ec",
+      "bytes": 182771,
+      "role": "albedo",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/brown_planks_05_diff_1k_musiyo.jpg"
+      ]
+    },
+    {
+      "file": "brown_planks_05_rough_1k_1024.jpg",
+      "sha256": "9153152164e5a41cc7f890c6ca88af46ade75fc5e05b240bd2273c049c892f4f",
+      "bytes": 92792,
+      "role": "roughness",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/brown_planks_05_rough_1k.jpg"
+      ]
+    },
+    {
+      "file": "brown_planks_05_nor_1k_1024.jpg",
+      "sha256": "e03e5caae3ac7e950bb639df83f9983a4e510cab695a9c93049536b98ad1b9f7",
+      "bytes": 467650,
+      "role": "normal",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/brown_planks_05_nor_1k.jpg"
+      ]
+    },
+    {
+      "file": "thatch_roof_angled_diff_1k_musiyo_1024.jpg",
+      "sha256": "f76660dac3b43cf2facf76edaaa48f6dffb7fc11313e1de1babc3487b6f009db",
+      "bytes": 520194,
+      "role": "albedo",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/thatch_roof_angled_diff_1k_musiyo.jpg"
+      ]
+    },
+    {
+      "file": "thatch_roof_angled_rough_1k_1024.jpg",
+      "sha256": "81891e8df23ad0019c467095f5eb9631fef44e558a66ed2a472842349a7449ba",
+      "bytes": 588100,
+      "role": "roughness",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/thatch_roof_angled_rough_1k.jpg"
+      ]
+    },
+    {
+      "file": "thatch_roof_angled_nor_1k_1024.jpg",
+      "sha256": "073e2b374f2477605e23a1054e605de5268a012d2701865040d4551816b70d06",
+      "bytes": 1278796,
+      "role": "normal",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/thatch_roof_angled_nor_1k.jpg"
+      ]
+    },
+    {
+      "file": "leafy_grass_diff_1k_musiyo_1024.jpg",
+      "sha256": "d36d2acbff5aadab8993632ce0fe154570b68c57d061f6e1b64cbc83752c3fcb",
+      "bytes": 475784,
+      "role": "albedo",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/leafy_grass_diff_1k_musiyo.jpg"
+      ]
+    },
+    {
+      "file": "leafy_grass_rough_1k_1024.jpg",
+      "sha256": "0c2a1d91aacb8e54a496051b59854e51e456fe858abeade778e308359ef16463",
+      "bytes": 511385,
+      "role": "roughness",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/leafy_grass_rough_1k.jpg"
+      ]
+    },
+    {
+      "file": "leafy_grass_nor_1k_1024.jpg",
+      "sha256": "832328216adc0a7e1f70a31d5ee48c9ab7f2152d83816122736cf42ac4b2ebd6",
+      "bytes": 1466049,
+      "role": "normal",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/leafy_grass_nor_1k.jpg"
+      ]
+    },
+    {
+      "file": "cobblestone_floor_001_diff_1k_musiyo_1024.jpg",
+      "sha256": "8d6d3a61aff708e748dbc96d0352012bea8e08eb534be5287cb3fbcea922a8f1",
+      "bytes": 469497,
+      "role": "albedo",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/cobblestone_floor_001_diff_1k_musiyo.jpg"
+      ]
+    },
+    {
+      "file": "cobblestone_floor_001_rough_1k_1024.jpg",
+      "sha256": "ac7cfc342f9d13b5dff1972200daaf864fbdf5455a2ed2da96491b823f411f36",
+      "bytes": 403395,
+      "role": "roughness",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/cobblestone_floor_001_rough_1k.jpg"
+      ]
+    },
+    {
+      "file": "cobblestone_floor_001_nor_1k_1024.jpg",
+      "sha256": "f5c92ea5f9d09c35fee6f75884f4496a61a08ac0a1fe427d5a1ae7d1e15c4280",
+      "bytes": 995098,
+      "role": "normal",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/cobblestone_floor_001_nor_1k.jpg"
+      ]
+    },
+    {
+      "file": "piso_bienvenida_labores_2048.png",
+      "sha256": "4a0cf4311feadb5b9dbf150dbf9a9df1023486baf962963955708251bc101741",
+      "bytes": 5873424,
+      "role": "albedo",
+      "width": 2048,
+      "height": 2048,
+      "provenance": "authored_design",
+      "sources": [
+        "exports/windows/textures/piso_bienvenida_labores.png"
+      ]
+    },
+    {
+      "file": "clay_plaster_diff_1k_musiyo_1024.jpg",
+      "sha256": "4abd152eb01595bb32e396ccc251f0bdfded9d2454a5ab936f10a281a30dc856",
+      "bytes": 135422,
+      "role": "albedo",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/clay_plaster_diff_1k_musiyo.jpg"
+      ]
+    },
+    {
+      "file": "clay_plaster_rough_1k_1024.jpg",
+      "sha256": "e91a6238456b54a82dbf2c025e0b046851c90e7e772fe2affd26a46b243ce7b7",
+      "bytes": 345709,
+      "role": "roughness",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/clay_plaster_rough_1k.jpg"
+      ]
+    },
+    {
+      "file": "clay_plaster_nor_1k_1024.jpg",
+      "sha256": "359f814292005ab16be86807678a4a51e8256a87c282ebf5f5333ce18c428fba",
+      "bytes": 784921,
+      "role": "normal",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/clay_plaster_nor_1k.jpg"
+      ]
+    },
+    {
+      "file": "dirt_floor_diff_1k_musiyo_1024.jpg",
+      "sha256": "5532aab392877dfea46b3255c0464381992578c02e5198cdcefb847a79bf57cd",
+      "bytes": 353109,
+      "role": "albedo",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/dirt_floor_diff_1k_musiyo.jpg"
+      ]
+    },
+    {
+      "file": "dirt_floor_rough_1k_1024.jpg",
+      "sha256": "093166ffda063b8fcf04ec645e1e12c24811f614468ba378437a3535c3c53f57",
+      "bytes": 389725,
+      "role": "roughness",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/dirt_floor_rough_1k.jpg"
+      ]
+    },
+    {
+      "file": "dirt_floor_nor_1k_1024.jpg",
+      "sha256": "9481dc2cee97b240ca10dc1cd60fec834a85e455aaa7d2a584396ea10210c2c0",
+      "bytes": 1167485,
+      "role": "normal",
+      "width": 1024,
+      "height": 1024,
+      "provenance": "material_photograph",
+      "sources": [
+        "exports/windows/textures/dirt_floor_nor_1k.jpg"
+      ]
+    }
+  ],
+  "profiles": [
+    {
+      "name": "web",
+      "shader": "Universal Render Pipeline/Lit",
+      "guide_source": "exports/web/materials_delivery_web.json",
+      "guide_sha256": "f21f0a28c5658c55be5bc6eb67c45b87cf26453feec5b800a0bc1f1d9caeeb61",
+      "materials": [
+        {
+          "name": "M_Agua_Laguna",
+          "double_sided": false,
+          "base_color": [
+            0.02,
+            0.06,
+            0.07,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.04,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Arbol_Follaje",
+          "double_sided": false,
+          "base_color": [
+            0.12,
+            0.26,
+            0.09,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.85,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Arbol_Follaje_DS",
+          "double_sided": true,
+          "base_color": [
+            0.12,
+            0.26,
+            0.09,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.85,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Barro_Piso",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6862,
+          "base_color_texture": "clay_floor_001_diff_1k_musiyo_512.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Canasto_Fibra",
+          "double_sided": false,
+          "base_color": [
+            0.42,
+            0.3,
+            0.14,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.9,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Cartela_Fondo",
+          "double_sided": false,
+          "base_color": [
+            0.86,
+            0.82,
+            0.72,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.7,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Cenefa_Piso_Rombos",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": "cenefa_piso_rombos_1024.png",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Corteza_Sauce",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.7606,
+          "base_color_texture": "bark_willow_diff_1k_musiyo_512.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Estera_Fibra",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.95,
+          "base_color_texture": "estera_fibra_512.png",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Farol_Luz_Calida",
+          "double_sided": false,
+          "base_color": [
+            1.0,
+            0.7,
+            0.35,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": [
+            1.0,
+            0.62,
+            0.28,
+            1.0
+          ],
+          "emission_strength": 4.0
+        },
+        {
+          "name": "M_Flor_Amarilla",
+          "double_sided": false,
+          "base_color": [
+            0.95,
+            0.75,
+            0.1,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Flor_Blanca",
+          "double_sided": false,
+          "base_color": [
+            0.95,
+            0.95,
+            0.9,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Flor_Roja",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.1,
+            0.15,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Fuego",
+          "double_sided": false,
+          "base_color": [
+            1.0,
+            0.35,
+            0.05,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": [
+            1.0,
+            0.4,
+            0.05,
+            1.0
+          ],
+          "emission_strength": 3.0
+        },
+        {
+          "name": "M_Guia_Provisional",
+          "double_sided": false,
+          "base_color": [
+            0.55,
+            0.55,
+            0.6,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Letrero_Madera_Clara",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.66,
+            0.45,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.7,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Madera",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6608,
+          "base_color_texture": "dark_wooden_planks_diff_1k_musiyo_512.jpg",
+          "normal_texture": "dark_wooden_planks_nor_1k_512.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Madera_DS",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6608,
+          "base_color_texture": "dark_wooden_planks_diff_1k_musiyo_512.jpg",
+          "normal_texture": "dark_wooden_planks_nor_1k_512.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Madera_Piso",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.9321,
+          "base_color_texture": "brown_planks_05_diff_1k_musiyo_512.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Maiz",
+          "double_sided": true,
+          "base_color": [
+            0.16,
+            0.34,
+            0.07,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.85,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Manta_Negra",
+          "double_sided": false,
+          "base_color": [
+            0.05,
+            0.05,
+            0.06,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.95,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Mazorca",
+          "double_sided": false,
+          "base_color": [
+            0.9,
+            0.72,
+            0.2,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Olla_Barro",
+          "double_sided": false,
+          "base_color": [
+            0.45,
+            0.22,
+            0.12,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Paja",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8921,
+          "base_color_texture": "thatch_roof_angled_diff_1k_musiyo_512.jpg",
+          "normal_texture": "thatch_roof_angled_nor_1k_512.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Paja_DS",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8921,
+          "base_color_texture": "thatch_roof_angled_diff_1k_musiyo_512.jpg",
+          "normal_texture": "thatch_roof_angled_nor_1k_512.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Pasto_Valle",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.685,
+          "base_color_texture": "leafy_grass_diff_1k_musiyo_512.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Piedra",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.674,
+          "base_color_texture": "cobblestone_floor_001_diff_1k_musiyo_512.jpg",
+          "normal_texture": "cobblestone_floor_001_nor_1k_512.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Piedra_DS",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.674,
+          "base_color_texture": "cobblestone_floor_001_diff_1k_musiyo_512.jpg",
+          "normal_texture": "cobblestone_floor_001_nor_1k_512.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Piso_Bienvenida_Labores",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.85,
+          "base_color_texture": "piso_bienvenida_labores_1024.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Piso_Patio_Rombo_Sol",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.85,
+          "base_color_texture": "piso_patio_rombo_sol_1024.png",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Planta_Medicinal",
+          "double_sided": false,
+          "base_color": [
+            0.09,
+            0.26,
+            0.07,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tapia",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.9227,
+          "base_color_texture": "clay_plaster_diff_1k_musiyo_512.jpg",
+          "normal_texture": "clay_plaster_nor_1k_512.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tapia_DS",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.9227,
+          "base_color_texture": "clay_plaster_diff_1k_musiyo_512.jpg",
+          "normal_texture": "clay_plaster_nor_1k_512.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Amarillo",
+          "double_sided": false,
+          "base_color": [
+            0.95,
+            0.72,
+            0.05,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Azul_Agua",
+          "double_sided": false,
+          "base_color": [
+            0.08,
+            0.22,
+            0.6,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Azul_Agua_DS",
+          "double_sided": true,
+          "base_color": [
+            0.08,
+            0.22,
+            0.6,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Blanco_Paz",
+          "double_sided": false,
+          "base_color": [
+            0.9,
+            0.88,
+            0.84,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Blanco_Paz_DS",
+          "double_sided": true,
+          "base_color": [
+            0.9,
+            0.88,
+            0.84,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Rojo",
+          "double_sided": false,
+          "base_color": [
+            0.7,
+            0.05,
+            0.05,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Rojo_DS",
+          "double_sided": true,
+          "base_color": [
+            0.7,
+            0.05,
+            0.05,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Verde_Esperanza",
+          "double_sided": false,
+          "base_color": [
+            0.07,
+            0.42,
+            0.15,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Verde_Esperanza_DS",
+          "double_sided": true,
+          "base_color": [
+            0.07,
+            0.42,
+            0.15,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tierra_Apisonada",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.9202,
+          "base_color_texture": "dirt_floor_diff_1k_musiyo_512.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Trazado_Ocho",
+          "double_sided": false,
+          "base_color": [
+            0.85,
+            0.75,
+            0.4,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": [
+            0.9,
+            0.7,
+            0.3,
+            1.0
+          ],
+          "emission_strength": 0.8
+        },
+        {
+          "name": "M_Tsombiach_Interpretacion",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.9,
+          "base_color_texture": "tsombiach_labores_interpretacion_2048.png",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        }
+      ]
+    },
+    {
+      "name": "quest",
+      "shader": "Universal Render Pipeline/Simple Lit",
+      "guide_source": "exports/quest/materials_delivery_quest.json",
+      "guide_sha256": "b60ef271f86da13e60a6cdb1b95b5b3e8ead596324bcb2dfd94d1fc9d9d97842",
+      "materials": [
+        {
+          "name": "M_Agua_Laguna",
+          "double_sided": false,
+          "base_color": [
+            0.02,
+            0.06,
+            0.07,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.04,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Arbol_Follaje",
+          "double_sided": false,
+          "base_color": [
+            0.12,
+            0.26,
+            0.09,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.85,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Arbol_Follaje_DS",
+          "double_sided": true,
+          "base_color": [
+            0.12,
+            0.26,
+            0.09,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.85,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Barro_Piso",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6862,
+          "base_color_texture": "clay_floor_001_diff_1k_musiyo_512.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Canasto_Fibra",
+          "double_sided": false,
+          "base_color": [
+            0.42,
+            0.3,
+            0.14,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.9,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Cartela_Fondo",
+          "double_sided": false,
+          "base_color": [
+            0.86,
+            0.82,
+            0.72,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.7,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Cenefa_Piso_Rombos",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": "cenefa_piso_rombos_1024.png",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Corteza_Sauce",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.7606,
+          "base_color_texture": "bark_willow_diff_1k_musiyo_512.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Estera_Fibra",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.95,
+          "base_color_texture": "estera_fibra_512.png",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Farol_Luz_Calida",
+          "double_sided": false,
+          "base_color": [
+            1.0,
+            0.7,
+            0.35,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": [
+            1.0,
+            0.62,
+            0.28,
+            1.0
+          ],
+          "emission_strength": 4.0
+        },
+        {
+          "name": "M_Flor_Amarilla",
+          "double_sided": false,
+          "base_color": [
+            0.95,
+            0.75,
+            0.1,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Flor_Blanca",
+          "double_sided": false,
+          "base_color": [
+            0.95,
+            0.95,
+            0.9,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Flor_Roja",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.1,
+            0.15,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Fuego",
+          "double_sided": false,
+          "base_color": [
+            1.0,
+            0.35,
+            0.05,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": [
+            1.0,
+            0.4,
+            0.05,
+            1.0
+          ],
+          "emission_strength": 3.0
+        },
+        {
+          "name": "M_Guia_Provisional",
+          "double_sided": false,
+          "base_color": [
+            0.55,
+            0.55,
+            0.6,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Letrero_Madera_Clara",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.66,
+            0.45,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.7,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Madera",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6608,
+          "base_color_texture": "dark_wooden_planks_diff_1k_musiyo_512.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Madera_DS",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6608,
+          "base_color_texture": "dark_wooden_planks_diff_1k_musiyo_512.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Madera_Piso",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.9321,
+          "base_color_texture": "brown_planks_05_diff_1k_musiyo_512.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Maiz",
+          "double_sided": true,
+          "base_color": [
+            0.16,
+            0.34,
+            0.07,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.85,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Manta_Negra",
+          "double_sided": false,
+          "base_color": [
+            0.05,
+            0.05,
+            0.06,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.95,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Mazorca",
+          "double_sided": false,
+          "base_color": [
+            0.9,
+            0.72,
+            0.2,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Olla_Barro",
+          "double_sided": false,
+          "base_color": [
+            0.45,
+            0.22,
+            0.12,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Paja",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8921,
+          "base_color_texture": "thatch_roof_angled_diff_1k_musiyo_512.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Paja_DS",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8921,
+          "base_color_texture": "thatch_roof_angled_diff_1k_musiyo_512.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Pasto_Valle",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.685,
+          "base_color_texture": "leafy_grass_diff_1k_musiyo_512.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Piedra",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.674,
+          "base_color_texture": "cobblestone_floor_001_diff_1k_musiyo_512.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Piedra_DS",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.674,
+          "base_color_texture": "cobblestone_floor_001_diff_1k_musiyo_512.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Piso_Bienvenida_Labores",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.85,
+          "base_color_texture": "piso_bienvenida_labores_1024.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Piso_Patio_Rombo_Sol",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.85,
+          "base_color_texture": "piso_patio_rombo_sol_1024.png",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Planta_Medicinal",
+          "double_sided": false,
+          "base_color": [
+            0.09,
+            0.26,
+            0.07,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tapia",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.9227,
+          "base_color_texture": "clay_plaster_diff_1k_musiyo_512.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tapia_DS",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.9227,
+          "base_color_texture": "clay_plaster_diff_1k_musiyo_512.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Amarillo",
+          "double_sided": false,
+          "base_color": [
+            0.95,
+            0.72,
+            0.05,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Azul_Agua",
+          "double_sided": false,
+          "base_color": [
+            0.08,
+            0.22,
+            0.6,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Azul_Agua_DS",
+          "double_sided": true,
+          "base_color": [
+            0.08,
+            0.22,
+            0.6,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Blanco_Paz",
+          "double_sided": false,
+          "base_color": [
+            0.9,
+            0.88,
+            0.84,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Blanco_Paz_DS",
+          "double_sided": true,
+          "base_color": [
+            0.9,
+            0.88,
+            0.84,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Rojo",
+          "double_sided": false,
+          "base_color": [
+            0.7,
+            0.05,
+            0.05,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Rojo_DS",
+          "double_sided": true,
+          "base_color": [
+            0.7,
+            0.05,
+            0.05,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Verde_Esperanza",
+          "double_sided": false,
+          "base_color": [
+            0.07,
+            0.42,
+            0.15,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Verde_Esperanza_DS",
+          "double_sided": true,
+          "base_color": [
+            0.07,
+            0.42,
+            0.15,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tierra_Apisonada",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.9202,
+          "base_color_texture": "dirt_floor_diff_1k_musiyo_512.jpg",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Trazado_Ocho",
+          "double_sided": false,
+          "base_color": [
+            0.85,
+            0.75,
+            0.4,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": [
+            0.9,
+            0.7,
+            0.3,
+            1.0
+          ],
+          "emission_strength": 0.8
+        },
+        {
+          "name": "M_Tsombiach_Interpretacion",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.9,
+          "base_color_texture": "tsombiach_labores_interpretacion_2048.png",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        }
+      ]
+    },
+    {
+      "name": "windows",
+      "shader": "Universal Render Pipeline/Lit",
+      "guide_source": "exports/windows/materials_delivery_windows.json",
+      "guide_sha256": "e1416c8620dd794baad7da054dd87585b7136d69d06aca210c3b02f4a6ea48ed",
+      "materials": [
+        {
+          "name": "M_Agua_Laguna",
+          "double_sided": false,
+          "base_color": [
+            0.02,
+            0.06,
+            0.07,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.04,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Arbol_Follaje",
+          "double_sided": false,
+          "base_color": [
+            0.12,
+            0.26,
+            0.09,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.85,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Arbol_Follaje_DS",
+          "double_sided": true,
+          "base_color": [
+            0.12,
+            0.26,
+            0.09,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.85,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Barro_Piso",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5,
+          "base_color_texture": "clay_floor_001_diff_1k_musiyo_1024.jpg",
+          "normal_texture": "clay_floor_001_nor_1k_1024.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": "clay_floor_001_rough_1k_1024.jpg",
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Canasto_Fibra",
+          "double_sided": false,
+          "base_color": [
+            0.42,
+            0.3,
+            0.14,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.9,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Cartela_Fondo",
+          "double_sided": false,
+          "base_color": [
+            0.86,
+            0.82,
+            0.72,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.7,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Cenefa_Piso_Rombos",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": "cenefa_piso_rombos_1024.png",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Corteza_Sauce",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5,
+          "base_color_texture": "bark_willow_diff_1k_musiyo_1024.jpg",
+          "normal_texture": "bark_willow_nor_1k_1024.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": "bark_willow_rough_1k_1024.jpg",
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Estera_Fibra",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.95,
+          "base_color_texture": "estera_fibra_512.png",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Farol_Luz_Calida",
+          "double_sided": false,
+          "base_color": [
+            1.0,
+            0.7,
+            0.35,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": [
+            1.0,
+            0.62,
+            0.28,
+            1.0
+          ],
+          "emission_strength": 4.0
+        },
+        {
+          "name": "M_Flor_Amarilla",
+          "double_sided": false,
+          "base_color": [
+            0.95,
+            0.75,
+            0.1,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Flor_Blanca",
+          "double_sided": false,
+          "base_color": [
+            0.95,
+            0.95,
+            0.9,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Flor_Roja",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.1,
+            0.15,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Fuego",
+          "double_sided": false,
+          "base_color": [
+            1.0,
+            0.35,
+            0.05,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": [
+            1.0,
+            0.4,
+            0.05,
+            1.0
+          ],
+          "emission_strength": 3.0
+        },
+        {
+          "name": "M_Guia_Provisional",
+          "double_sided": false,
+          "base_color": [
+            0.55,
+            0.55,
+            0.6,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Letrero_Madera_Clara",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.66,
+            0.45,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.7,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Madera",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5,
+          "base_color_texture": "dark_wooden_planks_diff_1k_musiyo_1024.jpg",
+          "normal_texture": "dark_wooden_planks_nor_1k_1024.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": "dark_wooden_planks_rough_1k_1024.jpg",
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Madera_DS",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5,
+          "base_color_texture": "dark_wooden_planks_diff_1k_musiyo_1024.jpg",
+          "normal_texture": "dark_wooden_planks_nor_1k_1024.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": "dark_wooden_planks_rough_1k_1024.jpg",
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Madera_Piso",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5,
+          "base_color_texture": "brown_planks_05_diff_1k_musiyo_1024.jpg",
+          "normal_texture": "brown_planks_05_nor_1k_1024.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": "brown_planks_05_rough_1k_1024.jpg",
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Maiz",
+          "double_sided": true,
+          "base_color": [
+            0.16,
+            0.34,
+            0.07,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.85,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Manta_Negra",
+          "double_sided": false,
+          "base_color": [
+            0.05,
+            0.05,
+            0.06,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.95,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Mazorca",
+          "double_sided": false,
+          "base_color": [
+            0.9,
+            0.72,
+            0.2,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Olla_Barro",
+          "double_sided": false,
+          "base_color": [
+            0.45,
+            0.22,
+            0.12,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Paja",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5,
+          "base_color_texture": "thatch_roof_angled_diff_1k_musiyo_1024.jpg",
+          "normal_texture": "thatch_roof_angled_nor_1k_1024.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": "thatch_roof_angled_rough_1k_1024.jpg",
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Paja_DS",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5,
+          "base_color_texture": "thatch_roof_angled_diff_1k_musiyo_1024.jpg",
+          "normal_texture": "thatch_roof_angled_nor_1k_1024.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": "thatch_roof_angled_rough_1k_1024.jpg",
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Pasto_Valle",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5,
+          "base_color_texture": "leafy_grass_diff_1k_musiyo_1024.jpg",
+          "normal_texture": "leafy_grass_nor_1k_1024.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": "leafy_grass_rough_1k_1024.jpg",
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Piedra",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5,
+          "base_color_texture": "cobblestone_floor_001_diff_1k_musiyo_1024.jpg",
+          "normal_texture": "cobblestone_floor_001_nor_1k_1024.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": "cobblestone_floor_001_rough_1k_1024.jpg",
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Piedra_DS",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5,
+          "base_color_texture": "cobblestone_floor_001_diff_1k_musiyo_1024.jpg",
+          "normal_texture": "cobblestone_floor_001_nor_1k_1024.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": "cobblestone_floor_001_rough_1k_1024.jpg",
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Piso_Bienvenida_Labores",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.85,
+          "base_color_texture": "piso_bienvenida_labores_2048.png",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Piso_Patio_Rombo_Sol",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.85,
+          "base_color_texture": "piso_patio_rombo_sol_1024.png",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Planta_Medicinal",
+          "double_sided": false,
+          "base_color": [
+            0.09,
+            0.26,
+            0.07,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tapia",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5,
+          "base_color_texture": "clay_plaster_diff_1k_musiyo_1024.jpg",
+          "normal_texture": "clay_plaster_nor_1k_1024.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": "clay_plaster_rough_1k_1024.jpg",
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tapia_DS",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5,
+          "base_color_texture": "clay_plaster_diff_1k_musiyo_1024.jpg",
+          "normal_texture": "clay_plaster_nor_1k_1024.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": "clay_plaster_rough_1k_1024.jpg",
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Amarillo",
+          "double_sided": false,
+          "base_color": [
+            0.95,
+            0.72,
+            0.05,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Azul_Agua",
+          "double_sided": false,
+          "base_color": [
+            0.08,
+            0.22,
+            0.6,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Azul_Agua_DS",
+          "double_sided": true,
+          "base_color": [
+            0.08,
+            0.22,
+            0.6,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Blanco_Paz",
+          "double_sided": false,
+          "base_color": [
+            0.9,
+            0.88,
+            0.84,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Blanco_Paz_DS",
+          "double_sided": true,
+          "base_color": [
+            0.9,
+            0.88,
+            0.84,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Rojo",
+          "double_sided": false,
+          "base_color": [
+            0.7,
+            0.05,
+            0.05,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Rojo_DS",
+          "double_sided": true,
+          "base_color": [
+            0.7,
+            0.05,
+            0.05,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Verde_Esperanza",
+          "double_sided": false,
+          "base_color": [
+            0.07,
+            0.42,
+            0.15,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tela_Verde_Esperanza_DS",
+          "double_sided": true,
+          "base_color": [
+            0.07,
+            0.42,
+            0.15,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.8,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Tierra_Apisonada",
+          "double_sided": false,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5,
+          "base_color_texture": "dirt_floor_diff_1k_musiyo_1024.jpg",
+          "normal_texture": "dirt_floor_nor_1k_1024.jpg",
+          "normal_strength": 1.0,
+          "roughness_texture": "dirt_floor_rough_1k_1024.jpg",
+          "emission_color": null,
+          "emission_strength": 0.0
+        },
+        {
+          "name": "M_Trazado_Ocho",
+          "double_sided": false,
+          "base_color": [
+            0.85,
+            0.75,
+            0.4,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.6,
+          "base_color_texture": null,
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": [
+            0.9,
+            0.7,
+            0.3,
+            1.0
+          ],
+          "emission_strength": 0.8
+        },
+        {
+          "name": "M_Tsombiach_Interpretacion",
+          "double_sided": true,
+          "base_color": [
+            0.8,
+            0.8,
+            0.8,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.9,
+          "base_color_texture": "tsombiach_labores_interpretacion_2048.png",
+          "normal_texture": null,
+          "normal_strength": 1.0,
+          "roughness_texture": null,
+          "emission_color": null,
+          "emission_strength": 0.0
+        }
+      ]
+    }
+  ],
+  "objects": [
+    {
+      "name": "Arbol_Betiyeguagua_Copa",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "vegetation",
+      "collision": "none",
+      "triangles": 1120,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 172,
+      "size": [
+        6.314,
+        2.809,
+        6.808
+      ],
+      "lowest": 3.261
+    },
+    {
+      "name": "Arbol_Betiyeguagua_Tronco_Ramas",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "vegetation",
+      "collision": "blocking",
+      "triangles": 500,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.71,
+      "lightmap_clean_px": 128,
+      "size": [
+        4.549,
+        5.012,
+        5.032
+      ],
+      "lowest": 0.114
+    },
+    {
+      "name": "Bandera_NE_Asta",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_structure",
+      "collision": "optional",
+      "triangles": 28,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 16,
+      "size": [
+        0.07,
+        3.37,
+        0.07
+      ],
+      "lowest": 0.03
+    },
+    {
+      "name": "Bandera_NE_Tela",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "cloth",
+      "collision": "none",
+      "triangles": 120,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 16,
+      "size": [
+        1.1,
+        0.75,
+        0.096
+      ],
+      "lowest": 2.6
+    },
+    {
+      "name": "Bandera_NO_Asta",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_structure",
+      "collision": "optional",
+      "triangles": 28,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 16,
+      "size": [
+        0.07,
+        3.37,
+        0.07
+      ],
+      "lowest": 0.03
+    },
+    {
+      "name": "Bandera_NO_Tela",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "cloth",
+      "collision": "none",
+      "triangles": 120,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 16,
+      "size": [
+        1.1,
+        0.75,
+        0.096
+      ],
+      "lowest": 2.6
+    },
+    {
+      "name": "Bandera_SE_Asta",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_structure",
+      "collision": "optional",
+      "triangles": 28,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 16,
+      "size": [
+        0.07,
+        3.37,
+        0.07
+      ],
+      "lowest": 0.03
+    },
+    {
+      "name": "Bandera_SE_Tela",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "cloth",
+      "collision": "none",
+      "triangles": 120,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 16,
+      "size": [
+        1.1,
+        0.75,
+        0.096
+      ],
+      "lowest": 2.6
+    },
+    {
+      "name": "Bandera_SO_Asta",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_structure",
+      "collision": "optional",
+      "triangles": 28,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 16,
+      "size": [
+        0.07,
+        3.37,
+        0.07
+      ],
+      "lowest": 0.03
+    },
+    {
+      "name": "Bandera_SO_Tela",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "cloth",
+      "collision": "none",
+      "triangles": 120,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 16,
+      "size": [
+        1.1,
+        0.75,
+        0.096
+      ],
+      "lowest": 2.6
+    },
+    {
+      "name": "Bienvenida_Agua_Laguna",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "set_dressing",
+      "collision": "none",
+      "triangles": 188,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 116,
+      "size": [
+        6.0,
+        0.2,
+        6.0
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Bienvenida_Borde_Laguna",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "set_dressing",
+      "collision": "blocking",
+      "triangles": 480,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 83,
+      "size": [
+        6.6,
+        0.35,
+        6.6
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Bienvenida_Estructura_Corteza_Sauce",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "architecture_structure",
+      "collision": "none",
+      "triangles": 384,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.76,
+      "lightmap_clean_px": 192,
+      "size": [
+        11.767,
+        1.723,
+        11.767
+      ],
+      "lowest": 5.867
+    },
+    {
+      "name": "Bienvenida_Estructura_Madera.001",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "architecture_structure",
+      "collision": "blocking",
+      "triangles": 2592,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 204,
+      "size": [
+        13.711,
+        6.1,
+        13.711
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Bienvenida_Isla",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "set_dressing",
+      "collision": "none",
+      "triangles": 76,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 50,
+      "size": [
+        2.6,
+        0.4,
+        2.6
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Bienvenida_Muro_Madera_DS",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 24,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 41,
+      "size": [
+        2.6,
+        2.62,
+        0.5
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Bienvenida_Muro_Tapia",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 24,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 109,
+      "size": [
+        3.6,
+        4.0,
+        2.8
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Bienvenida_Muro_Tapia_DS",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 1134,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 365,
+      "size": [
+        12.3,
+        6.0,
+        12.3
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Bienvenida_Piedras_Isla",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "set_dressing",
+      "collision": "none",
+      "triangles": 200,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 2.06,
+      "lightmap_clean_px": 64,
+      "size": [
+        3.003,
+        0.349,
+        3.02
+      ],
+      "lowest": 0.031
+    },
+    {
+      "name": "Bienvenida_Piso",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "architecture_floor",
+      "collision": "walkable",
+      "triangles": 188,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 235,
+      "size": [
+        12.3,
+        0.2,
+        12.3
+      ],
+      "lowest": -0.2
+    },
+    {
+      "name": "Bienvenida_Techo_Paja",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "architecture_roof",
+      "collision": "none",
+      "triangles": 332,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 273,
+      "size": [
+        13.8,
+        4.9,
+        15.4
+      ],
+      "lowest": 3.0
+    },
+    {
+      "name": "Bienvenida_Zocalo_Piedra",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 824,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 116,
+      "size": [
+        12.64,
+        0.6,
+        12.303
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Cartela_01_Matachin",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "lectern",
+      "collision": "blocking",
+      "triangles": 36,
+      "uv_channels": 0,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": [
+        0.404,
+        1.511,
+        0.64
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Cartela_02_Gobernador_Cabildo",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "lectern",
+      "collision": "blocking",
+      "triangles": 36,
+      "uv_channels": 0,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": [
+        0.738,
+        1.511,
+        0.738
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Cartela_03_Bandereros",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "lectern",
+      "collision": "blocking",
+      "triangles": 36,
+      "uv_channels": 0,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": [
+        0.64,
+        1.511,
+        0.404
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Cartela_04_Sanjuanes",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "lectern",
+      "collision": "blocking",
+      "triangles": 36,
+      "uv_channels": 0,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": [
+        0.738,
+        1.511,
+        0.738
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Cartela_05_Saraguayes",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "lectern",
+      "collision": "blocking",
+      "triangles": 36,
+      "uv_channels": 0,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": [
+        0.404,
+        1.511,
+        0.64
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Cintas_Entrada_amarillo",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "cloth",
+      "collision": "none",
+      "triangles": 84,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 3.0,
+      "lightmap_clean_px": 48,
+      "size": [
+        2.59,
+        0.45,
+        0.01
+      ],
+      "lowest": 2.35
+    },
+    {
+      "name": "Cintas_Entrada_azul",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "cloth",
+      "collision": "none",
+      "triangles": 84,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 4.0,
+      "lightmap_clean_px": 64,
+      "size": [
+        2.59,
+        0.6,
+        0.01
+      ],
+      "lowest": 2.2
+    },
+    {
+      "name": "Cintas_Entrada_rojo",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "cloth",
+      "collision": "none",
+      "triangles": 84,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 6.0,
+      "lightmap_clean_px": 96,
+      "size": [
+        2.59,
+        0.525,
+        0.01
+      ],
+      "lowest": 2.275
+    },
+    {
+      "name": "Corredor_Cenefa_Piso",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "floor_decoration",
+      "collision": "none",
+      "triangles": 8,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 94,
+      "size": [
+        22.1,
+        0.0,
+        18.1
+      ],
+      "lowest": 0.006
+    },
+    {
+      "name": "Entorno",
+      "mesh": false,
+      "room": "Entorno",
+      "role": "root",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "Entorno_Arboles_Copas",
+      "mesh": true,
+      "room": "Entorno",
+      "role": "vegetation",
+      "collision": "none",
+      "triangles": 2040,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 707,
+      "size": [
+        114.717,
+        6.651,
+        127.968
+      ],
+      "lowest": 1.096
+    },
+    {
+      "name": "Entorno_Arboles_Troncos",
+      "mesh": true,
+      "room": "Entorno",
+      "role": "vegetation",
+      "collision": "optional",
+      "triangles": 680,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 185,
+      "size": [
+        110.907,
+        4.478,
+        124.588
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Faja_Exterior_Bienvenida",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 128,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.64,
+      "lightmap_clean_px": 128,
+      "size": [
+        12.34,
+        0.7,
+        12.34
+      ],
+      "lowest": 2.8
+    },
+    {
+      "name": "Faja_Exterior_Fogon",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 8,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 50,
+      "size": [
+        8.04,
+        0.35,
+        8.04
+      ],
+      "lowest": 2.45
+    },
+    {
+      "name": "Faja_Exterior_Instrumentos",
+      "mesh": true,
+      "room": "Sala_Instrumentos",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 8,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 67,
+      "size": [
+        11.04,
+        0.45,
+        11.04
+      ],
+      "lowest": 3.3
+    },
+    {
+      "name": "Faja_Exterior_Personajes",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 8,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 106,
+      "size": [
+        27.04,
+        0.5,
+        23.04
+      ],
+      "lowest": 3.1
+    },
+    {
+      "name": "Faja_Pedestal_01_Matachin",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 64,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 8.0,
+      "lightmap_clean_px": 128,
+      "size": [
+        0.916,
+        0.22,
+        0.916
+      ],
+      "lowest": 0.72
+    },
+    {
+      "name": "Faja_Pedestal_02_Gobernador_Cabildo",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 64,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 8.0,
+      "lightmap_clean_px": 128,
+      "size": [
+        0.916,
+        0.22,
+        0.916
+      ],
+      "lowest": 0.72
+    },
+    {
+      "name": "Faja_Pedestal_03_Bandereros",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 64,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 8.0,
+      "lightmap_clean_px": 128,
+      "size": [
+        0.916,
+        0.22,
+        0.916
+      ],
+      "lowest": 0.72
+    },
+    {
+      "name": "Faja_Pedestal_04_Sanjuanes",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 64,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 8.0,
+      "lightmap_clean_px": 128,
+      "size": [
+        0.916,
+        0.22,
+        0.916
+      ],
+      "lowest": 0.72
+    },
+    {
+      "name": "Faja_Pedestal_05_Saraguayes",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 64,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 8.0,
+      "lightmap_clean_px": 128,
+      "size": [
+        0.916,
+        0.22,
+        0.916
+      ],
+      "lowest": 0.72
+    },
+    {
+      "name": "Faja_Pedestal_Instrumento_Bombo",
+      "mesh": true,
+      "room": "Sala_Instrumentos",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 64,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 8.0,
+      "lightmap_clean_px": 128,
+      "size": [
+        0.816,
+        0.17,
+        0.816
+      ],
+      "lowest": 0.35
+    },
+    {
+      "name": "Faja_Pedestal_Instrumento_Cacho",
+      "mesh": true,
+      "room": "Sala_Instrumentos",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 64,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 8.0,
+      "lightmap_clean_px": 128,
+      "size": [
+        0.816,
+        0.17,
+        0.816
+      ],
+      "lowest": 0.35
+    },
+    {
+      "name": "Faja_Pedestal_Instrumento_Dulzaina",
+      "mesh": true,
+      "room": "Sala_Instrumentos",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 64,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 8.0,
+      "lightmap_clean_px": 128,
+      "size": [
+        0.816,
+        0.17,
+        0.816
+      ],
+      "lowest": 0.35
+    },
+    {
+      "name": "Faja_Pedestal_Instrumento_Flauta",
+      "mesh": true,
+      "room": "Sala_Instrumentos",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 64,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 8.0,
+      "lightmap_clean_px": 128,
+      "size": [
+        0.816,
+        0.17,
+        0.816
+      ],
+      "lowest": 0.35
+    },
+    {
+      "name": "Faja_Pedestal_Instrumento_Rondador",
+      "mesh": true,
+      "room": "Sala_Instrumentos",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 64,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 8.0,
+      "lightmap_clean_px": 128,
+      "size": [
+        0.816,
+        0.17,
+        0.816
+      ],
+      "lowest": 0.35
+    },
+    {
+      "name": "Fogon_Bichasha",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "set_dressing",
+      "collision": "none",
+      "triangles": 60,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 30,
+      "size": [
+        1.3,
+        1.431,
+        1.3
+      ],
+      "lowest": 2.02
+    },
+    {
+      "name": "Fogon_Canastos",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "set_dressing",
+      "collision": "optional",
+      "triangles": 156,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.45,
+      "lightmap_clean_px": 32,
+      "size": [
+        6.948,
+        0.35,
+        4.26
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Fogon_Estera_Guia",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "floor_decoration",
+      "collision": "none",
+      "triangles": 2,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 22,
+      "size": [
+        3.2,
+        0.0,
+        0.7
+      ],
+      "lowest": 0.008
+    },
+    {
+      "name": "Fogon_Estera_Telar",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "floor_decoration",
+      "collision": "none",
+      "triangles": 2,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 22,
+      "size": [
+        1.5,
+        0.0,
+        1.4
+      ],
+      "lowest": 0.008
+    },
+    {
+      "name": "Fogon_Estructura_Corteza_Sauce",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "architecture_structure",
+      "collision": "blocking",
+      "triangles": 384,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.3,
+      "lightmap_clean_px": 192,
+      "size": [
+        8.36,
+        4.246,
+        8.36
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Fogon_Estructura_Madera",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "architecture_structure",
+      "collision": "blocking",
+      "triangles": 52,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 102,
+      "size": [
+        8.0,
+        4.5,
+        8.0
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Fogon_Fuego_Provisional",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "provisional_placeholder",
+      "collision": "none",
+      "triangles": 28,
+      "uv_channels": 1,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": [
+        0.6,
+        0.55,
+        0.6
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Fogon_Guanga_Telar",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "set_dressing",
+      "collision": "blocking",
+      "triangles": 112,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 2.53,
+      "lightmap_clean_px": 48,
+      "size": [
+        1.5,
+        1.85,
+        0.09
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Fogon_Manta_Este",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "cloth",
+      "collision": "none",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 23,
+      "size": [
+        0.54,
+        0.02,
+        2.04
+      ],
+      "lowest": 0.45
+    },
+    {
+      "name": "Fogon_Manta_Norte",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "cloth",
+      "collision": "none",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 23,
+      "size": [
+        2.04,
+        0.02,
+        0.54
+      ],
+      "lowest": 0.45
+    },
+    {
+      "name": "Fogon_Manta_Oeste",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "cloth",
+      "collision": "none",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 23,
+      "size": [
+        0.54,
+        0.02,
+        2.04
+      ],
+      "lowest": 0.45
+    },
+    {
+      "name": "Fogon_Mazorcas",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "set_dressing",
+      "collision": "none",
+      "triangles": 120,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 4.0,
+      "lightmap_clean_px": 64,
+      "size": [
+        1.061,
+        0.23,
+        0.07
+      ],
+      "lowest": 1.75
+    },
+    {
+      "name": "Fogon_Muro_Este",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 32,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 106,
+      "size": [
+        0.3,
+        3.0,
+        7.4
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Fogon_Muro_Madera",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 456,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 156,
+      "size": [
+        8.14,
+        3.0,
+        8.155
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Fogon_Muro_Norte",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 32,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 111,
+      "size": [
+        8.0,
+        3.0,
+        0.3
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Fogon_Muro_Tapia",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 24,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 99,
+      "size": [
+        3.6,
+        3.0,
+        3.0
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Fogon_Ollas_Barro",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "set_dressing",
+      "collision": "optional",
+      "triangles": 372,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 2.67,
+      "lightmap_clean_px": 48,
+      "size": [
+        3.223,
+        0.444,
+        2.38
+      ],
+      "lowest": 0.016
+    },
+    {
+      "name": "Fogon_Piedras_Shinyac",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "set_dressing",
+      "collision": "blocking",
+      "triangles": 160,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 2.0,
+      "lightmap_clean_px": 64,
+      "size": [
+        1.4,
+        0.25,
+        1.4
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Fogon_Pilar_Central",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "architecture_structure",
+      "collision": "blocking",
+      "triangles": 44,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 36,
+      "size": [
+        0.4,
+        4.35,
+        0.4
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Fogon_Piso",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "architecture_floor",
+      "collision": "walkable",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 174,
+      "size": [
+        8.0,
+        0.2,
+        8.0
+      ],
+      "lowest": -0.2
+    },
+    {
+      "name": "Fogon_Piso_Piedra",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "architecture_floor",
+      "collision": "walkable",
+      "triangles": 24,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 39,
+      "size": [
+        5.7,
+        0.03,
+        5.7
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Fogon_Techo_Paja",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "architecture_roof",
+      "collision": "none",
+      "triangles": 68,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 224,
+      "size": [
+        9.2,
+        2.25,
+        11.6
+      ],
+      "lowest": 2.5
+    },
+    {
+      "name": "Fogon_Tishasha_Alacena",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "set_dressing",
+      "collision": "blocking",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 50,
+      "size": [
+        0.5,
+        1.8,
+        2.0
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Fogon_Tishasha_Ollitas",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "set_dressing",
+      "collision": "none",
+      "triangles": 100,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 6.0,
+      "lightmap_clean_px": 96,
+      "size": [
+        0.161,
+        1.306,
+        1.245
+      ],
+      "lowest": 0.621
+    },
+    {
+      "name": "Fogon_Tishasha_Repisas",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "set_dressing",
+      "collision": "none",
+      "triangles": 36,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 39,
+      "size": [
+        0.5,
+        1.2,
+        2.0
+      ],
+      "lowest": 0.575
+    },
+    {
+      "name": "Fogon_Tsombiach_En_Telar",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 2,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 16,
+      "size": [
+        0.36,
+        0.7,
+        0.0
+      ],
+      "lowest": 0.4
+    },
+    {
+      "name": "Fogon_Urdimbre",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "cloth",
+      "collision": "none",
+      "triangles": 168,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 6.0,
+      "lightmap_clean_px": 96,
+      "size": [
+        0.368,
+        0.58,
+        0.008
+      ],
+      "lowest": 1.1
+    },
+    {
+      "name": "Friso_Tsombiach_Bienvenida",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 128,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 2.0,
+      "lightmap_clean_px": 128,
+      "size": [
+        11.66,
+        0.5,
+        11.66
+      ],
+      "lowest": 3.3
+    },
+    {
+      "name": "Friso_Tsombiach_Corredor",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 8,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 94,
+      "size": [
+        26.38,
+        0.4,
+        22.38
+      ],
+      "lowest": 3.15
+    },
+    {
+      "name": "Friso_Tsombiach_Fogon",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 8,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 45,
+      "size": [
+        7.38,
+        0.3,
+        7.38
+      ],
+      "lowest": 2.5
+    },
+    {
+      "name": "Friso_Tsombiach_Instrumentos",
+      "mesh": true,
+      "room": "Sala_Instrumentos",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 8,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 61,
+      "size": [
+        10.38,
+        0.4,
+        10.38
+      ],
+      "lowest": 3.2
+    },
+    {
+      "name": "Guia_Provisional_Cabeza",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "provisional_placeholder",
+      "collision": "none",
+      "triangles": 80,
+      "uv_channels": 1,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": [
+        0.304,
+        0.32,
+        0.32
+      ],
+      "lowest": 1.29
+    },
+    {
+      "name": "Guia_Provisional_Cuerpo",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "provisional_placeholder",
+      "collision": "none",
+      "triangles": 44,
+      "uv_channels": 1,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": [
+        0.5,
+        0.8,
+        0.5
+      ],
+      "lowest": 0.45
+    },
+    {
+      "name": "Instrumentos_Cenefa_Piso",
+      "mesh": true,
+      "room": "Sala_Instrumentos",
+      "role": "floor_decoration",
+      "collision": "none",
+      "triangles": 8,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 58,
+      "size": [
+        9.6,
+        0.0,
+        9.6
+      ],
+      "lowest": 0.006
+    },
+    {
+      "name": "Instrumentos_Estructura_Corteza_Sauce",
+      "mesh": true,
+      "room": "Sala_Instrumentos",
+      "role": "architecture_structure",
+      "collision": "blocking",
+      "triangles": 432,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 181,
+      "size": [
+        11.38,
+        5.895,
+        11.38
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Instrumentos_Estructura_Madera",
+      "mesh": true,
+      "room": "Sala_Instrumentos",
+      "role": "architecture_structure",
+      "collision": "none",
+      "triangles": 16,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 113,
+      "size": [
+        11.0,
+        1.95,
+        11.0
+      ],
+      "lowest": 4.0
+    },
+    {
+      "name": "Instrumentos_Mobiliario_Tapia",
+      "mesh": true,
+      "room": "Sala_Instrumentos",
+      "role": "neutral_furniture",
+      "collision": "blocking",
+      "triangles": 380,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 53,
+      "size": [
+        7.7,
+        0.6,
+        8.2
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Instrumentos_Muro_Madera",
+      "mesh": true,
+      "room": "Sala_Instrumentos",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 108,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 291,
+      "size": [
+        11.075,
+        4.0,
+        11.0
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Instrumentos_Muro_Tapia",
+      "mesh": true,
+      "room": "Sala_Instrumentos",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 24,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 83,
+      "size": [
+        1.5,
+        4.0,
+        3.6
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Instrumentos_Piso",
+      "mesh": true,
+      "room": "Sala_Instrumentos",
+      "role": "architecture_floor",
+      "collision": "walkable",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 238,
+      "size": [
+        11.0,
+        0.2,
+        11.0
+      ],
+      "lowest": -0.2
+    },
+    {
+      "name": "Instrumentos_Tapices",
+      "mesh": true,
+      "room": "Sala_Instrumentos",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 16,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 2.29,
+      "lightmap_clean_px": 96,
+      "size": [
+        8.36,
+        2.4,
+        10.32
+      ],
+      "lowest": 0.45
+    },
+    {
+      "name": "Instrumentos_Techo_Paja",
+      "mesh": true,
+      "room": "Sala_Instrumentos",
+      "role": "architecture_roof",
+      "collision": "none",
+      "triangles": 68,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 287,
+      "size": [
+        13.1,
+        3.45,
+        12.4
+      ],
+      "lowest": 3.0
+    },
+    {
+      "name": "Jajan_Flores_amarillo",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "vegetation",
+      "collision": "none",
+      "triangles": 600,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 8.0,
+      "lightmap_clean_px": 128,
+      "size": [
+        3.74,
+        0.284,
+        31.108
+      ],
+      "lowest": 0.31
+    },
+    {
+      "name": "Jajan_Flores_blanco",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "vegetation",
+      "collision": "none",
+      "triangles": 600,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 12.0,
+      "lightmap_clean_px": 192,
+      "size": [
+        3.786,
+        0.285,
+        27.852
+      ],
+      "lowest": 0.301
+    },
+    {
+      "name": "Jajan_Flores_rojo",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "vegetation",
+      "collision": "none",
+      "triangles": 600,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 8.0,
+      "lightmap_clean_px": 128,
+      "size": [
+        3.818,
+        0.296,
+        31.338
+      ],
+      "lowest": 0.298
+    },
+    {
+      "name": "Jajan_Lindero_Postes",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "architecture_structure",
+      "collision": "blocking",
+      "triangles": 784,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 84,
+      "size": [
+        17.287,
+        1.1,
+        34.1
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Jajan_Maiz",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "vegetation",
+      "collision": "none",
+      "triangles": 3344,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.94,
+      "lightmap_clean_px": 192,
+      "size": [
+        14.556,
+        2.196,
+        25.816
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Jajan_Maiz_Espigas",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "vegetation",
+      "collision": "none",
+      "triangles": 3168,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 5.05,
+      "lightmap_clean_px": 192,
+      "size": [
+        13.546,
+        1.494,
+        24.63
+      ],
+      "lowest": 0.922
+    },
+    {
+      "name": "Jajan_Plantas_Medicinales",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "vegetation",
+      "collision": "none",
+      "triangles": 3360,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 2.4,
+      "lightmap_clean_px": 192,
+      "size": [
+        4.524,
+        0.509,
+        30.5
+      ],
+      "lowest": -0.003
+    },
+    {
+      "name": "Llegada_Jajan",
+      "mesh": false,
+      "room": "Llegada_Jajan",
+      "role": "root",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "Mirador_Estructura_Madera",
+      "mesh": true,
+      "room": "Mirador_Salida",
+      "role": "architecture_structure",
+      "collision": "blocking",
+      "triangles": 600,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.48,
+      "lightmap_clean_px": 192,
+      "size": [
+        11.087,
+        1.05,
+        4.1
+      ],
+      "lowest": 0.05
+    },
+    {
+      "name": "Mirador_Muro_Madera",
+      "mesh": true,
+      "room": "Mirador_Salida",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 24,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 77,
+      "size": [
+        2.0,
+        2.6,
+        3.6
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Mirador_Piso_Madera_Piso",
+      "mesh": true,
+      "room": "Mirador_Salida",
+      "role": "architecture_floor",
+      "collision": "walkable",
+      "triangles": 24,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 159,
+      "size": [
+        13.0,
+        0.25,
+        4.0
+      ],
+      "lowest": -0.2
+    },
+    {
+      "name": "Mirador_Salida",
+      "mesh": false,
+      "room": "Mirador_Salida",
+      "role": "root",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "PI_Bienvenida_01_Mito_Betiyeguagua",
+      "mesh": false,
+      "room": "Puntos_Interes",
+      "role": "anchor_point_of_interest",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "PI_Bienvenida_02_Nombres_y_Significados",
+      "mesh": false,
+      "room": "Puntos_Interes",
+      "role": "anchor_point_of_interest",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "PI_Fogon_01_Personaje_Guia",
+      "mesh": false,
+      "room": "Puntos_Interes",
+      "role": "anchor_point_of_interest",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "PI_Instrumentos_01_Bombo",
+      "mesh": false,
+      "room": "Puntos_Interes",
+      "role": "anchor_point_of_interest",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "PI_Instrumentos_02_Cacho",
+      "mesh": false,
+      "room": "Puntos_Interes",
+      "role": "anchor_point_of_interest",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "PI_Instrumentos_03_Flauta",
+      "mesh": false,
+      "room": "Puntos_Interes",
+      "role": "anchor_point_of_interest",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "PI_Instrumentos_04_Rondador",
+      "mesh": false,
+      "room": "Puntos_Interes",
+      "role": "anchor_point_of_interest",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "PI_Instrumentos_05_Dulzaina",
+      "mesh": false,
+      "room": "Puntos_Interes",
+      "role": "anchor_point_of_interest",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "PI_Instrumentos_06_Danza_del_Ocho",
+      "mesh": false,
+      "room": "Puntos_Interes",
+      "role": "anchor_point_of_interest",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "PI_Mirador_01_Creditos_Portadores",
+      "mesh": false,
+      "room": "Puntos_Interes",
+      "role": "anchor_point_of_interest",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "PI_Personajes_01_Matachin",
+      "mesh": false,
+      "room": "Puntos_Interes",
+      "role": "anchor_point_of_interest",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "PI_Personajes_02_Gobernador_Cabildo",
+      "mesh": false,
+      "room": "Puntos_Interes",
+      "role": "anchor_point_of_interest",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "PI_Personajes_03_Bandereros",
+      "mesh": false,
+      "room": "Puntos_Interes",
+      "role": "anchor_point_of_interest",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "PI_Personajes_04_Sanjuanes",
+      "mesh": false,
+      "room": "Puntos_Interes",
+      "role": "anchor_point_of_interest",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "PI_Personajes_05_Saraguayes",
+      "mesh": false,
+      "room": "Puntos_Interes",
+      "role": "anchor_point_of_interest",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "Pasaje_Este_Piso",
+      "mesh": true,
+      "room": "Sala_Instrumentos",
+      "role": "architecture_floor",
+      "collision": "walkable",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 54,
+      "size": [
+        1.5,
+        0.2,
+        3.6
+      ],
+      "lowest": -0.2
+    },
+    {
+      "name": "Pasaje_Norte_Piso",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "architecture_floor",
+      "collision": "walkable",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 74,
+      "size": [
+        3.6,
+        0.2,
+        3.0
+      ],
+      "lowest": -0.2
+    },
+    {
+      "name": "Pasaje_Sur_Piso",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "architecture_floor",
+      "collision": "walkable",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 71,
+      "size": [
+        3.6,
+        0.2,
+        2.8
+      ],
+      "lowest": -0.2
+    },
+    {
+      "name": "Patio_Flores_amarillo",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "vegetation",
+      "collision": "none",
+      "triangles": 120,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 4.0,
+      "lightmap_clean_px": 64,
+      "size": [
+        11.482,
+        0.148,
+        0.625
+      ],
+      "lowest": 0.376
+    },
+    {
+      "name": "Patio_Flores_blanco",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "vegetation",
+      "collision": "none",
+      "triangles": 60,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 2.0,
+      "lightmap_clean_px": 32,
+      "size": [
+        10.127,
+        0.148,
+        0.627
+      ],
+      "lowest": 0.375
+    },
+    {
+      "name": "Patio_Flores_rojo",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "vegetation",
+      "collision": "none",
+      "triangles": 120,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 6.0,
+      "lightmap_clean_px": 96,
+      "size": [
+        11.475,
+        0.15,
+        0.627
+      ],
+      "lowest": 0.375
+    },
+    {
+      "name": "Patio_Maiz",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "vegetation",
+      "collision": "none",
+      "triangles": 456,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 5.49,
+      "lightmap_clean_px": 192,
+      "size": [
+        12.931,
+        1.886,
+        1.846
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Patio_Maiz_Espigas",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "vegetation",
+      "collision": "none",
+      "triangles": 432,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 8.0,
+      "lightmap_clean_px": 128,
+      "size": [
+        11.796,
+        1.295,
+        0.784
+      ],
+      "lowest": 0.812
+    },
+    {
+      "name": "Patio_Plantas_Medicinales",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "vegetation",
+      "collision": "none",
+      "triangles": 1080,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 4.27,
+      "lightmap_clean_px": 192,
+      "size": [
+        11.979,
+        0.512,
+        1.067
+      ],
+      "lowest": 0.345
+    },
+    {
+      "name": "Patio_Rombo_Sol_Incrustado",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "floor_decoration",
+      "collision": "none",
+      "triangles": 2,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 34,
+      "size": [
+        3.2,
+        0.0,
+        3.2
+      ],
+      "lowest": 0.05
+    },
+    {
+      "name": "Patio_Sendero_Piedras",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "ground_detail",
+      "collision": "none",
+      "triangles": 1002,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 105,
+      "size": [
+        12.577,
+        0.04,
+        8.27
+      ],
+      "lowest": 0.015
+    },
+    {
+      "name": "Personajes_Basas_Piedra",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_structure",
+      "collision": "blocking",
+      "triangles": 648,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 2.06,
+      "lightmap_clean_px": 128,
+      "size": [
+        20.571,
+        0.3,
+        16.6
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Personajes_Estructura_Corteza_Sauce_E",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_structure",
+      "collision": "blocking",
+      "triangles": 220,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 62,
+      "size": [
+        0.3,
+        3.5,
+        16.3
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Personajes_Estructura_Corteza_Sauce_N",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_structure",
+      "collision": "blocking",
+      "triangles": 176,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 55,
+      "size": [
+        12.3,
+        3.5,
+        0.3
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Personajes_Estructura_Corteza_Sauce_O",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_structure",
+      "collision": "blocking",
+      "triangles": 220,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 62,
+      "size": [
+        0.3,
+        3.5,
+        16.3
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Personajes_Estructura_Corteza_Sauce_S",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_structure",
+      "collision": "blocking",
+      "triangles": 176,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 55,
+      "size": [
+        12.3,
+        3.5,
+        0.3
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Personajes_Estructura_Madera_Anillo",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_structure",
+      "collision": "blocking",
+      "triangles": 2736,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 321,
+      "size": [
+        28.113,
+        4.403,
+        26.627
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Personajes_Estructura_Piedra_E",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_structure",
+      "collision": "blocking",
+      "triangles": 24,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 82,
+      "size": [
+        0.15,
+        0.6,
+        23.3
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Personajes_Estructura_Piedra_N",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_structure",
+      "collision": "blocking",
+      "triangles": 24,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 90,
+      "size": [
+        27.3,
+        0.6,
+        0.15
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Personajes_Estructura_Piedra_S",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_structure",
+      "collision": "blocking",
+      "triangles": 24,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 90,
+      "size": [
+        27.3,
+        0.6,
+        0.15
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Personajes_Mobiliario_Madera",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "neutral_furniture",
+      "collision": "blocking",
+      "triangles": 1116,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.64,
+      "lightmap_clean_px": 128,
+      "size": [
+        26.355,
+        2.9,
+        19.437
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Personajes_Mobiliario_Tapia",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "neutral_furniture",
+      "collision": "blocking",
+      "triangles": 460,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 68,
+      "size": [
+        14.9,
+        1.02,
+        7.9
+      ],
+      "lowest": 0.03
+    },
+    {
+      "name": "Personajes_Muro_Madera_E",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 36,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 53,
+      "size": [
+        0.45,
+        3.02,
+        3.6
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Personajes_Muro_Madera_N",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 36,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 53,
+      "size": [
+        3.6,
+        3.02,
+        0.45
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Personajes_Muro_Madera_S",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 348,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.91,
+      "lightmap_clean_px": 128,
+      "size": [
+        17.4,
+        3.02,
+        0.46
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Personajes_Muro_Oeste",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 209,
+      "size": [
+        0.3,
+        4.0,
+        22.4
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Personajes_Muro_Sur_Dintel",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_wall",
+      "collision": "none",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 43,
+      "size": [
+        3.0,
+        1.0,
+        0.3
+      ],
+      "lowest": 3.0
+    },
+    {
+      "name": "Personajes_Muro_Sur_E",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 32,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 153,
+      "size": [
+        12.0,
+        4.0,
+        0.3
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Personajes_Muro_Sur_O",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 32,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 153,
+      "size": [
+        12.0,
+        4.0,
+        0.3
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Personajes_Muro_Tapia_E",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 36,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 201,
+      "size": [
+        0.3,
+        4.0,
+        22.4
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Personajes_Muro_Tapia_N",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 36,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 222,
+      "size": [
+        27.0,
+        4.0,
+        0.3
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Personajes_Piso_Corredor",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_floor",
+      "collision": "walkable",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 533,
+      "size": [
+        27.0,
+        0.2,
+        23.0
+      ],
+      "lowest": -0.2
+    },
+    {
+      "name": "Personajes_Piso_Patio",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_floor",
+      "collision": "walkable",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 380,
+      "size": [
+        20.0,
+        0.03,
+        16.0
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Personajes_Viga_E",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_structure",
+      "collision": "none",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 61,
+      "size": [
+        0.3,
+        0.2,
+        16.3
+      ],
+      "lowest": 3.3
+    },
+    {
+      "name": "Personajes_Viga_N",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_structure",
+      "collision": "none",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 68,
+      "size": [
+        20.3,
+        0.2,
+        0.3
+      ],
+      "lowest": 3.3
+    },
+    {
+      "name": "Personajes_Viga_O",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_structure",
+      "collision": "none",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 61,
+      "size": [
+        0.3,
+        0.2,
+        16.3
+      ],
+      "lowest": 3.3
+    },
+    {
+      "name": "Personajes_Viga_S",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_structure",
+      "collision": "none",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 68,
+      "size": [
+        20.3,
+        0.2,
+        0.3
+      ],
+      "lowest": 3.3
+    },
+    {
+      "name": "Personajes_Zocalo_O",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 89,
+      "size": [
+        0.15,
+        0.6,
+        23.3
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Portada_Cintas_amarillo",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "cloth",
+      "collision": "none",
+      "triangles": 72,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 6.0,
+      "lightmap_clean_px": 96,
+      "size": [
+        2.76,
+        0.591,
+        0.01
+      ],
+      "lowest": 2.079
+    },
+    {
+      "name": "Portada_Cintas_azul",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "cloth",
+      "collision": "none",
+      "triangles": 60,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 3.0,
+      "lightmap_clean_px": 48,
+      "size": [
+        2.22,
+        0.572,
+        0.01
+      ],
+      "lowest": 2.098
+    },
+    {
+      "name": "Portada_Cintas_blanco",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "cloth",
+      "collision": "none",
+      "triangles": 60,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 3.0,
+      "lightmap_clean_px": 48,
+      "size": [
+        2.22,
+        0.587,
+        0.01
+      ],
+      "lowest": 2.083
+    },
+    {
+      "name": "Portada_Cintas_rojo",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "cloth",
+      "collision": "none",
+      "triangles": 60,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 3.0,
+      "lightmap_clean_px": 48,
+      "size": [
+        2.22,
+        0.589,
+        0.01
+      ],
+      "lowest": 2.081
+    },
+    {
+      "name": "Portada_Cintas_verde",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "cloth",
+      "collision": "none",
+      "triangles": 60,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 4.0,
+      "lightmap_clean_px": 64,
+      "size": [
+        2.22,
+        0.486,
+        0.01
+      ],
+      "lowest": 2.184
+    },
+    {
+      "name": "Portada_Estructura",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "architecture_structure",
+      "collision": "blocking",
+      "triangles": 152,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 65,
+      "size": [
+        4.6,
+        3.48,
+        0.6
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Portada_Faja_Poste_E",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 8,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 2.0,
+      "lightmap_clean_px": 32,
+      "size": [
+        0.29,
+        0.7,
+        0.29
+      ],
+      "lowest": 1.2
+    },
+    {
+      "name": "Portada_Faja_Poste_O",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 8,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 2.0,
+      "lightmap_clean_px": 32,
+      "size": [
+        0.29,
+        0.7,
+        0.29
+      ],
+      "lowest": 1.2
+    },
+    {
+      "name": "Portada_Fleco_Paja",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "architecture_roof_fringe",
+      "collision": "none",
+      "triangles": 84,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 7.53,
+      "lightmap_clean_px": 128,
+      "size": [
+        5.4,
+        0.331,
+        2.0
+      ],
+      "lowest": 2.789
+    },
+    {
+      "name": "Portada_Letrero",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "set_dressing",
+      "collision": "none",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 24,
+      "size": [
+        2.9,
+        0.36,
+        0.06
+      ],
+      "lowest": 2.84
+    },
+    {
+      "name": "Portada_Techo_Paja",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "architecture_roof",
+      "collision": "none",
+      "triangles": 20,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 78,
+      "size": [
+        5.4,
+        1.35,
+        2.0
+      ],
+      "lowest": 3.1
+    },
+    {
+      "name": "Portada_Texto_Nombre",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "set_dressing",
+      "collision": "none",
+      "triangles": 2840,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 8.0,
+      "lightmap_clean_px": 128,
+      "size": [
+        2.009,
+        0.194,
+        0.02
+      ],
+      "lowest": 2.952
+    },
+    {
+      "name": "Puerta_Bienvenida_Sur_Jamba_O",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "architecture_wall",
+      "collision": "blocking",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 28,
+      "size": [
+        0.18,
+        2.4,
+        0.5
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Puntos_Interes",
+      "mesh": false,
+      "room": "Puntos_Interes",
+      "role": "root",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "Sala_Bienvenida",
+      "mesh": false,
+      "room": "Sala_Bienvenida",
+      "role": "root",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "Sala_Fogon",
+      "mesh": false,
+      "room": "Sala_Fogon",
+      "role": "root",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "Sala_Instrumentos",
+      "mesh": false,
+      "room": "Sala_Instrumentos",
+      "role": "root",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "Sala_Personajes",
+      "mesh": false,
+      "room": "Sala_Personajes",
+      "role": "root",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "Sendero_Borde_Piedras",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "ground_detail",
+      "collision": "none",
+      "triangles": 2400,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 3.69,
+      "lightmap_clean_px": 192,
+      "size": [
+        2.44,
+        0.168,
+        33.286
+      ],
+      "lowest": -0.064
+    },
+    {
+      "name": "Sendero_Faroles_Luz",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "set_dressing",
+      "collision": "none",
+      "triangles": 72,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 3.56,
+      "lightmap_clean_px": 64,
+      "size": [
+        3.1,
+        0.2,
+        25.2
+      ],
+      "lowest": 1.35
+    },
+    {
+      "name": "Sendero_Faroles_Postes",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "architecture_structure",
+      "collision": "blocking",
+      "triangles": 216,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 2.67,
+      "lightmap_clean_px": 96,
+      "size": [
+        3.2,
+        1.68,
+        25.3
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Sendero_Jajan",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "architecture_floor",
+      "collision": "walkable",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 176,
+      "size": [
+        2.0,
+        0.03,
+        34.0
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Sendero_Lajas_Piedra",
+      "mesh": true,
+      "room": "Llegada_Jajan",
+      "role": "ground_detail",
+      "collision": "none",
+      "triangles": 1992,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 157,
+      "size": [
+        1.724,
+        0.05,
+        33.33
+      ],
+      "lowest": 0.015
+    },
+    {
+      "name": "Spawn_Visitante",
+      "mesh": false,
+      "room": "Puntos_Interes",
+      "role": "anchor_spawn",
+      "collision": "none",
+      "triangles": 0,
+      "uv_channels": 0,
+      "gi": "",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": null,
+      "lowest": 0.0
+    },
+    {
+      "name": "Tapices_Tsombiach_Corredor",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "wall_decoration",
+      "collision": "none",
+      "triangles": 24,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 2.51,
+      "lightmap_clean_px": 128,
+      "size": [
+        26.32,
+        2.4,
+        19.36
+      ],
+      "lowest": 0.45
+    },
+    {
+      "name": "Techo_Bienvenida_Fleco_Paja",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "architecture_roof_fringe",
+      "collision": "none",
+      "triangles": 741,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 3.2,
+      "lightmap_clean_px": 192,
+      "size": [
+        13.8,
+        0.417,
+        13.8
+      ],
+      "lowest": 5.483
+    },
+    {
+      "name": "Techo_Corredor_Fleco_Paja",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_roof_fringe",
+      "collision": "none",
+      "triangles": 3507,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 2.1,
+      "lightmap_clean_px": 256,
+      "size": [
+        28.2,
+        1.16,
+        24.2
+      ],
+      "lowest": 3.04
+    },
+    {
+      "name": "Techo_Corredor_Paja",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_roof",
+      "collision": "none",
+      "triangles": 32,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 443,
+      "size": [
+        28.2,
+        1.1,
+        24.2
+      ],
+      "lowest": 3.4
+    },
+    {
+      "name": "Techo_Fogon_Fleco_Paja",
+      "mesh": true,
+      "room": "Sala_Fogon",
+      "role": "architecture_roof_fringe",
+      "collision": "none",
+      "triangles": 384,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 4.92,
+      "lightmap_clean_px": 192,
+      "size": [
+        9.2,
+        0.359,
+        9.0
+      ],
+      "lowest": 2.141
+    },
+    {
+      "name": "Techo_Instrumentos_Fleco_Paja",
+      "mesh": true,
+      "room": "Sala_Instrumentos",
+      "role": "architecture_roof_fringe",
+      "collision": "none",
+      "triangles": 462,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 4.57,
+      "lightmap_clean_px": 192,
+      "size": [
+        12.2,
+        0.359,
+        12.2
+      ],
+      "lowest": 3.091
+    },
+    {
+      "name": "Techo_Pasaje_Oeste",
+      "mesh": true,
+      "room": "Mirador_Salida",
+      "role": "architecture_roof",
+      "collision": "none",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 62,
+      "size": [
+        2.0,
+        0.25,
+        3.6
+      ],
+      "lowest": 2.6
+    },
+    {
+      "name": "Terreno_Valle_Provisional",
+      "mesh": true,
+      "room": "Entorno",
+      "role": "provisional_ground",
+      "collision": "walkable",
+      "triangles": 12,
+      "uv_channels": 1,
+      "gi": "probes",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 0,
+      "size": [
+        400.0,
+        0.28,
+        400.0
+      ],
+      "lowest": -0.3
+    },
+    {
+      "name": "Trazado_Danza_Ocho",
+      "mesh": true,
+      "room": "Sala_Instrumentos",
+      "role": "floor_decoration",
+      "collision": "none",
+      "triangles": 768,
+      "uv_channels": 2,
+      "gi": "probes",
+      "scale_in_lightmap": 1.3,
+      "lightmap_clean_px": 48,
+      "size": [
+        6.16,
+        0.04,
+        3.157
+      ],
+      "lowest": -0.015
+    },
+    {
+      "name": "Umbral_Bienvenida_Sur",
+      "mesh": true,
+      "room": "Sala_Bienvenida",
+      "role": "architecture_floor",
+      "collision": "walkable",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 27,
+      "size": [
+        2.2,
+        0.03,
+        0.7
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Umbral_Personajes_Este",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_floor",
+      "collision": "walkable",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 28,
+      "size": [
+        0.5,
+        0.03,
+        3.2
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Umbral_Personajes_Norte",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_floor",
+      "collision": "walkable",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 28,
+      "size": [
+        3.2,
+        0.03,
+        0.5
+      ],
+      "lowest": 0.0
+    },
+    {
+      "name": "Umbral_Personajes_Sur",
+      "mesh": true,
+      "room": "Sala_Personajes",
+      "role": "architecture_floor",
+      "collision": "walkable",
+      "triangles": 12,
+      "uv_channels": 2,
+      "gi": "lightmap",
+      "scale_in_lightmap": 1.0,
+      "lightmap_clean_px": 28,
+      "size": [
+        3.2,
+        0.03,
+        0.5
+      ],
+      "lowest": 0.0
+    }
+  ],
+  "anchors": [
+    {
+      "object": "Cartela_01_Matachin",
+      "kind": "lectern",
+      "key": null,
+      "position": [
+        -6.65,
+        0.0,
+        -4.85
+      ],
+      "activation_diameter": 0.0
+    },
+    {
+      "object": "Cartela_02_Gobernador_Cabildo",
+      "kind": "lectern",
+      "key": null,
+      "position": [
+        -3.8891,
+        0.0,
+        -0.4846
+      ],
+      "activation_diameter": 0.0
+    },
+    {
+      "object": "Cartela_03_Bandereros",
+      "kind": "lectern",
+      "key": null,
+      "position": [
+        1.15,
+        0.0,
+        0.65
+      ],
+      "activation_diameter": 0.0
+    },
+    {
+      "object": "Cartela_04_Sanjuanes",
+      "kind": "lectern",
+      "key": null,
+      "position": [
+        5.5154,
+        0.0,
+        -2.1109
+      ],
+      "activation_diameter": 0.0
+    },
+    {
+      "object": "Cartela_05_Saraguayes",
+      "kind": "lectern",
+      "key": null,
+      "position": [
+        6.65,
+        0.0,
+        -7.15
+      ],
+      "activation_diameter": 0.0
+    },
+    {
+      "object": "Entorno",
+      "kind": "root",
+      "key": null,
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "activation_diameter": 0.0
+    },
+    {
+      "object": "Llegada_Jajan",
+      "kind": "root",
+      "key": null,
+      "position": [
+        0.0,
+        0.0,
+        -43.0
+      ],
+      "activation_diameter": 0.0
+    },
+    {
+      "object": "Mirador_Salida",
+      "kind": "root",
+      "key": null,
+      "position": [
+        -11.5,
+        0.0,
+        18.5
+      ],
+      "activation_diameter": 0.0
+    },
+    {
+      "object": "PI_Bienvenida_01_Mito_Betiyeguagua",
+      "kind": "point_of_interest",
+      "key": "punto.bienvenida.mito",
+      "position": [
+        0.0,
+        0.0,
+        -15.6
+      ],
+      "activation_diameter": 4.0
+    },
+    {
+      "object": "PI_Bienvenida_02_Nombres_y_Significados",
+      "kind": "point_of_interest",
+      "key": "punto.bienvenida.significados",
+      "position": [
+        -4.2,
+        0.0,
+        -20.0
+      ],
+      "activation_diameter": 3.0
+    },
+    {
+      "object": "PI_Fogon_01_Personaje_Guia",
+      "kind": "point_of_interest",
+      "key": "guia.principal",
+      "position": [
+        1.0,
+        0.0,
+        20.3
+      ],
+      "activation_diameter": 5.0
+    },
+    {
+      "object": "PI_Instrumentos_01_Bombo",
+      "kind": "point_of_interest",
+      "key": "punto.instrumentos.pedestal_1",
+      "position": [
+        18.0,
+        0.0,
+        -0.8
+      ],
+      "activation_diameter": 3.0
+    },
+    {
+      "object": "PI_Instrumentos_02_Cacho",
+      "kind": "point_of_interest",
+      "key": "punto.instrumentos.pedestal_2",
+      "position": [
+        23.0,
+        0.0,
+        -0.8
+      ],
+      "activation_diameter": 3.0
+    },
+    {
+      "object": "PI_Instrumentos_03_Flauta",
+      "kind": "point_of_interest",
+      "key": "punto.instrumentos.pedestal_3",
+      "position": [
+        24.9,
+        0.0,
+        -4.5
+      ],
+      "activation_diameter": 3.0
+    },
+    {
+      "object": "PI_Instrumentos_04_Rondador",
+      "kind": "point_of_interest",
+      "key": "punto.instrumentos.pedestal_4",
+      "position": [
+        23.0,
+        0.0,
+        -8.2
+      ],
+      "activation_diameter": 3.0
+    },
+    {
+      "object": "PI_Instrumentos_05_Dulzaina",
+      "kind": "point_of_interest",
+      "key": "punto.instrumentos.pedestal_5",
+      "position": [
+        18.0,
+        0.0,
+        -8.2
+      ],
+      "activation_diameter": 3.0
+    },
+    {
+      "object": "PI_Instrumentos_06_Danza_del_Ocho",
+      "kind": "point_of_interest",
+      "key": "punto.instrumentos.danza_ocho",
+      "position": [
+        20.2,
+        0.0,
+        -4.5
+      ],
+      "activation_diameter": 5.0
+    },
+    {
+      "object": "PI_Mirador_01_Creditos_Portadores",
+      "kind": "point_of_interest",
+      "key": "punto.mirador.creditos",
+      "position": [
+        -11.5,
+        0.0,
+        18.5
+      ],
+      "activation_diameter": 6.0
+    },
+    {
+      "object": "PI_Personajes_01_Matachin",
+      "kind": "point_of_interest",
+      "key": "punto.personajes.pedestal_1",
+      "position": [
+        -7.0,
+        0.0,
+        -6.0
+      ],
+      "activation_diameter": 3.5
+    },
+    {
+      "object": "PI_Personajes_02_Gobernador_Cabildo",
+      "kind": "point_of_interest",
+      "key": "punto.personajes.pedestal_2",
+      "position": [
+        -4.9497,
+        0.0,
+        -1.0503
+      ],
+      "activation_diameter": 3.5
+    },
+    {
+      "object": "PI_Personajes_03_Bandereros",
+      "kind": "point_of_interest",
+      "key": "punto.personajes.pedestal_3",
+      "position": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "activation_diameter": 3.5
+    },
+    {
+      "object": "PI_Personajes_04_Sanjuanes",
+      "kind": "point_of_interest",
+      "key": "punto.personajes.pedestal_4",
+      "position": [
+        4.9497,
+        0.0,
+        -1.0503
+      ],
+      "activation_diameter": 3.5
+    },
+    {
+      "object": "PI_Personajes_05_Saraguayes",
+      "kind": "point_of_interest",
+      "key": "punto.personajes.pedestal_5",
+      "position": [
+        7.0,
+        0.0,
+        -6.0
+      ],
+      "activation_diameter": 3.5
+    },
+    {
+      "object": "Puntos_Interes",
+      "kind": "root",
+      "key": null,
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "activation_diameter": 0.0
+    },
+    {
+      "object": "Sala_Bienvenida",
+      "kind": "root",
+      "key": null,
+      "position": [
+        0.0,
+        0.0,
+        -20.0
+      ],
+      "activation_diameter": 0.0
+    },
+    {
+      "object": "Sala_Fogon",
+      "kind": "root",
+      "key": null,
+      "position": [
+        0.0,
+        0.0,
+        18.5
+      ],
+      "activation_diameter": 0.0
+    },
+    {
+      "object": "Sala_Instrumentos",
+      "kind": "root",
+      "key": null,
+      "position": [
+        20.5,
+        0.0,
+        -4.5
+      ],
+      "activation_diameter": 0.0
+    },
+    {
+      "object": "Sala_Personajes",
+      "kind": "root",
+      "key": null,
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "activation_diameter": 0.0
+    },
+    {
+      "object": "Spawn_Visitante",
+      "kind": "spawn",
+      "key": null,
+      "position": [
+        0.0,
+        0.0,
+        -58.0
+      ],
+      "activation_diameter": 0.0
+    }
+  ]
+}
