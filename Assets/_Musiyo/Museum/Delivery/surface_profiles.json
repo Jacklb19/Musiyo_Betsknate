@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "build_targets": {
+    "WebGL": "web",
+    "Android": "quest",
+    "StandaloneWindows64": "windows"
+  }
+}
