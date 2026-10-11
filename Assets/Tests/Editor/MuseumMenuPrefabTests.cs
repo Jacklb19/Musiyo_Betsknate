@@ -294,6 +294,27 @@ namespace MusiyoBetsknate.Tests
         }
 
         [Test]
+        public void SpatialControlsUseControllerGuidanceAndKeepBackReachable()
+        {
+            MuseumInput.Current.SetSpatial(true);
+            menu.SetSpatial(true);
+            menu.View.Main.Controls.onClick.Invoke();
+            Assert.That(menu.View.Controls.Description.text, Does.Contain("Quest 2"));
+            var hints = Array.Find(menu.View.Controls.GetComponentsInChildren<MuseumInterfaceLabel>(true), label => label.TextKey == "menu_controls");
+            Assert.That(hints.GetComponent<TMPro.TMP_Text>().text, Does.Contain("gatillo").And.Contain("Botón Y"));
+            Assert.That(menu.View.Controls.Bindings.gameObject.activeSelf, Is.False);
+            Assert.That(menu.View.Controls.RestoreBindings.gameObject.activeSelf, Is.False);
+            Assert.That(menu.View.Controls.Back.gameObject.activeInHierarchy, Is.True);
+            Assert.That(EventSystem.current.currentSelectedGameObject, Is.SameAs(menu.View.Controls.Back.gameObject));
+            menu.View.Controls.Back.onClick.Invoke();
+            menu.View.Main.Settings.onClick.Invoke();
+            Assert.That(menu.View.Settings.Sensitivity.gameObject.activeSelf, Is.False);
+            Assert.That(EventSystem.current.currentSelectedGameObject, Is.SameAs(menu.View.Settings.Volume.gameObject));
+            menu.SetSpatial(false);
+            Assert.That(menu.View.Settings.Sensitivity.gameObject.activeSelf, Is.True);
+        }
+
+        [Test]
         public void MissingRequiredReferenceReportsThePageAndField()
         {
             menu.View.Controls.Back = null;

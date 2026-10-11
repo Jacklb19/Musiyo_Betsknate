@@ -1,6 +1,9 @@
 using System;
 using MusiyoBetsknate.Museum;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.Networking;
+using System.Reflection;
 
 namespace MusiyoBetsknate.Tests
 {
@@ -12,6 +15,27 @@ namespace MusiyoBetsknate.Tests
         public void UsesPageOriginOrLocalEditorDefault(string page, string expected)
         {
             Assert.That(TourLoader.ResolveApiBase("", page), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void RejectedTransportSettlesUnavailableInsteadOfLeavingEntryLoading()
+        {
+            var root = new GameObject("TransportTest");
+            try
+            {
+                var loader = root.AddComponent<TourLoader>();
+                var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+                typeof(TourLoader).GetField("sendRequest", flags).SetValue(loader,
+                    new Func<UnityWebRequest, UnityWebRequestAsyncOperation>(_ => throw new InvalidOperationException("Transport denied")));
+                var states = new System.Collections.Generic.List<TourLoadState>();
+                loader.Changed += () => states.Add(loader.State);
+                var load = (System.Collections.IEnumerator)typeof(TourLoader).GetMethod("Load", flags).Invoke(loader, null);
+                Assert.That(load.MoveNext(), Is.False);
+                Assert.That(states, Is.EqualTo(new[] { TourLoadState.Loading, TourLoadState.Unavailable }));
+                Assert.That(loader.State, Is.EqualTo(TourLoadState.Unavailable));
+                Assert.That(loader.Status, Is.EqualTo(MuseumInterfaceText.Get("tour_unavailable")));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(root); }
         }
 
         [Test]

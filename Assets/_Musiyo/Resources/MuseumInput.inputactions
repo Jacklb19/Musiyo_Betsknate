@@ -150,6 +150,17 @@
           "action": "ScrollWheel",
           "isComposite": false,
           "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "b4180f55-e484-4dcd-a74e-c0cf0830dada",
+          "path": "<OculusTouchController>{RightHand}/triggerPressed",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "Click",
+          "isComposite": false,
+          "isPartOfComposite": false
         }
       ]
     },
@@ -291,6 +302,28 @@
           "action": "Previous",
           "isComposite": false,
           "isPartOfComposite": true
+        },
+        {
+          "name": "",
+          "id": "cfde777c-7a36-4f90-b397-994926752c60",
+          "path": "<OculusTouchController>{LeftHand}/menu",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "Pause",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "f14b682a-3e60-4475-8aa0-43882c1da2b3",
+          "path": "<OculusTouchController>{LeftHand}/secondaryButton",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "Back",
+          "isComposite": false,
+          "isPartOfComposite": false
         }
       ]
     },
@@ -333,6 +366,15 @@
           "processors": "",
           "interactions": "",
           "initialStateCheck": false
+        },
+        {
+          "name": "SnapTurn",
+          "type": "Value",
+          "id": "8acaff7a-66e4-43e5-a3ce-49ba0b73d211",
+          "expectedControlType": "Vector2",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": true
         }
       ],
       "bindings": [
@@ -520,6 +562,28 @@
           "processors": "",
           "groups": "KeyboardMouse",
           "action": "Sprint",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "56609945-c9ae-47fc-a73c-2b931da81f75",
+          "path": "<OculusTouchController>{LeftHand}/thumbstick",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "Move",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "371eb53b-44e6-475b-abbf-100eed26a39f",
+          "path": "<OculusTouchController>{RightHand}/thumbstick",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "SnapTurn",
           "isComposite": false,
           "isPartOfComposite": false
         }
@@ -840,6 +904,17 @@
           "action": "ChooseElement",
           "isComposite": false,
           "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "58ece1be-1f2a-4ed8-9d4e-b37de4adf942",
+          "path": "<OculusTouchController>{RightHand}/thumbstick/y",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "ScrollPanel",
+          "isComposite": false,
+          "isPartOfComposite": false
         }
       ]
     },
@@ -1154,6 +1229,145 @@
           "action": "Navigate",
           "isComposite": false,
           "isPartOfComposite": true
+        },
+        {
+          "name": "",
+          "id": "93840a6a-1e38-40fd-83a1-5a3e83366679",
+          "path": "<OculusTouchController>{LeftHand}/thumbstick",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "Navigate",
+          "isComposite": false,
+          "isPartOfComposite": false
+        }
+      ]
+    },
+    {
+      "name": "Tracking",
+      "id": "596ee12b-54c2-40ad-8dc0-09dc573f7110",
+      "actions": [
+        {
+          "name": "HeadPosition",
+          "type": "Value",
+          "id": "4fe4f858-6965-4f19-8cc1-35db64522f4d",
+          "expectedControlType": "Vector3",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": true
+        },
+        {
+          "name": "HeadRotation",
+          "type": "Value",
+          "id": "00545b50-68ec-4feb-b8a8-7aca7f296a75",
+          "expectedControlType": "Quaternion",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": true
+        },
+        {
+          "name": "HeadState",
+          "type": "Value",
+          "id": "320cdf70-b803-4ef7-bd0c-9621b6dad5d9",
+          "expectedControlType": "Integer",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": true
+        },
+        {
+          "name": "RightPosition",
+          "type": "Value",
+          "id": "1c822b3d-b15a-476e-846b-a102c92281e8",
+          "expectedControlType": "Vector3",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": true
+        },
+        {
+          "name": "RightRotation",
+          "type": "Value",
+          "id": "bc86ea59-f3f5-43d6-ad4d-3cca0e7534d8",
+          "expectedControlType": "Quaternion",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": true
+        },
+        {
+          "name": "RightTracked",
+          "type": "Value",
+          "id": "00c3033a-5b6b-4dc8-82b8-df83305e1870",
+          "expectedControlType": "Button",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": true
+        }
+      ],
+      "bindings": [
+        {
+          "name": "",
+          "id": "e05d91e8-0296-4dc9-be6d-7c5103ef029a",
+          "path": "<XRHMD>/centerEyePosition",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "HeadPosition",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "c5840e43-e9d8-4612-8d61-d84856c5536b",
+          "path": "<XRHMD>/centerEyeRotation",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "HeadRotation",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "e77d4871-9726-4c5b-a304-d8a5cd061678",
+          "path": "<XRHMD>/trackingState",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "HeadState",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "7d08ec6a-4886-42da-b8ac-b3bca7da3b19",
+          "path": "<OculusTouchController>{RightHand}/pointerPosition",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "RightPosition",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "fc09d64b-6162-412c-9f42-a82d7d7e673f",
+          "path": "<OculusTouchController>{RightHand}/pointerRotation",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "RightRotation",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "6feab80d-a769-48fa-b4a3-155566e114a8",
+          "path": "<OculusTouchController>{RightHand}/isTracked",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "RightTracked",
+          "isComposite": false,
+          "isPartOfComposite": false
         }
       ]
     }

@@ -1,4 +1,12 @@
 {
-    "name": "MusiyoBetsknate.Runtime",
-    "references": ["Unity.InputSystem", "Unity.InputSystem.RebindingUI", "Unity.TextMeshPro", "Unity.ugui", "Unity.Newtonsoft.Json", "glTFast"]
+  "name": "MusiyoBetsknate.Runtime",
+  "references": [
+    "Unity.InputSystem",
+    "Unity.InputSystem.RebindingUI",
+    "Unity.TextMeshPro",
+    "Unity.ugui",
+    "Unity.Newtonsoft.Json",
+    "glTFast",
+    "Unity.XR.CoreUtils"
+  ]
 }

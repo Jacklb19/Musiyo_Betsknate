@@ -18,7 +18,7 @@ namespace MusiyoBetsknate.Museum
         public ElementSummaryContractV1 SelectedElement { get; private set; }
         public ActivationSource LastSource { get; private set; }
         /// <summary>The detail of the active point floats by its reading stand in the museum instead of covering the screen.</summary>
-        public bool DetailInWorld => GetComponent<MuseumLecternDisplay>()?.Find(ActivePoint) != null;
+        public bool DetailInWorld => GetComponent<MuseumLecternDisplay>()?.CanDisplay(ActivePoint) == true;
         /// <summary>A detail in the museum is read while walking; one on the screen stops the visitor.</summary>
         public bool BlocksMovement => GetComponent<MuseumVisitFlow>()?.BlocksInput == true
             || (State == InteractionState.Reading && !DetailInWorld) || State == InteractionState.ModelExamination

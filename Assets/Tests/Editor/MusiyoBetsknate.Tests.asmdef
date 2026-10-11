@@ -1,6 +1,17 @@
 {
-    "name": "MusiyoBetsknate.Tests",
-    "references": ["MusiyoBetsknate.Runtime", "Unity.TextMeshPro", "Unity.ugui", "Unity.InputSystem", "Unity.InputSystem.TestFramework"],
-    "includePlatforms": ["Editor"],
-    "optionalUnityReferences": ["TestAssemblies"]
+  "name": "MusiyoBetsknate.Tests",
+  "references": [
+    "MusiyoBetsknate.Runtime",
+    "Unity.TextMeshPro",
+    "Unity.ugui",
+    "Unity.InputSystem",
+    "Unity.InputSystem.TestFramework",
+    "Unity.XR.OpenXR"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
 }

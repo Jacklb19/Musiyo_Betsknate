@@ -91,6 +91,7 @@ namespace MusiyoBetsknate.Museum
         /// </summary>
         private void PointAtScreen()
         {
+            if (MuseumInput.Current.Spatial) return;
             var display = GetComponent<MuseumLecternDisplay>();
             if (display == null) return;
             bool captured = Cursor.lockState == CursorLockMode.Locked;

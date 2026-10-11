@@ -110,6 +110,29 @@ namespace MusiyoBetsknate.Museum
             ApplyPreferences();
         }
 
+        private void Start()
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            // Android delivery uses the same visit and menu views with a spatial host.
+            StartCoroutine(AttachHeadset());
+#endif
+        }
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        private IEnumerator AttachHeadset()
+        {
+            float deadline = Time.realtimeSinceStartup + 10;
+            while (!UnityEngine.XR.XRSettings.isDeviceActive && Time.realtimeSinceStartup < deadline) yield return null;
+            if (!UnityEngine.XR.XRSettings.isDeviceActive)
+            {
+                Debug.LogError("Quest requires an active OpenXR headset. Spatial presentation was not started.");
+                yield break;
+            }
+            var host = gameObject.AddComponent<MuseumXrHost>();
+            host.Configure(visitor, interaction, GetComponent<MuseumMenuHud>(), GetComponent<Canvas>());
+        }
+#endif
+
         private void OnEnable()
         {
             loader.Changed += Refresh;
@@ -174,8 +197,8 @@ namespace MusiyoBetsknate.Museum
             return panelScroll;
         }
 
-        /// <summary>Page Up and Page Down scroll long panels; the mouse wheel stays free for model zoom.</summary>
-        private void ScrollPanelWithKeyboard()
+        /// <summary>Page keys and the right controller stick scroll long panels; the mouse wheel stays free for model zoom.</summary>
+        private void ScrollPointPanel()
         {
             var scroll = MuseumInput.Current.ScrollPanel;
             if (!scroll.WasPressedThisFrame() || !panel.activeSelf || PanelScroll() == null) return;
@@ -192,6 +215,8 @@ namespace MusiyoBetsknate.Museum
         }
 
         /// <summary>A reassigned key changes every caption and prompt that names it.</summary>
+        public void RefreshDeviceLabels() => RefreshKeys();
+
         private void RefreshKeys()
         {
             foreach (var (caption, textKey) in keyedCaptions)
@@ -208,7 +233,7 @@ namespace MusiyoBetsknate.Museum
             var focus = pointInput.FocusedPoint;
             focusText.text = focus != null && focus.Content != null ? MuseumInterfaceText.Format("focus_point", focus.Content.name)
                 : pointInput.GazeProgress > 0 ? MuseumInterfaceText.Format("gaze_progress", Mathf.RoundToInt(pointInput.GazeProgress * 100)) : ".";
-            ScrollPanelWithKeyboard();
+            ScrollPointPanel();
             if (panel.activeSelf && PanelGroup().alpha < 1)
                 panelGroup.alpha = Mathf.MoveTowards(panelGroup.alpha, 1,
                     Time.unscaledDeltaTime / MuseumExperienceConfiguration.Current.PanelFadeSeconds);

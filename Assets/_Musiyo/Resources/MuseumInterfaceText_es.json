@@ -153,6 +153,24 @@
     "key_insert": "Insert",
     "key_delete": "Supr",
     "key_capsLock": "Bloq Mayús",
-    "menu_kicker": "MUSEO VIRTUAL"
+    "menu_kicker": "MUSEO VIRTUAL",
+    "xr_settings_description": "Ajusta la narración y los subtítulos. Tus preferencias se guardan en este visor.",
+    "xr_controls_description": "Controles de Quest 2. Usa los mandos para recorrer el museo y elegir opciones.",
+    "menu_controls_xr": "Apunta con el mando derecho y pulsa el gatillo para elegir.\n\nPalanca izquierda: caminar o recorrer el menú.\nPalanca derecha: giro lateral; arriba/abajo para desplazar una ficha.\nBotón de menú izquierdo: pausa.\nBotón Y: volver.\n\nLa mirada sigue los movimientos de tu cabeza.",
+    "arrival_body_xr": "Exploración libre. Ruta sugerida de unos {0} minutos: {1}.\nAcércate a un punto o míralo para activarlo. Apunta al panel con el mando derecho y pulsa el gatillo para elegir.\nBotón de menú izquierdo: pausa y ajustes.",
+    "guide_prompt_xr": "{0}",
+    "focus_point_xr": "{0} · acércate o mira el punto para activarlo",
+    "guide_panel_xr": "{0}\n{1}\nBotón Y: volver a la visita",
+    "examination_controls_xr": "\nUsa los botones del panel para examinar el modelo. Botón Y: salir del examen.",
+    "detail_controls_xr": "\nPalanca derecha arriba/abajo: desplazar la ficha. Botón Y: cerrar.",
+    "examine_model_xr": "Examinar modelo",
+    "repeat_narration_xr": "Repetir narración",
+    "mute_narration_xr": "Silenciar narración",
+    "pause_narration_keyboard_xr": "Pausar narración",
+    "resume_narration_keyboard_xr": "Reanudar narración",
+    "unmute_narration_xr": "Activar sonido",
+    "start_visit_xr": "Comenzar la visita",
+    "wayfinding_open_xr": "Orientación",
+    "wayfinding_close_xr": "Cerrar orientación"
   }
 }
