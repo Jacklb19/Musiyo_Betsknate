@@ -45,8 +45,12 @@ namespace MusiyoBetsknate.Museum
             return value;
         }
 
-        public static string Get(string key) => Current.Read(key);
+        /// <summary>Optional entries, such as the names of keys, return null when the catalog has none.</summary>
+        public string Find(string key) => entries.TryGetValue(key, out var value) ? value : null;
+
+        /// <summary>Catalog text with every {input:id} replaced by the key currently assigned to that action.</summary>
+        public static string Get(string key) => MuseumInputLabels.Expand(Current.Read(key));
         public static string Format(string key, params object[] values) =>
-            string.Format(CultureInfo.GetCultureInfo(Current.Language), Get(key), values);
+            string.Format(CultureInfo.GetCultureInfo(Current.Language), MuseumInputLabels.Expand(Current.Read(key), true), values);
     }
 }

@@ -16,12 +16,14 @@ namespace MusiyoBetsknate.Museum
         private TMP_Text title;
         private Transform choices;
         private bool wasOpen;
+        private MuseumInput input;
+        private readonly System.Collections.Generic.List<(TMP_Text caption, string textKey)> keyedCaptions = new();
         public void Configure(MuseumWayfinding wayfinding, MuseumInteraction state, Button buttonTemplate, TMP_Text textTemplate)
         {
             guide = wayfinding;
             interaction = state;
             template = buttonTemplate;
-            open = ActionButton(MuseumInterfaceText.Get("wayfinding_open"), transform, guide.ToggleMenu);
+            open = KeyedButton("wayfinding_open", transform, guide.ToggleMenu);
             var rect = open.GetComponent<RectTransform>();
             rect.anchorMin = rect.anchorMax = new Vector2(1, 1);
             rect.pivot = new Vector2(1, 1);
@@ -61,12 +63,26 @@ namespace MusiyoBetsknate.Museum
             choiceLayout.spacing = 8;
             choiceLayout.childControlHeight = true;
             choiceLayout.childForceExpandHeight = false;
-            ActionButton(MuseumInterfaceText.Get("wayfinding_follow"), menu.transform, guide.FollowSuggested);
-            ActionButton(MuseumInterfaceText.Get("wayfinding_stop"), menu.transform, () => { guide.StopGuidance(); guide.CloseMenu(); });
-            ActionButton(MuseumInterfaceText.Get("wayfinding_close"), menu.transform, guide.CloseMenu);
+            KeyedButton("wayfinding_follow", menu.transform, guide.FollowSuggested);
+            KeyedButton("wayfinding_stop", menu.transform, () => { guide.StopGuidance(); guide.CloseMenu(); });
+            KeyedButton("wayfinding_close", menu.transform, guide.CloseMenu);
             guide.Changed += Refresh;
             interaction.Changed += Refresh;
+            input = MuseumInput.Current;
+            input.BindingsChanged += RefreshKeys;
             Refresh();
+        }
+        /// <summary>Captions that name a key are created from their text key and follow reassignments.</summary>
+        private Button KeyedButton(string textKey, Transform parent, UnityEngine.Events.UnityAction action)
+        {
+            var button = ActionButton(MuseumInterfaceText.Get(textKey), parent, action);
+            keyedCaptions.Add((button.GetComponentInChildren<TMP_Text>(), textKey));
+            return button;
+        }
+        private void RefreshKeys()
+        {
+            foreach (var (caption, textKey) in keyedCaptions)
+                if (caption != null) caption.text = MuseumInterfaceText.Get(textKey);
         }
         private Button ActionButton(string label, Transform parent, UnityEngine.Events.UnityAction action)
         {
@@ -107,6 +123,7 @@ namespace MusiyoBetsknate.Museum
         {
             if (guide != null) guide.Changed -= Refresh;
             if (interaction != null) interaction.Changed -= Refresh;
+            if (input != null) input.BindingsChanged -= RefreshKeys;
         }
     }
 }

@@ -15,7 +15,7 @@ namespace MusiyoBetsknate.Tests
             var catalog = MuseumInterfaceText.Current;
             Assert.That(catalog.Language, Is.EqualTo("es"));
             Assert.That(catalog.SuggestedVisitMinutes, Is.GreaterThan(0));
-            var pattern = new Regex("MuseumInterfaceText\\.(?:Get|Format)\\(\"([^\"]+)\"");
+            var pattern = new Regex("(?:MuseumInterfaceText\\.(?:Get|Format)|ModelButton|KeyedButton)\\(\"([^\"]+)\"");
             var count = 0;
             foreach (var path in Directory.GetFiles(Path.Combine(Application.dataPath, "Scripts/Museo"), "*.cs"))
                 foreach (Match match in pattern.Matches(File.ReadAllText(path)))

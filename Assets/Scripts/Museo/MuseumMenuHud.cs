@@ -38,8 +38,10 @@ namespace MusiyoBetsknate.Museum
         private bool wasVisible;
         private bool wasEntry;
         private TourLoadState lastLoadState;
-        private InputSystemUIInputModule navigationModule;
-        private InputActionReference suspendedNavigation;
+        private MuseumInput input;
+        private readonly System.Collections.Generic.List<MuseumRebindRow> rebindRows = new();
+        private Vector2Int heldNavigation;
+        private bool navigationArmed;
 
         [SerializeField] private MuseumMenuView viewPrefab;
         private MuseumMenuView view;
@@ -89,6 +91,7 @@ namespace MusiyoBetsknate.Museum
             sensitivity.maxValue = configuration.MaximumSensitivity;
             volume.minValue = 0; volume.maxValue = 1;
             flow.Menu = this;
+            MuseumInputDirector.Ensure(interaction);
             if (isActiveAndEnabled) Bind();
         }
 
@@ -113,13 +116,51 @@ namespace MusiyoBetsknate.Museum
             Listen(view.Settings.Reset, preferences.Reset);
             Listen(settingsBack, OpenHome);
             Listen(controlsBack, OpenHome);
+            Listen(view.Controls.RestoreBindings, RestoreBindings);
             sensitivity.onValueChanged.AddListener(preferences.SetSensitivity);
             volume.onValueChanged.AddListener(preferences.SetVolume);
             flow.Changed += Refresh;
             interaction.Changed += Refresh;
             loader.Changed += Refresh;
             preferences.Changed += SyncSettings;
+            input = MuseumInput.Current;
+            input.BindingsChanged += RefreshKeys;
+            BuildRebindRows();
             SyncSettings(); Refresh();
+        }
+
+        /// <summary>One row per key the visitor may change, in the order of the binding list; the row layout belongs to its prefab.</summary>
+        private void BuildRebindRows()
+        {
+            var page = view.Controls;
+            foreach (var binding in input.Bindings.All)
+            {
+                if (!binding.Rebindable) continue;
+                var row = rebindRows.Find(existing => existing != null && existing.Binding != null && existing.Binding.Id == binding.Id);
+                if (row == null)
+                {
+                    row = Instantiate(page.RowPrefab, page.Bindings, false);
+                    row.name = "Rebind_" + binding.Id;
+                    foreach (var theme in row.GetComponentsInChildren<MuseumMenuThemeBinding>(true)) theme.Apply();
+                    rebindRows.Add(row);
+                }
+                row.Configure(input, binding, ReportBinding);
+            }
+            page.BindingStatus.text = "";
+        }
+
+        private void ReportBinding(string message) => view.Controls.BindingStatus.text = message;
+        private void RestoreBindings()
+        {
+            input.Bindings.RestoreDefaults();
+            ReportBinding(MuseumInterfaceText.Get("rebind_restored"));
+        }
+        /// <summary>A reassigned key changes the rows and every menu text that names it.</summary>
+        private void RefreshKeys()
+        {
+            foreach (var row in rebindRows) if (row != null) row.Refresh();
+            foreach (var label in view.GetComponentsInChildren<MuseumInterfaceLabel>(true)) label.RefreshText();
+            Refresh();
         }
 
         private void Listen(Button button, UnityEngine.Events.UnityAction callback)
@@ -129,8 +170,9 @@ namespace MusiyoBetsknate.Museum
         }
         private void Unbind()
         {
-            SuspendModuleNavigation(false);
             if (!bound) return;
+            foreach (var row in rebindRows) if (row != null) row.Cancel();
+            if (input != null) input.BindingsChanged -= RefreshKeys;
             foreach (var remove in removeListeners) remove();
             removeListeners.Clear();
             sensitivity.onValueChanged.RemoveListener(preferences.SetSensitivity);
@@ -171,6 +213,8 @@ namespace MusiyoBetsknate.Museum
         private void ShowPage(MenuPage selected)
         {
             preferences.Save();
+            foreach (var row in rebindRows) if (row != null) row.Cancel();
+            view.Controls.BindingStatus.text = "";
             page = selected;
             Refresh();
             SelectFirst();
@@ -185,7 +229,8 @@ namespace MusiyoBetsknate.Museum
         private GameObject FirstSelectable()
         {
             if (page == MenuPage.Settings) return sensitivity.gameObject;
-            if (page == MenuPage.Controls) return controlsBack.gameObject;
+            if (page == MenuPage.Controls)
+                return rebindRows.Count > 0 && rebindRows[0] != null ? rebindRows[0].gameObject : controlsBack.gameObject;
             if (flow.Phase != VisitPhase.Menu) return resume.gameObject;
             if (begin.interactable) return begin.gameObject;
             return retry.gameObject.activeSelf ? retry.gameObject : settingsButton.gameObject;
@@ -246,7 +291,6 @@ namespace MusiyoBetsknate.Museum
                 if (!wasVisible || entry != wasEntry || loadSettled || !SelectionInsideMenu()) SelectFirst();
             }
             lastLoadState = loader.State;
-            SuspendModuleNavigation(visible);
             wasVisible = visible;
             wasEntry = entry;
         }
@@ -254,26 +298,34 @@ namespace MusiyoBetsknate.Museum
         {
             if (!bound) return;
             if (flow.Phase == VisitPhase.Entering) UpdateTransition();
-            var keyboard = Keyboard.current;
-            if (!overlayGroup.interactable || keyboard == null) return;
-            if (page != MenuPage.Home && (keyboard.backspaceKey.wasPressedThisFrame
-                    || flow.Phase == VisitPhase.Menu && keyboard.escapeKey.wasPressedThisFrame)) { ShowPage(MenuPage.Home); return; }
-            int step = keyboard.downArrowKey.wasPressedThisFrame || keyboard.sKey.wasPressedThisFrame
-                || keyboard.tabKey.wasPressedThisFrame && !keyboard.shiftKey.isPressed ? 1
-                : keyboard.upArrowKey.wasPressedThisFrame || keyboard.wKey.wasPressedThisFrame
-                || keyboard.tabKey.wasPressedThisFrame && keyboard.shiftKey.isPressed ? -1 : 0;
+            // The key being chosen for an action, and the one that just was, never also operates the menu.
+            if (!overlayGroup.interactable || input.Capturing || input.CaptureEndedThisFrame) { navigationArmed = false; return; }
+            if (page != MenuPage.Home && (input.Back.WasPressedThisFrame()
+                    || flow.Phase == VisitPhase.Menu && input.Pause.WasPressedThisFrame())) { ShowPage(MenuPage.Home); return; }
+            var pressed = PressedNavigation();
+            // The reverse combination also contains the forward key, so it is read first.
+            int step = input.Previous.WasPressedThisFrame() ? -1 : input.Next.WasPressedThisFrame() ? 1 : -pressed.y;
             // A mouse click on the backdrop clears the selection; any navigation key brings the focus back.
             if (!SelectionInsideMenu())
             {
-                if (step != 0 || keyboard.enterKey.wasPressedThisFrame) SelectFirst();
+                if (step != 0 || input.Confirm.WasPressedThisFrame()) SelectFirst();
                 return;
             }
             if (step != 0) MoveSelection(step);
-            int adjust = keyboard.rightArrowKey.wasPressedThisFrame || keyboard.dKey.wasPressedThisFrame ? 1
-                : keyboard.leftArrowKey.wasPressedThisFrame || keyboard.aKey.wasPressedThisFrame ? -1 : 0;
             var slider = EventSystem.current.currentSelectedGameObject.GetComponent<Slider>();
-            if (adjust != 0 && slider != null)
-                slider.value += adjust * configuration.SliderStep * (slider.maxValue - slider.minValue);
+            if (pressed.x != 0 && slider != null)
+                slider.value += pressed.x * configuration.SliderStep * (slider.maxValue - slider.minValue);
+        }
+        /// <summary>Directions pressed this frame. Keys already held when the menu opened, such as a walking key at the moment of pausing, do not count.</summary>
+        private Vector2Int PressedNavigation()
+        {
+            var value = input.Navigate.ReadValue<Vector2>();
+            var held = new Vector2Int(value.x > .5f ? 1 : value.x < -.5f ? -1 : 0, value.y > .5f ? 1 : value.y < -.5f ? -1 : 0);
+            var pressed = new Vector2Int(held.x != heldNavigation.x ? held.x : 0, held.y != heldNavigation.y ? held.y : 0);
+            heldNavigation = held;
+            if (navigationArmed) return pressed;
+            navigationArmed = held == Vector2Int.zero;
+            return Vector2Int.zero;
         }
         /// <summary>Keyboard order follows the visible page layout; it wraps at both ends.</summary>
         private void MoveSelection(int step)
@@ -288,23 +340,6 @@ namespace MusiyoBetsknate.Museum
             index = index < 0 ? 0 : (index + step + options.Count) % options.Count;
             EventSystem.current.SetSelectedGameObject(options[index].gameObject);
             KeepFocusVisible(options[index].gameObject);
-        }
-        /// <summary>The menu owns arrow keys while open, so the UI module's held-axis navigation cannot move twice.</summary>
-        private void SuspendModuleNavigation(bool suspend)
-        {
-            if (suspend && navigationModule == null && EventSystem.current != null)
-            {
-                navigationModule = EventSystem.current.GetComponent<InputSystemUIInputModule>();
-                if (navigationModule == null) return;
-                suspendedNavigation = navigationModule.move;
-                navigationModule.move = null;
-            }
-            else if (!suspend && navigationModule != null)
-            {
-                navigationModule.move = suspendedNavigation;
-                navigationModule = null;
-                suspendedNavigation = null;
-            }
         }
         private bool SelectionInsideMenu()
         {

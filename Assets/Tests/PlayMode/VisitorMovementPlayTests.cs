@@ -14,6 +14,10 @@ namespace MusiyoBetsknate.Tests
         private int simulatedFrames;
         private float simulatedSeconds;
 
+        // The shipped actions with their default keys, bound to this fixture's devices and never to saved preferences.
+        public override void Setup() { base.Setup(); MuseumInput.Replace(MuseumInput.CreateDefault()); }
+        public override void TearDown() { MuseumInput.Replace(null); base.TearDown(); }
+
         /// <summary>Distance covered in Walk seconds of game time while easing in at the configured acceleration, with margin.</summary>
         private static float MinimumWalk
         {
@@ -62,14 +66,7 @@ namespace MusiyoBetsknate.Tests
             cameraObject.transform.SetParent(visitor.transform);
             cameraObject.transform.localPosition = Vector3.up * 1.65f;
             var camera = cameraObject.AddComponent<Camera>();
-            var actions = ScriptableObject.CreateInstance<InputActionAsset>();
-            var map = actions.AddActionMap("Desktop");
-            map.AddAction("Move", InputActionType.Value).AddCompositeBinding("2DVector").With("Up", "<Keyboard>/w");
-            map.AddAction("Look", InputActionType.Value, "<Mouse>/delta");
-            map.AddAction("KeyboardLook", InputActionType.Value).AddCompositeBinding("2DVector").With("Up", "<Keyboard>/i");
-            map.AddAction("Sprint", InputActionType.Button, "<Keyboard>/leftShift");
-            map.AddAction("CapturePointer", InputActionType.Button, "<Mouse>/leftButton");
-            visitor.AddComponent<DesktopVisitorController>().Configure(actions, camera, interaction);
+            visitor.AddComponent<DesktopVisitorController>().Configure(camera, interaction);
             var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
             floor.transform.SetParent(root.transform);
             floor.transform.position = new Vector3(0, -.1f, 0);
@@ -88,6 +85,8 @@ namespace MusiyoBetsknate.Tests
                 Press(keyboard.wKey);
                 yield return Simulate(Walk);
                 Assert.That(visitor.transform.position.z, Is.EqualTo(0).Within(.01f), "The entry menu must block locomotion.");
+                Assert.That(MuseumInput.Current.Context, Is.EqualTo(MuseumInputContext.Menu));
+                Assert.That(MuseumInput.Current.Move.enabled, Is.False, "Walking does not even listen while a menu is open.");
                 flow.EnterImmediately();
                 interaction.Activate(point, ActivationSource.Keyboard);
                 yield return Simulate(Walk);
@@ -113,6 +112,7 @@ namespace MusiyoBetsknate.Tests
                 guidance.ToggleMenu();
                 yield return null;
                 float menuPosition = visitor.transform.position.z;
+                Assert.That(MuseumInput.Current.Context, Is.EqualTo(MuseumInputContext.Panel), "The orientation menu takes navigation.");
                 yield return Simulate(Walk);
                 Assert.That(visitor.transform.position.z, Is.EqualTo(menuPosition).Within(.01f));
                 guidance.CloseMenu();
@@ -120,7 +120,7 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(visitor.transform.position.z, Is.GreaterThan(menuPosition + MinimumWalk), Diagnostics());
                 Release(keyboard.wKey);
             }
-            finally { Object.Destroy(root); Object.Destroy(actions); }
+            finally { Object.Destroy(root); }
             yield return null;
         }
 
