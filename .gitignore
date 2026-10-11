@@ -56,6 +56,13 @@ sysinfo.txt
 ehthumbs.db
 Thumbs.db
 
+# Asset Store content. This repository is public and the Asset Store EULA forbids redistributing assets,
+# so the full import and the selection installed by tools/ThirdParty/slimui_selection.py stay local.
+/[aA]ssets/SlimUI/
+/[aA]ssets/SlimUI.meta
+/[aA]ssets/_Musiyo/Licensed/
+/[aA]ssets/_Musiyo/Licensed.meta
+
 # Only README.md is tracked as Markdown.
 *.[mM][dD]
 !/README.md
