@@ -96,6 +96,31 @@ namespace MusiyoBetsknate.Museo
     }
 
     [Serializable, Preserve]
+    public sealed partial class GuideCitationContractV1
+    {
+        [Preserve] public string element_slug;
+        [Preserve] public string title;
+    }
+
+    [Serializable, Preserve]
+    public sealed partial class GuideQuestionContractV1
+    {
+        [Preserve] public int schema_version;
+        [Preserve] public string question;
+        [Preserve] public string element_slug;
+    }
+
+    [Serializable, Preserve]
+    public sealed partial class GuideResponseContractV1
+    {
+        [Preserve] public int schema_version;
+        [Preserve] public string status;
+        [Preserve] public string answer;
+        [Preserve] public GuideCitationContractV1[] citations;
+        [Preserve] public string reason;
+    }
+
+    [Serializable, Preserve]
     public sealed partial class LastModifiedContractV1
     {
         [Preserve] public string date;
@@ -289,5 +314,7 @@ namespace MusiyoBetsknate.Museo
         public const string CatalogFacet = @"{""additionalProperties"":false,""properties"":{""slug"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Slug"",""type"":""string""},""name"":{""title"":""Name"",""type"":""string""},""element_count"":{""minimum"":1,""title"":""Element Count"",""type"":""integer""}},""required"":[""slug"",""name"",""element_count""],""title"":""CatalogFacet"",""type"":""object""}";
         public const string ResourceAccess = @"{""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""title"":""Schema Version"",""type"":""integer""},""url"":{""minLength"":1,""title"":""Url"",""type"":""string""},""expires_at"":{""format"":""date-time"",""title"":""Expires At"",""type"":""string""},""mime"":{""title"":""Mime"",""type"":""string""},""byte_count"":{""anyOf"":[{""minimum"":0,""type"":""integer""},{""type"":""null""}],""default"":null,""title"":""Byte Count""},""sha256"":{""anyOf"":[{""pattern"":""^[a-f0-9]{64}$"",""type"":""string""},{""type"":""null""}],""default"":null,""title"":""Sha256""}},""required"":[""schema_version"",""url"",""expires_at"",""mime""],""title"":""ResourceAccess"",""type"":""object""}";
         public const string ValidatorSession = @"{""$defs"":{""ValidatorProfile"":{""additionalProperties"":false,""properties"":{""username"":{""title"":""Username"",""type"":""string""},""name"":{""title"":""Name"",""type"":""string""}},""required"":[""username"",""name""],""title"":""ValidatorProfile"",""type"":""object""}},""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""title"":""Schema Version"",""type"":""integer""},""authenticated"":{""title"":""Authenticated"",""type"":""boolean""},""user"":{""anyOf"":[{""$ref"":""#/$defs/ValidatorProfile""},{""type"":""null""}],""default"":null},""csrf_token"":{""anyOf"":[{""pattern"":""^[A-Za-z0-9_-]{43}$"",""type"":""string""},{""type"":""null""}],""default"":null,""title"":""Csrf Token""}},""required"":[""schema_version"",""authenticated""],""title"":""ValidatorSession"",""type"":""object""}";
+        public const string GuideQuestion = @"{""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""title"":""Schema Version"",""type"":""integer""},""question"":{""maxLength"":500,""minLength"":3,""title"":""Question"",""type"":""string""},""element_slug"":{""anyOf"":[{""maxLength"":100,""minLength"":1,""pattern"":""^\\S+$"",""type"":""string""},{""type"":""null""}],""default"":null,""title"":""Element Slug""}},""required"":[""schema_version"",""question""],""title"":""GuideQuestion"",""type"":""object""}";
+        public const string GuideResponse = @"{""$defs"":{""GuideCitation"":{""additionalProperties"":false,""properties"":{""element_slug"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Element Slug"",""type"":""string""},""title"":{""minLength"":1,""title"":""Title"",""type"":""string""}},""required"":[""element_slug"",""title""],""title"":""GuideCitation"",""type"":""object""}},""additionalProperties"":false,""allOf"":[{""if"":{""properties"":{""status"":{""const"":""answered""}}},""then"":{""properties"":{""answer"":{""minLength"":1,""pattern"":""\\S"",""type"":""string""},""citations"":{""minItems"":1},""reason"":{""type"":""null""}}}},{""if"":{""properties"":{""status"":{""const"":""abstained""}}},""then"":{""properties"":{""answer"":{""type"":""null""},""citations"":{""maxItems"":0},""reason"":{""const"":""insufficient_evidence""}}}},{""if"":{""properties"":{""status"":{""const"":""provider_unavailable""}}},""then"":{""properties"":{""answer"":{""type"":""null""},""citations"":{""maxItems"":0},""reason"":{""const"":""provider_unavailable""}}}}],""properties"":{""schema_version"":{""const"":1,""title"":""Schema Version"",""type"":""integer""},""status"":{""enum"":[""answered"",""abstained"",""provider_unavailable""],""title"":""Status"",""type"":""string""},""answer"":{""anyOf"":[{""maxLength"":2000,""minLength"":1,""pattern"":""\\S"",""type"":""string""},{""type"":""null""}],""title"":""Answer""},""citations"":{""items"":{""$ref"":""#/$defs/GuideCitation""},""maxItems"":8,""title"":""Citations"",""type"":""array""},""reason"":{""anyOf"":[{""enum"":[""insufficient_evidence"",""provider_unavailable""],""type"":""string""},{""type"":""null""}],""title"":""Reason""}},""required"":[""schema_version"",""status"",""answer"",""citations"",""reason""],""title"":""GuideResponse"",""type"":""object""}";
     }
 }
