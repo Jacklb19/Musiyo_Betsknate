@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "menu_distance": 1.8,
+  "menu_width": 1.4,
+  "ray_length": 6,
+  "walk_speed": 1.2,
+  "snap_turn_degrees": 30,
+  "device_height": 1.65
+}

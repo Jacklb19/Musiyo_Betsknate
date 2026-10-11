@@ -9,7 +9,7 @@ namespace MusiyoBetsknate.Museum
     /// <summary>What the visitor is doing decides which action maps listen.</summary>
     public enum MuseumInputContext
     {
-        /// <summary>Nothing listens, for example while a new key is being captured.</summary>
+        /// <summary>Gameplay and interface actions are silent while a new key is captured; headset tracking continues.</summary>
         Suspended,
         /// <summary>Walking freely, including reading a screen that floats inside the museum.</summary>
         Visit,
@@ -50,7 +50,7 @@ namespace MusiyoBetsknate.Museum
         public bool Alive => !disposed && Asset != null;
         public MuseumInputBindings Bindings { get; }
         public MuseumInputContext Context { get; private set; }
-        /// <summary>True while a new key is being captured; every map is silent meanwhile.</summary>
+        /// <summary>True while a new key is being captured; interactive maps are silent meanwhile.</summary>
         public bool Capturing { get; private set; }
         /// <summary>True on the frame a capture ended, so the captured key cannot also act on the interface.</summary>
         public bool CaptureEndedThisFrame => captureEndFrame == Time.frameCount;
@@ -85,6 +85,14 @@ namespace MusiyoBetsknate.Museum
         public InputAction ResetPose { get; }
         public InputAction Drag { get; }
         public InputAction Navigate { get; }
+        public InputAction HeadPosition { get; }
+        public InputAction HeadRotation { get; }
+        public InputAction HeadState { get; }
+        public InputAction RightPosition { get; }
+        public InputAction RightRotation { get; }
+        public InputAction RightTracked { get; }
+        public InputAction SnapTurn { get; }
+        public bool Spatial { get; private set; }
 
         /// <summary>The instance every museum component shares, created on first use with the visitor's saved keys.</summary>
         public static MuseumInput Current
@@ -142,6 +150,10 @@ namespace MusiyoBetsknate.Museum
             ChooseElement = Find("Visit/ChooseElement");
             Rotate = Find("Examine/Rotate"); Zoom = Find("Examine/Zoom"); ResetPose = Find("Examine/Reset"); Drag = Find("Examine/Drag");
             Navigate = Find("Navigation/Navigate");
+            HeadPosition = Find("Tracking/HeadPosition"); HeadRotation = Find("Tracking/HeadRotation");
+            HeadState = Find("Tracking/HeadState"); RightPosition = Find("Tracking/RightPosition");
+            RightRotation = Find("Tracking/RightRotation"); RightTracked = Find("Tracking/RightTracked");
+            SnapTurn = Find("Locomotion/SnapTurn");
             foreach (var maps in ContextMaps.Values)
                 foreach (var map in maps) Asset.FindActionMap(map, true);
             Bindings = new MuseumInputBindings(this);
@@ -167,14 +179,14 @@ namespace MusiyoBetsknate.Museum
             var enabled = ContextMaps[Context];
             // Disable first so two contexts never overlap, not even for one action.
             foreach (var map in Asset.actionMaps)
-                if (Array.IndexOf(enabled, map.name) < 0) map.Disable();
+                if (Array.IndexOf(enabled, map.name) < 0 && !(Spatial && map.name == "Tracking")) map.Disable();
             foreach (var map in Asset.actionMaps)
-                if (Array.IndexOf(enabled, map.name) >= 0) map.Enable();
+                if (Array.IndexOf(enabled, map.name) >= 0 || Spatial && map.name == "Tracking") map.Enable();
             // Menus move their own focus; only panels inside the visit let the interface module follow the arrows.
             if (uiModule != null) uiModule.move = Context == MuseumInputContext.Panel ? Reference(Navigate) : null;
         }
 
-        /// <summary>Silences every action while the visitor chooses a new key.</summary>
+        /// <summary>Silences interactive actions while the visitor chooses a new key.</summary>
         public void BeginCapture()
         {
             Capturing = true;
@@ -203,14 +215,29 @@ namespace MusiyoBetsknate.Museum
             module.submit = Reference(Confirm);
             // Pause and Back are handled by the visit and the menus, never as a generic interface cancel.
             module.cancel = null;
-            module.trackedDevicePosition = null;
-            module.trackedDeviceOrientation = null;
+            module.trackedDevicePosition = Spatial ? Reference(RightPosition) : null;
+            module.trackedDeviceOrientation = Spatial ? Reference(RightRotation) : null;
             // The module enables what it is given; put the context back in charge.
             SetContext(requested);
         }
 
-        private InputActionReference Reference(InputAction action)
+        /// <summary>Keeps pose tracking alive even when gameplay is suspended. The visitor owns the tracking origin.</summary>
+        public void SetSpatial(bool value, Transform trackingOrigin = null)
         {
+            Spatial = value;
+            if (uiModule != null)
+            {
+                uiModule.trackedDevicePosition = value ? Reference(RightPosition) : null;
+                uiModule.trackedDeviceOrientation = value ? Reference(RightRotation) : null;
+                uiModule.xrTrackingOrigin = trackingOrigin;
+            }
+            SetContext(requested);
+        }
+
+        /// <summary>Shared references belong to the sole runtime asset and are released with it.</summary>
+        public InputActionReference Reference(InputAction action)
+        {
+            if (action == null || action.actionMap?.asset != Asset) throw new ArgumentException("Action must belong to the museum runtime asset.", nameof(action));
             if (!references.TryGetValue(action, out var reference) || reference == null)
                 references[action] = reference = InputActionReference.Create(action);
             return reference;

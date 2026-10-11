@@ -247,11 +247,11 @@ namespace MusiyoBetsknate.Tests
             interaction.SetPaused(false);
 
             Assert.That(interaction.Activate(withoutStand, ActivationSource.Proximity), Is.True);
-            Assert.That(interaction.DetailInWorld, Is.False);
-            Assert.That(interaction.HoldsVisitor, Is.True, "A list on the screen holds the visitor until an element is chosen.");
+            Assert.That(interaction.DetailInWorld, Is.True);
+            Assert.That(interaction.HoldsVisitor, Is.False, "Every published point has a stable anchor for its in-world panel.");
             interaction.SelectElement(0);
             interaction.OpenDetail();
-            Assert.That(interaction.BlocksMovement, Is.True, "A complete text on the screen stops the visitor.");
+            Assert.That(interaction.BlocksMovement, Is.False, "The anchored text leaves the visitor free to walk.");
         }
 
         [Test]
@@ -286,19 +286,23 @@ namespace MusiyoBetsknate.Tests
         }
 
         [Test]
-        public void APointWithoutAStandKeepsItsPanelOnTheScreen()
+        public void APointWithoutAStandUsesItsStableAnchorAndTheSamePointer()
         {
             display.Show(withStand);
             display.Advance(1);
             display.Show(withoutStand);
-            Assert.That(display.InWorld, Is.False);
-            Assert.That(panel.parent, Is.SameAs(screenParent));
-            Assert.That(panel.anchoredPosition, Is.EqualTo(new Vector2(-24, -124)));
-            Assert.That(panel.pivot, Is.EqualTo(Vector2.one));
-            Assert.That(panel.gameObject.activeSelf, Is.True);
-            Assert.That(display.Surface.gameObject.activeSelf, Is.False);
+            display.Advance(1);
+            Assert.That(display.InWorld, Is.True);
+            Assert.That(display.Host, Is.Null, "No furniture is invented for a point without a stand.");
+            Assert.That(display.Anchor, Is.SameAs(withoutStand.Anchor));
+            Assert.That(panel.parent, Is.SameAs(display.Surface));
+            Assert.That(display.Surface.gameObject.activeSelf, Is.True);
+            var centre = display.Surface.position;
+            Assert.That(Vector2.Distance(new Vector2(centre.x, centre.z),
+                new Vector2(withoutStand.Anchor.transform.position.x, withoutStand.Anchor.transform.position.z)), Is.LessThan(1));
             display.Hide();
-            Assert.That(panel.gameObject.activeSelf, Is.False);
+            display.Advance(1);
+            Assert.That(display.Surface.gameObject.activeSelf, Is.False);
             Assert.That(display.Find(null), Is.Null);
         }
 

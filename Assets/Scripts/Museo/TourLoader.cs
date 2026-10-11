@@ -15,6 +15,7 @@ namespace MusiyoBetsknate.Museum
         [SerializeField] private bool loadOnStart = true;
         private UnityWebRequest activeRequest;
         private Coroutine loading;
+        private Func<UnityWebRequest, UnityWebRequestAsyncOperation> sendRequest = request => request.SendWebRequest();
         public TourRuntime Runtime => GetComponent<TourRuntime>();
         public TourLoadState State { get; private set; }
         public string Status { get; private set; } = "";
@@ -49,7 +50,16 @@ namespace MusiyoBetsknate.Museum
             catch (ArgumentException) { SetState(TourLoadState.Unavailable, MuseumInterfaceText.Get("tour_invalid_service")); yield break; }
             activeRequest = UnityWebRequest.Get(url);
             activeRequest.timeout = 15;
-            yield return activeRequest.SendWebRequest();
+            UnityWebRequestAsyncOperation operation = null;
+            try { operation = sendRequest(activeRequest); }
+            catch (InvalidOperationException) { }
+            if (operation == null)
+            {
+                activeRequest.Dispose(); activeRequest = null; loading = null;
+                SetState(TourLoadState.Unavailable, MuseumInterfaceText.Get("tour_unavailable"));
+                yield break;
+            }
+            yield return operation;
             var success = activeRequest.result == UnityWebRequest.Result.Success;
             var json = success ? activeRequest.downloadHandler.text : null;
             activeRequest.Dispose();

@@ -46,6 +46,7 @@ namespace MusiyoBetsknate.Museum
         [SerializeField] private MuseumMenuView viewPrefab;
         private MuseumMenuView view;
         private bool bound;
+        private bool spatial;
         private readonly System.Collections.Generic.List<System.Action> removeListeners = new();
         public MuseumMenuView View => view;
 
@@ -149,6 +150,21 @@ namespace MusiyoBetsknate.Museum
             page.BindingStatus.text = "";
         }
 
+        /// <summary>The spatial host keeps controller guidance visible and hides keyboard-only adjustments.</summary>
+        public void SetSpatial(bool value)
+        {
+            spatial = value;
+            foreach (var label in view.GetComponentsInChildren<MuseumInterfaceLabel>(true)) label.RefreshText();
+            view.GetComponent<MuseumMenuLayout>().Spatial = value;
+            sensitivity.gameObject.SetActive(!value);
+            foreach (var label in view.Settings.GetComponentsInChildren<MuseumInterfaceLabel>(true))
+                if (label.TextKey == "mouse_sensitivity") label.gameObject.SetActive(!value);
+            view.Controls.Bindings.gameObject.SetActive(!value);
+            view.Controls.RestoreBindings.gameObject.SetActive(!value);
+            view.Controls.BindingStatus.gameObject.SetActive(!value);
+            Refresh();
+        }
+
         private void ReportBinding(string message) => view.Controls.BindingStatus.text = message;
         private void RestoreBindings()
         {
@@ -228,9 +244,9 @@ namespace MusiyoBetsknate.Museum
         }
         private GameObject FirstSelectable()
         {
-            if (page == MenuPage.Settings) return sensitivity.gameObject;
+            if (page == MenuPage.Settings) return spatial ? volume.gameObject : sensitivity.gameObject;
             if (page == MenuPage.Controls)
-                return rebindRows.Count > 0 && rebindRows[0] != null ? rebindRows[0].gameObject : controlsBack.gameObject;
+                return !spatial && rebindRows.Count > 0 && rebindRows[0] != null ? rebindRows[0].gameObject : controlsBack.gameObject;
             if (flow.Phase != VisitPhase.Menu) return resume.gameObject;
             if (begin.interactable) return begin.gameObject;
             return retry.gameObject.activeSelf ? retry.gameObject : settingsButton.gameObject;
@@ -279,8 +295,8 @@ namespace MusiyoBetsknate.Museum
             begin.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Get(flow.HasStarted ? "resume_visit" : "explore_museum");
             title.text = page == MenuPage.Settings ? MuseumInterfaceText.Get("settings") : page == MenuPage.Controls ? MuseumInterfaceText.Get("controls")
                 : entry ? interaction.Runtime.Contract?.tour?.name ?? MuseumInterfaceText.Get("museum_menu_title") : MuseumInterfaceText.Get("pause");
-            description.text = page == MenuPage.Settings ? MuseumInterfaceText.Get("settings_description")
-                : page == MenuPage.Controls ? MuseumInterfaceText.Get("controls_description")
+            description.text = page == MenuPage.Settings ? MuseumInterfaceText.Get(spatial ? "xr_settings_description" : "settings_description")
+                : page == MenuPage.Controls ? MuseumInterfaceText.Get(spatial ? "xr_controls_description" : "controls_description")
                 : !entry ? MuseumInterfaceText.Get("pause_menu_description")
                 : loader.State == TourLoadState.Loading ? MuseumInterfaceText.Get("menu_loading")
                 : loader.State == TourLoadState.Unavailable ? loader.Status

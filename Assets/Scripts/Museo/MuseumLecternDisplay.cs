@@ -7,7 +7,7 @@ namespace MusiyoBetsknate.Museum
 {
     /// <summary>
     /// Carries the point panel into the museum: it unfolds in front of the reading stand of the active point,
-    /// floats there turned toward the visitor, and stays on the screen only for points that have no stand.
+    /// floats there turned toward the visitor, and uses the stable point anchor where there is no stand.
     /// </summary>
     public sealed class MuseumLecternDisplay : MonoBehaviour
     {
@@ -27,9 +27,11 @@ namespace MusiyoBetsknate.Museum
         private float heading;
         private bool open;
 
-        /// <summary>Stand that currently carries the panel, or null while the panel is on the screen.</summary>
+        /// <summary>Existing stand beside the active point, or null when the stable point anchor carries the panel.</summary>
         public PointLectern Host { get; private set; }
-        public bool InWorld => Host != null;
+        public PointAnchor Anchor { get; private set; }
+        public bool InWorld => Anchor != null;
+        public bool CanDisplay(TourPoint point) => surface != null && point != null && point.Anchor != null;
         public bool Open => open;
         /// <summary>0 folded away, 1 completely unfolded.</summary>
         public float Openness { get; private set; }
@@ -103,13 +105,14 @@ namespace MusiyoBetsknate.Museum
             return null;
         }
 
-        /// <summary>Shows the panel for the point: unfolding by its stand, or on the screen when it has none.</summary>
+        /// <summary>Shows the panel for the point: unfolding by its existing stand or stable point anchor.</summary>
         public void Show(TourPoint point)
         {
             var stand = Find(point);
-            if (stand != Host || (stand == null && panel.parent != screenParent)) Place(stand);
+            var anchor = point != null ? point.Anchor : null;
+            if (stand != Host || anchor != Anchor || (anchor == null && panel.parent != screenParent)) Place(stand, anchor);
             open = true;
-            if (stand == null) panel.gameObject.SetActive(true);
+            if (anchor == null) panel.gameObject.SetActive(true);
         }
 
         public void Hide()
@@ -118,11 +121,12 @@ namespace MusiyoBetsknate.Museum
             if (!InWorld) panel.gameObject.SetActive(false);
         }
 
-        private void Place(PointLectern stand)
+        private void Place(PointLectern stand, PointAnchor anchor)
         {
             Host = stand;
+            Anchor = anchor;
             Openness = 0;
-            if (stand == null)
+            if (anchor == null)
             {
                 panel.SetParent(screenParent, false);
                 panel.SetSiblingIndex(screenSibling);
@@ -146,7 +150,8 @@ namespace MusiyoBetsknate.Museum
         /// <summary>Compass angle from the stand toward the visitor; the reading side of the board when nobody is watching.</summary>
         private float HeadingToViewer()
         {
-            var direction = viewer != null ? viewer.position - Host.BoardCentre : Host.Facing;
+            var centre = Host != null ? Host.BoardCentre : Anchor.transform.position;
+            var direction = viewer != null ? viewer.position - centre : Host != null ? Host.Facing : Anchor.transform.forward;
             direction.y = 0;
             // Right above the stand there is no side to turn to, so the screen keeps its heading.
             return direction.sqrMagnitude < .01f ? heading : Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
@@ -241,8 +246,8 @@ namespace MusiyoBetsknate.Museum
             var settings = MuseumExperienceConfiguration.Current;
             // It floats in front of the stand, on the side the visitor is on, upright and facing them.
             var toViewer = Quaternion.Euler(0, heading, 0) * Vector3.forward;
-            var centre = Host.BoardCentre;
-            centre.y = Host.transform.position.y + settings.LecternFloatHeight;
+            var centre = Host != null ? Host.BoardCentre : Anchor.transform.position;
+            centre.y = (Host != null ? Host.transform.position.y : Anchor.transform.position.y) + settings.LecternFloatHeight;
             surface.SetPositionAndRotation(centre + toViewer * settings.LecternFloatDistance, Quaternion.LookRotation(-toViewer, Vector3.up));
             float eased = Mathf.SmoothStep(0, 1, Openness);
             float scale = settings.LecternScreenWidth / surface.sizeDelta.x;
@@ -250,7 +255,7 @@ namespace MusiyoBetsknate.Museum
             surface.localScale = new Vector3(scale, scale * eased, scale);
             group.alpha = eased;
             // A captured pointer stays where it was locked, so its clicks must not land on the screen.
-            raycaster.enabled = open && Cursor.lockState != CursorLockMode.Locked;
+            raycaster.enabled = open && !MuseumInput.Current.Spatial && Cursor.lockState != CursorLockMode.Locked;
             MarkAim();
         }
     }

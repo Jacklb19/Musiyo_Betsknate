@@ -49,8 +49,10 @@ namespace MusiyoBetsknate.Museum
         public string Find(string key) => entries.TryGetValue(key, out var value) ? value : null;
 
         /// <summary>Catalog text with every {input:id} replaced by the key currently assigned to that action.</summary>
-        public static string Get(string key) => MuseumInputLabels.Expand(Current.Read(key));
+        private static string DeviceCopy(string key) => MuseumInput.Current.Spatial
+            ? Current.Find(key + "_xr") ?? Current.Read(key) : Current.Read(key);
+        public static string Get(string key) => MuseumInputLabels.Expand(DeviceCopy(key));
         public static string Format(string key, params object[] values) =>
-            string.Format(CultureInfo.GetCultureInfo(Current.Language), MuseumInputLabels.Expand(Current.Read(key), true), values);
+            string.Format(CultureInfo.GetCultureInfo(Current.Language), MuseumInputLabels.Expand(DeviceCopy(key), true), values);
     }
 }
