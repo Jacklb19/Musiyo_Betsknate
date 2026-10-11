@@ -170,6 +170,48 @@ namespace MusiyoBetsknate.Tests
         }
 
         [Test]
+        public void AGlidingEntryShowsTheMuseumBehindTheMenuAndNeverDarkensIt()
+        {
+            var settings = MuseumExperienceConfiguration.Current;
+            var visitor = new GameObject("MenuTestVisitor");
+            var eyes = new GameObject("MenuTestCamera", typeof(Camera));
+            eyes.transform.SetParent(visitor.transform, false);
+            eyes.transform.localPosition = Vector3.up * 1.65f;
+            var anchor = new GameObject("MenuTestViewpoint", typeof(MuseumEntryViewpoint));
+            anchor.transform.position = new Vector3(-2, 2.4f, -3);
+            try
+            {
+                var entry = root.AddComponent<MuseumEntryView>();
+                entry.HeadsetActive = () => false;
+                entry.Configure(eyes.GetComponent<Camera>(), visitor.transform, anchor.GetComponent<MuseumEntryViewpoint>());
+                menu.Configure(flow, interaction, loader, preferences);
+                var backdrop = menu.View.Overlay.GetComponent<Graphic>();
+                Assert.That(backdrop.color, Is.EqualTo(MuseumExperienceConfiguration.ColorValue(settings.EntryBackdropColor)));
+                Assert.That(EventSystem.current.currentSelectedGameObject.transform.IsChildOf(menu.View.Main.transform), Is.True,
+                    "The staged entry keeps keyboard focus on its own page.");
+                flow.BeginVisit();
+                Assert.That(flow.Transition, Is.EqualTo(EntryTransition.Glide));
+                Assert.That(menu.View.Transition.gameObject.activeSelf, Is.False);
+                Assert.That(MuseumInput.Current.Context, Is.EqualTo(MuseumInputContext.Menu), "Nothing walks while the camera glides.");
+                flow.Advance(flow.TransitionSeconds * settings.EntryMenuFadeShare);
+                Callback("Update");
+                Assert.That(menu.View.Overlay.alpha, Is.EqualTo(0).Within(.001f));
+                Assert.That(menu.View.Overlay.interactable, Is.False);
+                Assert.That(menu.View.Transition.alpha, Is.EqualTo(0));
+                flow.Advance(flow.TransitionSeconds);
+                Assert.That(flow.Phase, Is.EqualTo(VisitPhase.Exploring));
+                interaction.SetPaused(true);
+                Assert.That(backdrop.color, Is.EqualTo(MuseumExperienceConfiguration.ColorValue(settings.BackdropColor)),
+                    "A pause covers the visit with the denser backdrop.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(visitor);
+                UnityEngine.Object.DestroyImmediate(anchor);
+            }
+        }
+
+        [Test]
         public void AuthoredLayoutAndUnboundStyleSurviveRefreshAndReconfigure()
         {
             var page = menu.View.Main;

@@ -243,7 +243,12 @@ namespace MusiyoBetsknate.Museum
             overlay.SetActive(visible || entering);
             overlayGroup.interactable = overlayGroup.blocksRaycasts = visible;
             if (visible) overlayGroup.alpha = 1;
-            fade.gameObject.SetActive(entering);
+            // Over the staged entry the backdrop lets the museum show through; a pause keeps the denser one.
+            if (overlay.TryGetComponent<MuseumMenuThemeBinding>(out var theme) && theme.ColorToken == MuseumMenuColorToken.Backdrop
+                && overlay.TryGetComponent<Graphic>(out var backdrop))
+                backdrop.color = MuseumExperienceConfiguration.ColorValue(flow.Phase != VisitPhase.Exploring && flow.Entry != null
+                    && flow.Entry.Available ? configuration.EntryBackdropColor : configuration.BackdropColor);
+            fade.gameObject.SetActive(entering && flow.Transition == EntryTransition.Fade);
             UpdateTransition();
             if (!visible) page = MenuPage.Home;
             // Enter or Escape that closed the menu must not also activate a point or reopen the pause.
@@ -346,13 +351,14 @@ namespace MusiyoBetsknate.Museum
             var selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
             return selected != null && selected.activeInHierarchy && selected.transform.IsChildOf(overlay.transform);
         }
-        /// <summary>The menu dissolves into darkness, then the museum fades in; the camera never moves on its own.</summary>
+        /// <summary>The menu dissolves first. A glide then shows the way in; a fade goes dark before the museum appears.</summary>
         private void UpdateTransition()
         {
             if (flow.Phase != VisitPhase.Entering) { fade.alpha = 0; return; }
             float share = configuration.EntryMenuFadeShare;
             float progress = flow.TransitionProgress;
             overlayGroup.alpha = 1 - Mathf.SmoothStep(0, 1, progress / share);
+            if (flow.Transition == EntryTransition.Glide) { fade.alpha = 0; return; }
             fade.alpha = progress < share ? Mathf.SmoothStep(0, 1, progress / share)
                 : 1 - Mathf.SmoothStep(0, 1, (progress - share) / (1 - share));
         }

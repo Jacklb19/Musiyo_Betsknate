@@ -4,6 +4,7 @@ using UnityEngine;
 namespace MusiyoBetsknate.Museum
 {
     public enum VisitPhase { Menu, Entering, Exploring }
+    public enum EntryTransition { Fade, Glide }
 
     /// <summary>Presentation flow independent of the shared tour interaction contract.</summary>
     [RequireComponent(typeof(MuseumInteraction))]
@@ -13,6 +14,12 @@ namespace MusiyoBetsknate.Museum
         public bool HasStarted { get; private set; }
         public bool BlocksInput => Phase != VisitPhase.Exploring;
         public float TransitionProgress { get; private set; }
+        /// <summary>How the current entry is shown: a fade, or a camera glide when the entry view can offer one.</summary>
+        public EntryTransition Transition { get; private set; }
+        public float TransitionSeconds => Transition == EntryTransition.Glide
+            ? MuseumExperienceConfiguration.Current.EntryGlideSeconds : MuseumExperienceConfiguration.Current.EntryFadeSeconds;
+        /// <summary>Entry staging installed at runtime by the HUD; without it every entry is a fade.</summary>
+        public MuseumEntryView Entry { get; set; }
         private int consumedFrame = -1;
         /// <summary>True on the frame a menu closed, so its Enter or Escape cannot also reach the museum.</summary>
         public bool InputConsumedThisFrame => consumedFrame == Time.frameCount;
@@ -25,6 +32,7 @@ namespace MusiyoBetsknate.Museum
         public void BeginVisit()
         {
             if (Phase != VisitPhase.Menu) return;
+            Transition = Entry != null && Entry.CanGlide ? EntryTransition.Glide : EntryTransition.Fade;
             Phase = VisitPhase.Entering;
             TransitionProgress = 0;
             Changed?.Invoke();
@@ -32,7 +40,7 @@ namespace MusiyoBetsknate.Museum
         public void Advance(float elapsed)
         {
             if (Phase != VisitPhase.Entering || !MuseumExperienceConfiguration.Finite(elapsed) || elapsed < 0) return;
-            TransitionProgress = Mathf.Clamp01(TransitionProgress + elapsed / MuseumExperienceConfiguration.Current.EntryFadeSeconds);
+            TransitionProgress = Mathf.Clamp01(TransitionProgress + elapsed / TransitionSeconds);
             if (TransitionProgress < 1) return;
             EnterImmediately();
         }

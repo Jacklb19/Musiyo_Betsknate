@@ -96,6 +96,8 @@ namespace MusiyoBetsknate.Editor
             }
             CheckPosition(scene, "VisitorSpawn", new Vector3(0, 0, -58), errors);
             CheckPosition(scene, "HearthRoom", new Vector3(0, 0, 18.5f), errors);
+            if (root.GetComponentsInChildren<MuseumEntryViewpoint>(true).Length != 1)
+                errors.Add("Expected one entry viewpoint; run Musiyo > Configure Museum Entry Viewpoint.");
 
             var keys = new HashSet<string>();
             foreach (var anchor in root.GetComponentsInChildren<PointAnchor>(true))
