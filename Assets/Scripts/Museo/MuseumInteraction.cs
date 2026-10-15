@@ -19,10 +19,12 @@ namespace MusiyoBetsknate.Museum
         public ActivationSource LastSource { get; private set; }
         /// <summary>The detail of the active point floats by its reading stand in the museum instead of covering the screen.</summary>
         public bool DetailInWorld => GetComponent<MuseumLecternDisplay>()?.CanDisplay(ActivePoint) == true;
+        /// <summary>The conversation with the guide floats by the guide's anchor in the museum when the scene can show it there.</summary>
+        public bool GuideInWorld => GetComponent<MuseumLecternDisplay>()?.CanDisplay(Runtime.GuidePoint) == true;
         /// <summary>A detail in the museum is read while walking; one on the screen stops the visitor.</summary>
         public bool BlocksMovement => GetComponent<MuseumVisitFlow>()?.BlocksInput == true
             || (State == InteractionState.Reading && !DetailInWorld) || State == InteractionState.ModelExamination
-            || State == InteractionState.GuideQuestion || State == InteractionState.Paused;
+            || (State == InteractionState.GuideQuestion && !GuideInWorld) || State == InteractionState.Paused;
         /// <summary>Choosing among the elements of a point holds the visitor only while the list covers the screen.</summary>
         public bool HoldsVisitor => State == InteractionState.PointFocus && !DetailInWorld;
         public event Action Changed;

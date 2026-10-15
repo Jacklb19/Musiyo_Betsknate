@@ -95,6 +95,7 @@ namespace MusiyoBetsknate.Museum
             guide = interaction.GetComponent<MuseumGuide>();
             if (guide == null) guide = interaction.gameObject.AddComponent<MuseumGuide>();
             guide.Configure(visitorTransform);
+            gameObject.AddComponent<MuseumGuideView>().Configure(guide, interaction, wayfinding, panelText, elementList.parent, ModelButton);
             farewell = interaction.GetComponent<MuseumFarewell>();
             if (farewell == null) farewell = interaction.gameObject.AddComponent<MuseumFarewell>();
             farewell.Configure(visitorTransform);
@@ -252,8 +253,10 @@ namespace MusiyoBetsknate.Museum
             pauseButton.GetComponentInChildren<TMP_Text>().text = paused ? MuseumInterfaceText.Get("resume") : MuseumInterfaceText.Get("pause");
             if (sensitivitySlider != null) sensitivitySlider.gameObject.SetActive(false);
             bool showPanel = !visitFlow.BlocksInput && !paused && interaction.State != InteractionState.Exploration;
+            // The conversation with the guide unfolds at the guide's anchor; exhibit details at their point.
+            var shownPoint = interaction.State == InteractionState.GuideQuestion ? interaction.Runtime.GuidePoint : interaction.ActivePoint;
             // A reading stand folds its screen while the visitor is away from the point and unfolds it on return.
-            bool onStand = lectern.Find(interaction.ActivePoint) != null;
+            bool onStand = lectern.Find(shownPoint) != null;
             if (onStand && presence.Away) showPanel = false;
             if (!showPanel) lectern.Hide();
             else
@@ -261,7 +264,7 @@ namespace MusiyoBetsknate.Museum
                 // The stand unfolds the panel itself; on the screen, Update fades it in.
                 if (onStand) PanelGroup().alpha = 1;
                 else if (!panel.activeSelf || lectern.InWorld) PanelGroup().alpha = 0;
-                lectern.Show(interaction.ActivePoint);
+                lectern.Show(shownPoint);
             }
             // A new point, element or state starts reading from the top instead of a previous scroll offset.
             string subject = interaction.ActivePoint?.Anchor.Key + "/" + interaction.SelectedElement?.slug + "/" + interaction.State;

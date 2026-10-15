@@ -143,7 +143,12 @@ namespace MusiyoBetsknate.Museum
                 if (arrival != null && arrival.Visible && keyboardPoint == null) arrival.Dismiss();
                 else Confirm();
             }
-            if (input.Guide.WasPressedThisFrame()) GetComponent<MuseumGuide>()?.Ask();
+            if (input.Guide.WasPressedThisFrame())
+            {
+                // The same key opens the conversation and, once open, returns to writing the question.
+                var guide = GetComponent<MuseumGuide>();
+                if (guide != null && !guide.Ask()) guide.RequestTyping();
+            }
             if (input.Detail.WasPressedThisFrame()) interaction.OpenDetail();
             if (input.Examine.WasPressedThisFrame()) GetComponent<MuseumModelPresenter>()?.Examine();
             var narration = GetComponent<MuseumNarration>();
