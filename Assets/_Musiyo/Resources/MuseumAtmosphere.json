@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "fog_color": "#B9C3C8",
+  "fog_start": 40,
+  "fog_end": 230,
+  "sun_color": "#FFF2DC",
+  "sun_intensity": 1.2,
+  "sun_shadows": "soft",
+  "sun_shadows_headset": "none",
+  "shadow_strength": 0.7,
+  "ambient_sky": "#A3AFBA",
+  "ambient_equator": "#8A877C",
+  "ambient_ground": "#4D4539"
+}
