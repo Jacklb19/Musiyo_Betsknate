@@ -26,9 +26,14 @@ namespace MusiyoBetsknate.Museum
         public bool Available => visitorCamera != null && viewpoint != null && !HeadsetActive();
         public bool Staged => stage != null && stage.enabled;
         public Camera StageCamera => stage;
+        /// <summary>Scenic set shown behind the menu instead of the museum, when one is chosen.</summary>
+        public MuseumEntryBackdrop Backdrop { get; private set; }
+        public bool BackdropActive => Available && Backdrop != null && Backdrop.Active;
+        public const float BackdropFieldOfView = 40;
 
-        public void Configure(Camera visitorView, Transform visitor, MuseumEntryViewpoint entryViewpoint)
+        public void Configure(Camera visitorView, Transform visitor, MuseumEntryViewpoint entryViewpoint, MuseumEntryBackdrop backdrop = null)
         {
+            Backdrop = backdrop;
             Release();
             flow = GetComponent<MuseumVisitFlow>();
             configuration = MuseumExperienceConfiguration.Current;
@@ -66,17 +71,35 @@ namespace MusiyoBetsknate.Museum
         {
             if (flow == null) return;
             bool gliding = flow.Phase == VisitPhase.Entering && flow.Transition == EntryTransition.Glide;
+            float share = configuration.EntryMenuFadeShare;
             // A fading entry changes view while the screen is dark.
             bool show = Available && (flow.Phase == VisitPhase.Menu || gliding
-                || flow.Phase == VisitPhase.Entering && flow.TransitionProgress < configuration.EntryMenuFadeShare);
+                || flow.Phase == VisitPhase.Entering && flow.TransitionProgress < share);
             if (!show) { Release(); return; }
             if (stage == null) CreateStage();
-            float travel = gliding ? Mathf.SmoothStep(0, 1, flow.TransitionProgress) : 0;
+            // A scenic backdrop stays until the screen is dark; the glide then starts at the museum viewpoint.
+            bool backdrop = BackdropActive;
+            if (backdrop && (flow.Phase == VisitPhase.Menu || flow.TransitionProgress < share))
+            {
+                stage.transform.SetPositionAndRotation(Backdrop.CameraPose.position, Backdrop.CameraPose.rotation);
+                stage.fieldOfView = BackdropFieldOfView;
+                Backdrop.Show(true, stage);
+                Show();
+                return;
+            }
+            Backdrop?.Show(false, stage);
+            float travel = !gliding ? 0 : backdrop ? Mathf.SmoothStep(0, 1, (flow.TransitionProgress - share) / (1 - share))
+                : Mathf.SmoothStep(0, 1, flow.TransitionProgress);
             var from = viewpoint.transform;
             var to = visitorCamera.transform;
             stage.transform.SetPositionAndRotation(Vector3.Lerp(from.position, to.position, travel),
                 Quaternion.Slerp(from.rotation, to.rotation, travel));
             stage.fieldOfView = Mathf.Lerp(viewpoint.FieldOfView, visitorCamera.fieldOfView, travel);
+            Show();
+        }
+
+        private void Show()
+        {
             stage.enabled = true;
             if (visitorCamera.enabled) { visitorCamera.enabled = false; hidVisitorCamera = true; }
         }
@@ -101,6 +124,7 @@ namespace MusiyoBetsknate.Museum
 
         private void Release()
         {
+            Backdrop?.Show(false, stage);
             if (stage != null) stage.enabled = false;
             if (hidVisitorCamera && visitorCamera != null) visitorCamera.enabled = true;
             hidVisitorCamera = false;

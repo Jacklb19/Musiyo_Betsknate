@@ -266,7 +266,7 @@ namespace MusiyoBetsknate.Museum
                 && overlay.TryGetComponent<Graphic>(out var backdrop))
                 backdrop.color = MuseumExperienceConfiguration.ColorValue(flow.Phase != VisitPhase.Exploring && flow.Entry != null
                     && flow.Entry.Available ? configuration.EntryBackdropColor : configuration.BackdropColor);
-            fade.gameObject.SetActive(entering && flow.Transition == EntryTransition.Fade);
+            fade.gameObject.SetActive(entering && (flow.Transition == EntryTransition.Fade || FromBackdrop));
             UpdateTransition();
             if (!visible) page = MenuPage.Home;
             // Enter or Escape that closed the menu must not also activate a point or reopen the pause.
@@ -316,6 +316,8 @@ namespace MusiyoBetsknate.Museum
             lastLoadState = loader.State;
             wasVisible = visible;
             wasEntry = entry;
+            // Buttons shown or hidden above change how tall the page needs to be.
+            view.GetComponent<MuseumMenuLayout>()?.Apply();
         }
         private void Update()
         {
@@ -376,10 +378,19 @@ namespace MusiyoBetsknate.Museum
             float share = configuration.EntryMenuFadeShare;
             float progress = flow.TransitionProgress;
             overlayGroup.alpha = 1 - Mathf.SmoothStep(0, 1, progress / share);
+            // From a scenic backdrop the screen goes dark, then opens on the museum as the glide begins.
+            if (flow.Transition == EntryTransition.Glide && FromBackdrop)
+            {
+                fade.alpha = progress < share ? Mathf.SmoothStep(0, 1, progress / share)
+                    : 1 - Mathf.SmoothStep(0, 1, (progress - share) / ((1 - share) * .35f));
+                return;
+            }
             if (flow.Transition == EntryTransition.Glide) { fade.alpha = 0; return; }
             fade.alpha = progress < share ? Mathf.SmoothStep(0, 1, progress / share)
                 : 1 - Mathf.SmoothStep(0, 1, (progress - share) / (1 - share));
         }
+        private bool FromBackdrop => flow.Entry != null && flow.Entry.BackdropActive;
+
         /// <summary>Subpages consume Escape before exploration can resume.</summary>
         public bool Back()
         {

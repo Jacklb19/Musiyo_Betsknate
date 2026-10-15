@@ -17,7 +17,10 @@ namespace MusiyoBetsknate.Museum
         /// <summary>How the current entry is shown: a fade, or a camera glide when the entry view can offer one.</summary>
         public EntryTransition Transition { get; private set; }
         public float TransitionSeconds => Transition == EntryTransition.Glide
-            ? MuseumExperienceConfiguration.Current.EntryGlideSeconds : MuseumExperienceConfiguration.Current.EntryFadeSeconds;
+            // From a scenic backdrop the menu first goes dark, then the glide starts at the museum.
+            ? MuseumExperienceConfiguration.Current.EntryGlideSeconds + (Entry != null && Entry.BackdropActive
+                ? MuseumExperienceConfiguration.Current.EntryFadeSeconds : 0)
+            : MuseumExperienceConfiguration.Current.EntryFadeSeconds;
         /// <summary>Entry staging installed at runtime by the HUD; without it every entry is a fade.</summary>
         public MuseumEntryView Entry { get; set; }
         private int consumedFrame = -1;

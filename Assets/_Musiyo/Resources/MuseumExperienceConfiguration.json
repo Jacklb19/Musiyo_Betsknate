@@ -31,11 +31,13 @@
   "body_size": 22,
   "backdrop_color": "#071914E8",
   "entry_backdrop_color": "#07191438",
-  "panel_color": "#102B27F5",
+  "panel_color": "#0D211DEB",
   "text_color": "#F4EEDC",
   "accent_color": "#DFBD79",
   "selected_color": "#28564E",
   "pointer_color": "#DFBD7940",
   "muted_text_color": "#C2CCBE",
-  "secondary_accent_color": "#B86850"
+  "secondary_accent_color": "#B86850",
+  "entry_backdrop": "museum",
+  "entry_mask_element": "matachin-mask"
 }

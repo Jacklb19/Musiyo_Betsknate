@@ -48,6 +48,10 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("muted_text_color")] public string MutedTextColor = "#C2CCBE";
         [JsonProperty("secondary_accent_color")] public string SecondaryAccentColor = "#B86850";
         [JsonProperty("pointer_color")] public string PointerColor;
+        /// <summary>Scenic set behind the entry menu: museum, dark, hearth or mask. See <see cref="MuseumEntryBackdrop"/>.</summary>
+        [JsonProperty("entry_backdrop")] public string EntryBackdrop = "museum";
+        /// <summary>Record whose published model the mask backdrop shows, if the record allows reuse.</summary>
+        [JsonProperty("entry_mask_element")] public string EntryMaskElement = "";
         private static MuseumExperienceConfiguration current;
 
         public static MuseumExperienceConfiguration Current
@@ -87,6 +91,7 @@ namespace MusiyoBetsknate.Museum
             ColorValue(result.TextColor); ColorValue(result.AccentColor);
             ColorValue(result.SelectedColor); ColorValue(result.PointerColor);
             ColorValue(result.MutedTextColor); ColorValue(result.SecondaryAccentColor);
+            MuseumEntryBackdrop.Parse(result.EntryBackdrop);
             return result;
         }
 
