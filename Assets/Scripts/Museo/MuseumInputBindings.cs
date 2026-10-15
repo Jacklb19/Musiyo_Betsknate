@@ -48,7 +48,8 @@ namespace MusiyoBetsknate.Museum
             ("detail", "Visit/Detail", null, true), ("examine", "Visit/Examine", null, true),
             ("guide", "Visit/Guide", null, true), ("wayfinding", "Visit/Wayfinding", null, true),
             ("narration_pause", "Visit/NarrationPause", null, true), ("narration_repeat", "Visit/NarrationRepeat", null, true),
-            ("narration_mute", "Visit/NarrationMute", null, true), ("pause", "Common/Pause", null, true),
+            ("narration_mute", "Visit/NarrationMute", null, true), ("auto_tour", "Visit/AutoTour", null, true),
+            ("pause", "Common/Pause", null, true),
             ("back", "Common/Back", null, true), ("confirm", "Common/Confirm", null, false), ("next", "Common/Next", null, false)
         };
         private readonly MuseumInput input;

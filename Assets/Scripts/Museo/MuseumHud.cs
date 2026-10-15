@@ -67,6 +67,12 @@ namespace MusiyoBetsknate.Museum
         private TMP_Text carouselLabel;
         private Button carouselPrevious;
         private Button carouselNext;
+        private MuseumServiceNotice serviceNotice;
+        private Button serviceRetryButton;
+        private MuseumNarrationReading narrationReading;
+        private Button followNarrationButton;
+        private MuseumModelGrab grab;
+        private MuseumAutoTour autoTour;
         private readonly System.Collections.Generic.List<(TMP_Text caption, string textKey)> keyedCaptions = new();
 
         private void Awake()
@@ -81,6 +87,12 @@ namespace MusiyoBetsknate.Museum
             if (model == null) model = interaction.gameObject.AddComponent<MuseumModelPresenter>();
             if (visitor != null) model.Configure(visitor.GetComponentInChildren<Camera>(), visitor.transform);
             CreateModelInterface();
+            grab = interaction.GetComponent<MuseumModelGrab>();
+            if (grab == null) grab = interaction.gameObject.AddComponent<MuseumModelGrab>();
+            grab.Configure(visitor != null ? visitor.GetComponentInChildren<Camera>() : null, visitor);
+            autoTour = interaction.GetComponent<MuseumAutoTour>();
+            if (autoTour == null) autoTour = interaction.gameObject.AddComponent<MuseumAutoTour>();
+            if (visitor != null) autoTour.Configure(visitor.GetComponent<CharacterController>(), visitor.GetComponentInChildren<Camera>()?.transform);
             narration = interaction.GetComponent<MuseumNarration>();
             if (narration == null) narration = interaction.gameObject.AddComponent<MuseumNarration>();
             presence = interaction.GetComponent<MuseumPointPresence>();
@@ -90,6 +102,12 @@ namespace MusiyoBetsknate.Museum
             lectern.Configure((RectTransform)panel.transform, visitor != null ? visitor.GetComponentInChildren<Camera>() : null);
             CreateNarrationInterface();
             CreateCarouselInterface();
+            serviceNotice = interaction.GetComponent<MuseumServiceNotice>();
+            if (serviceNotice == null) serviceNotice = interaction.gameObject.AddComponent<MuseumServiceNotice>();
+            serviceNotice.Configure(visitor != null ? visitor.transform : null);
+            serviceRetryButton = ModelButton("retry_service", elementList.parent, loader.Reload);
+            serviceRetryButton.name = "RetryService";
+            serviceRetryButton.gameObject.SetActive(false);
             var wayfinding = interaction.GetComponent<MuseumWayfinding>();
             if (wayfinding == null) wayfinding = interaction.gameObject.AddComponent<MuseumWayfinding>();
             wayfinding.Configure(visitor != null ? visitor.transform : null);
@@ -161,6 +179,8 @@ namespace MusiyoBetsknate.Museum
             if (interaction.TryGetComponent<MuseumWayfinding>(out var orientation)) orientation.Changed += Refresh;
             if (model != null) model.Changed += Refresh;
             presence.Changed += OnPresenceChanged;
+            serviceNotice.Changed += Refresh;
+            autoTour.Changed += Refresh;
             if (narration != null)
             {
                 narration.Changed += Refresh;
@@ -192,6 +212,8 @@ namespace MusiyoBetsknate.Museum
             if (interaction.TryGetComponent<MuseumWayfinding>(out var orientation)) orientation.Changed -= Refresh;
             if (model != null) model.Changed -= Refresh;
             presence.Changed -= OnPresenceChanged;
+            serviceNotice.Changed -= Refresh;
+            autoTour.Changed -= Refresh;
             if (narration != null)
             {
                 narration.Changed -= Refresh;
@@ -220,6 +242,8 @@ namespace MusiyoBetsknate.Museum
             if (!scroll.WasPressedThisFrame() || !panel.activeSelf || PanelScroll() == null) return;
             int direction = System.Math.Sign(scroll.ReadValue<float>());
             if (direction == 0) return;
+            // Scrolling by hand takes the panel away from the narration until the visitor asks to follow it again.
+            narrationReading?.Suspend();
             panelScroll.verticalNormalizedPosition = Mathf.Clamp01(panelScroll.verticalNormalizedPosition
                 + direction * MuseumExperienceConfiguration.Current.PanelScrollStep);
         }
@@ -247,7 +271,9 @@ namespace MusiyoBetsknate.Museum
         private void Update()
         {
             var focus = pointInput.FocusedPoint;
-            focusText.text = focus != null && focus.Content != null ? MuseumInterfaceText.Format("focus_point", focus.Content.name)
+            focusText.text = grab != null && grab.Held ? MuseumInterfaceText.Get("grab_holding")
+                : grab != null && grab.Hovered ? MuseumInterfaceText.Get("grab_hint")
+                : focus != null && focus.Content != null ? MuseumInterfaceText.Format("focus_point", focus.Content.name)
                 : pointInput.GazeProgress > 0 ? MuseumInterfaceText.Format("gaze_progress", Mathf.RoundToInt(pointInput.GazeProgress * 100)) : ".";
             ScrollPointPanel();
             if (panel.activeSelf && PanelGroup().alpha < 1)
@@ -269,8 +295,14 @@ namespace MusiyoBetsknate.Museum
             pauseButton.GetComponentInChildren<TMP_Text>().text = paused ? MuseumInterfaceText.Get("resume") : MuseumInterfaceText.Get("pause");
             if (sensitivitySlider != null) sensitivitySlider.gameObject.SetActive(false);
             bool showPanel = !visitFlow.BlocksInput && !paused && interaction.State != InteractionState.Exploration;
+            // Without the museum service, the point the visitor stands at says so instead of staying silent.
+            bool notice = !visitFlow.BlocksInput && !paused && interaction.State == InteractionState.Exploration
+                && serviceNotice.Point != null;
+            serviceRetryButton.gameObject.SetActive(notice && loader.State == TourLoadState.Unavailable);
+            showPanel |= notice;
             // The conversation with the guide unfolds at the guide's anchor; exhibit details at their point.
-            var shownPoint = interaction.State == InteractionState.GuideQuestion ? interaction.Runtime.GuidePoint : interaction.ActivePoint;
+            var shownPoint = interaction.State == InteractionState.GuideQuestion ? interaction.Runtime.GuidePoint
+                : notice ? serviceNotice.Point : interaction.ActivePoint;
             // A reading stand folds its screen while the visitor is away from the point and unfolds it on return.
             bool onStand = lectern.Find(shownPoint) != null;
             if (onStand && presence.Away) showPanel = false;
@@ -303,6 +335,11 @@ namespace MusiyoBetsknate.Museum
             detailButton.gameObject.SetActive(interaction.State == InteractionState.ElementSelected
                 || interaction.State == InteractionState.ModelExamination);
             if (paused) { panelText.text = MuseumInterfaceText.Get("pause_description"); return; }
+            if (notice)
+            {
+                panelText.text = MuseumInterfaceText.Get(loader.State == TourLoadState.Loading ? "service_loading_point" : "service_unavailable_point");
+                return;
+            }
             if (interaction.State == InteractionState.GuideQuestion)
             {
                 panelText.text = guide != null ? MuseumInterfaceText.Format("guide_panel", guide.Name, guide.Message) : "";
@@ -521,6 +558,8 @@ namespace MusiyoBetsknate.Museum
             audioPauseButton = ModelButton("pause_narration", narrationControls.transform, narration.TogglePause);
             ModelButton("repeat_narration", narrationControls.transform, narration.Repeat);
             audioMuteButton = ModelButton("mute_narration", narrationControls.transform, narration.ToggleMute);
+            followNarrationButton = ModelButton("follow_narration", narrationControls.transform, () => narrationReading.Resume());
+            followNarrationButton.name = "FollowNarration";
             narrationRetryButton = ModelButton("retry_narration", elementList.parent, narration.Retry);
             subtitleText = Instantiate(focusText, transform);
             subtitleText.name = "NarrationSubtitles";
@@ -555,6 +594,8 @@ namespace MusiyoBetsknate.Museum
             volumeSlider.onValueChanged.RemoveAllListeners();
             volumeSlider.onValueChanged.AddListener(preferences.SetVolume);
             subtitlesButton = ModelButton("hide_subtitles", elementList.parent, () => preferences.SetSubtitles(!preferences.Subtitles));
+            narrationReading = gameObject.AddComponent<MuseumNarrationReading>();
+            narrationReading.Configure(narration, PanelScroll(), narrationText, followNarrationButton);
         }
 
         private void RefreshNarrationInterface()
@@ -567,8 +608,8 @@ namespace MusiyoBetsknate.Museum
             bool silent = heard != null && !heard.has_narration && !paused
                 && interaction.State != InteractionState.Reading;
             narrationText.gameObject.SetActive(selected || silent);
-            narrationText.text = silent ? MuseumInterfaceText.Get("narration_not_published")
-                : narration.Status + "\n" + narration.Transcription + (string.IsNullOrEmpty(narration.Attribution) ? "" : "\n" + narration.Attribution);
+            if (silent) narrationText.text = MuseumInterfaceText.Get("narration_not_published");
+            else narrationReading.Show(narration.Status, narration.Transcription, narration.Attribution);
             narrationControls.SetActive(selected && narration.CanPlay);
             audioPauseButton.GetComponentInChildren<TMP_Text>().text = narration.State == NarrationState.Playing
                 ? MuseumInterfaceText.Get("pause_narration_keyboard") : MuseumInterfaceText.Get("resume_narration_keyboard");
@@ -626,6 +667,13 @@ namespace MusiyoBetsknate.Museum
                 if (guide != null && !string.IsNullOrEmpty(guide.Prompt)) prompt = guide.Prompt;
                 if (farewell != null && farewell.AtEnd) prompt = string.IsNullOrEmpty(prompt) ? farewell.Message : prompt + "\n" + farewell.Message;
             }
+            // Without the service, a short line says so; the point screens and the menus offer to retry.
+            if (exploring && !welcome && loader.State == TourLoadState.Unavailable && serviceNotice.Point == null)
+                prompt = string.IsNullOrEmpty(prompt) ? MuseumInterfaceText.Get("service_unavailable_hint")
+                    : MuseumInterfaceText.Get("service_unavailable_hint") + "\n" + prompt;
+            // The automatic tour says what it is doing and how to take control back.
+            if (!visitFlow.BlocksInput && autoTour != null && !string.IsNullOrEmpty(autoTour.Status) && !welcome)
+                prompt = string.IsNullOrEmpty(prompt) ? autoTour.Status : autoTour.Status + "\n" + prompt;
             // The examined model fills the view, so its keys stay readable even with the stand out of sight.
             if (!visitFlow.BlocksInput && interaction.State == InteractionState.ModelExamination && lectern.InWorld)
                 prompt = MuseumInterfaceText.Get("examination_controls").Trim();

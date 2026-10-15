@@ -26,6 +26,8 @@ namespace MusiyoBetsknate.Museum
             public GltfImport Import;
             public GameObject Pivot;
             public Transform[] Nodes;
+            public Renderer[] Renderers = Array.Empty<Renderer>();
+            public ModelLoadTimeline Timeline;
             public float ExaminationScale = 1;
             /// <summary>Size of the normalized model before any display scale.</summary>
             public Vector3 Size;
@@ -61,6 +63,10 @@ namespace MusiyoBetsknate.Museum
         private RoomAnchor[] roomAnchors;
         private string switchSlug;
         private float switchAt;
+        private ModelLoadBudget budget;
+        private ModelByteCache cache;
+        private ModelLoadTimeline observed;
+        private float observeUntil;
         /// <summary>Changing piece within the same point waits this long before asking for the model, so quick changes never pile up requests.</summary>
         public const float SwitchSettleSeconds = .25f;
         /// <summary>A model that appears grows in from slightly smaller over this time.</summary>
@@ -75,7 +81,15 @@ namespace MusiyoBetsknate.Museum
         public string Attribution { get; private set; } = "";
         public bool CanExamine => State == ModelLoadState.Ready && session != null
             && session.Point == interaction.ActivePoint && session.Slug == interaction.SelectedElement?.slug;
-        public Transform Model => session?.Pivot != null ? session.Pivot.transform : null;
+        public Transform Model => session?.Pivot != null && session.Ready ? session.Pivot.transform : null;
+        /// <summary>Renderers of the piece on show, for reaching and holding it; empty while nothing is shown.</summary>
+        public Renderer[] Renderers => Model != null ? session.Renderers : Array.Empty<Renderer>();
+        /// <summary>Point whose piece is on show or on its way.</summary>
+        public TourPoint ModelPoint => session?.Point;
+        /// <summary>While true, someone else holds the piece: its exhibition pose is not applied until it is let go.</summary>
+        public bool PoseHeld { get; set; }
+        /// <summary>Stages of the latest load, measured on this device.</summary>
+        public ModelLoadTimeline LastTimeline { get; private set; }
         public ModelExaminationPose Pose => pose;
         public event Action Changed;
         public string Profile => Application.platform == RuntimePlatform.Android ? "quest" : "web";
@@ -88,6 +102,10 @@ namespace MusiyoBetsknate.Museum
             interaction = GetComponent<MuseumInteraction>();
             loader = GetComponent<TourLoader>();
             roomAnchors = interaction.Runtime.GetComponentsInChildren<RoomAnchor>();
+            var settings = MuseumExperienceConfiguration.Current;
+            budget = gameObject.AddComponent<ModelLoadBudget>();
+            budget.BudgetSeconds = settings.ModelLoadFrameBudgetMs / 1000f;
+            cache = new ModelByteCache(settings.ModelCacheEntries, settings.ModelCacheBytes);
             if (viewCamera == null) viewCamera = GetComponentInChildren<Camera>();
             if (visitor == null) visitor = GetComponentInChildren<DesktopVisitorController>()?.transform;
             CreateStudyLight();
@@ -106,7 +124,11 @@ namespace MusiyoBetsknate.Museum
             studyLight.cullingMask = layer >= 0 ? 1 << layer : 0;
             studyLight.enabled = false;
         }
-        private void OnDestroy() { if (studyLight != null) Destroy(studyLight.gameObject); }
+        private void OnDestroy()
+        {
+            if (studyLight != null) Destroy(studyLight.gameObject);
+            cache?.Clear();
+        }
         private void OnEnable()
         {
             interaction.Changed += OnInteractionChanged;
@@ -163,6 +185,16 @@ namespace MusiyoBetsknate.Museum
 
         private void Update()
         {
+            // The longest frame from the request until shortly after the piece appears, including its first draws.
+            if (observed != null)
+            {
+                observed.ObserveFrame(Time.unscaledDeltaTime);
+                if (observed.Outcome != "pending" && Time.realtimeSinceStartup >= observeUntil)
+                {
+                    Debug.Log(observed.ToString());
+                    observed = null;
+                }
+            }
             var currentRoom = visitor != null ? roomAnchors.FirstOrDefault(room => room.Contains(visitor.position)) : null;
             if (switchSlug != null && Time.realtimeSinceStartup >= switchAt)
             {
@@ -225,6 +257,26 @@ namespace MusiyoBetsknate.Museum
             }
         }
 
+        /// <summary>Applies the exhibition or examination pose again, for instance once a held piece is back in place.</summary>
+        public void RefreshPose() => UpdatePose();
+
+        /// <summary>
+        /// Where the piece on show stands in the exhibition: always computed from its pedestal or point and its own size,
+        /// never from where a visitor has just moved it.
+        /// </summary>
+        public bool TryExhibitPose(out Vector3 position, out Quaternion rotation, out Vector3 localScale)
+        {
+            position = Vector3.zero; rotation = Quaternion.identity; localScale = Vector3.one;
+            if (session?.Pivot == null || !session.Ready) return false;
+            var mount = session.Point.Anchor.GetComponentInChildren<PointExhibitMount>();
+            var parent = mount != null ? mount.transform : session.Point.Anchor.LookTarget;
+            float fit = mount != null ? PointExhibitMount.Fit(session.Size, mount.MaxFootprint, mount.MaxHeight) : 1;
+            position = parent.TransformPoint(mount != null ? Vector3.up * (session.Size.y * fit * .5f) : Vector3.zero);
+            rotation = parent.rotation;
+            localScale = Vector3.one * fit;
+            return true;
+        }
+
         private void UpdatePose()
         {
             if (session?.Pivot == null || !session.Ready) return;
@@ -233,6 +285,8 @@ namespace MusiyoBetsknate.Museum
             if (studyLight != null) studyLight.enabled = examining;
             // Pause keeps the model at its last examination pose.
             if (interaction.State == InteractionState.Paused) return;
+            // A piece in the visitor's hand, or on its way back, is placed by whoever holds it.
+            if (PoseHeld && !examining) return;
             // A pedestal with a mount carries the model standing on it; elsewhere it floats at the point.
             var mount = examining ? null : session.Point.Anchor.GetComponentInChildren<PointExhibitMount>();
             var parent = examining ? viewCamera.transform : mount != null ? mount.transform : session.Point.Anchor.LookTarget;
@@ -256,7 +310,11 @@ namespace MusiyoBetsknate.Museum
             Release();
             attemptedKey = key;
             var pending = new LoadSession { Point = point, Slug = slug, Deadline = Time.realtimeSinceStartup + 60,
-                VisitorRoom = visitor != null ? roomAnchors.FirstOrDefault(room => room.Contains(visitor.position)) : null };
+                VisitorRoom = visitor != null ? roomAnchors.FirstOrDefault(room => room.Contains(visitor.position)) : null,
+                Timeline = new ModelLoadTimeline(slug, Profile) };
+            FinishObservation();
+            observed = LastTimeline = pending.Timeline;
+            observed.MemoryBefore = UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong();
             session = pending;
             RequestCount++;
             SetState(ModelLoadState.Loading, MuseumInterfaceText.Get("model_loading"));
@@ -266,10 +324,12 @@ namespace MusiyoBetsknate.Museum
         private async void Load(LoadSession pending)
         {
             bool retained = false;
+            var timeline = pending.Timeline;
             try
             {
                 string api = loader.ApiBase;
                 string elementJson;
+                timeline.Begin("element");
                 using (var request = UnityWebRequest.Get(api + "/elements/" + Uri.EscapeDataString(pending.Slug)))
                 {
                     await Send(pending, request, 15);
@@ -280,6 +340,8 @@ namespace MusiyoBetsknate.Museum
                     throw new InvalidOperationException();
                 ResourceAccessContractV1 access;
                 Uri url;
+                // Access is granted anew for every load, including one the cache can serve: revocation and expiry apply.
+                timeline.Begin("access");
                 using (var request = new UnityWebRequest(api + "/resources/" + Uri.EscapeDataString(id) + "/access?schema_version=1", "POST"))
                 {
                     request.downloadHandler = new DownloadHandlerBuffer();
@@ -287,23 +349,36 @@ namespace MusiyoBetsknate.Museum
                     if (!ModelResourcePolicy.TryAccess(api, request.downloadHandler.text, Profile, DateTimeOffset.UtcNow, out access, out url))
                         throw new InvalidOperationException();
                 }
-                byte[] data;
-                using (var request = UnityWebRequest.Get(url))
+                string cacheKey = Profile + "/" + id;
+                if (cache.TryGet(cacheKey, access.sha256, out var data)) timeline.FromCache = true;
+                else
                 {
-                    await Send(pending, request, 60, true);
-                    data = request.downloadHandler.data;
+                    timeline.Begin("download");
+                    using (var request = UnityWebRequest.Get(url))
+                    {
+                        await Send(pending, request, 60, true);
+                        data = request.downloadHandler.data;
+                    }
+                    timeline.Begin("verify");
+                    if (!await Verify(data, Profile, access.sha256)) throw new InvalidOperationException();
+                    pending.Cancellation.Token.ThrowIfCancellationRequested();
+                    cache.Put(cacheKey, access.sha256, data);
                 }
-                if (!ModelResourcePolicy.ValidateGlb(data, Profile, access.sha256)) throw new InvalidOperationException();
+                timeline.Bytes = data.LongLength;
                 var logger = new CollectingLogger();
-                pending.Import = new GltfImport(logger: logger);
+                pending.Import = new GltfImport(deferAgent: budget, logger: logger);
+                timeline.Begin("import");
                 if (!await pending.Import.Load(data, url, new ImportSettings { GenerateMipMaps = true }, pending.Cancellation.Token))
                     throw new InvalidOperationException();
                 pending.Cancellation.Token.ThrowIfCancellationRequested();
+                timeline.Begin("textures");
+                timeline.Textures = pending.Import.TextureCount;
                 for (int index = 0; index < pending.Import.TextureCount; index++)
                 {
                     var texture = pending.Import.GetTexture(index);
                     if (texture != null && (texture.width > 2048 || texture.height > 2048)) throw new InvalidOperationException();
                 }
+                timeline.Begin("instantiate");
                 pending.Pivot = new GameObject("RemoteModelPivot");
                 var content = new GameObject("RemoteModelContent");
                 content.transform.SetParent(pending.Pivot.transform, false);
@@ -311,14 +386,17 @@ namespace MusiyoBetsknate.Museum
                     settings: new InstantiationSettings { Mask = ComponentType.Mesh });
                 if (!await pending.Import.InstantiateMainSceneAsync(instantiator, pending.Cancellation.Token)
                     || (logger.Items?.Any(item => item.Type == LogType.Error) ?? false)
-                    || !WithinTriangleBudget(content, Profile) || !ModelExaminationPose.Normalize(content.transform))
+                    || !WithinTriangleBudget(content, Profile, out long triangles) || !ModelExaminationPose.Normalize(content.transform))
                     throw new InvalidOperationException();
+                timeline.Triangles = triangles;
+                timeline.End();
                 pending.Cancellation.Token.ThrowIfCancellationRequested();
                 if (session != pending || this == null || !isActiveAndEnabled) return;
                 pending.Expiration = DateTimeOffset.Parse(access.expires_at, System.Globalization.CultureInfo.InvariantCulture);
                 pending.Nodes = pending.Pivot.GetComponentsInChildren<Transform>();
-                var bounds = content.GetComponentsInChildren<Renderer>()[0].bounds;
-                foreach (var renderer in content.GetComponentsInChildren<Renderer>()) bounds.Encapsulate(renderer.bounds);
+                pending.Renderers = content.GetComponentsInChildren<Renderer>();
+                var bounds = pending.Renderers[0].bounds;
+                foreach (var renderer in pending.Renderers) bounds.Encapsulate(renderer.bounds);
                 pending.ExaminationScale = ModelExaminationPose.FrameScale(bounds.size, viewCamera != null ? viewCamera.fieldOfView : 70);
                 pending.Size = bounds.size;
                 pending.ReadyAt = Time.realtimeSinceStartup;
@@ -328,11 +406,17 @@ namespace MusiyoBetsknate.Museum
                     string.IsNullOrEmpty(resource.credit) ? null : MuseumInterfaceText.Format("narration_credit", resource.credit),
                     string.IsNullOrEmpty(resource.provenance) ? null : MuseumInterfaceText.Format("narration_provenance", resource.provenance) }.Where(value => !string.IsNullOrEmpty(value)));
                 UpdatePose();
+                timeline.MemoryAfter = UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong();
+                timeline.Outcome = "ready";
+                // Keep watching frames for a moment: the first draws upload textures and may compile shaders.
+                observeUntil = Time.realtimeSinceStartup + 1;
                 SetState(ModelLoadState.Ready, MuseumInterfaceText.Get("model_ready"));
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException) { timeline.End(); timeline.Outcome = "cancelled"; }
             catch (Exception)
             {
+                timeline.End();
+                timeline.Outcome = "failed";
                 if (this != null && session == pending && !pending.Cancellation.IsCancellationRequested)
                     SetState(ModelLoadState.Unavailable, MuseumInterfaceText.Get("model_unavailable"));
             }
@@ -347,6 +431,28 @@ namespace MusiyoBetsknate.Museum
                     if (session == pending) session = null;
                 }
             }
+        }
+
+        /// <summary>
+        /// Hash and structure checks of a downloaded file. They run on a worker thread where the platform has one, so a
+        /// large file does not hold up the frame; the browser build has no worker threads and checks in place.
+        /// </summary>
+        private static Task<bool> Verify(byte[] data, string profile, string sha256)
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            return Task.FromResult(ModelResourcePolicy.ValidateGlb(data, profile, sha256));
+#else
+            return Task.Run(() => ModelResourcePolicy.ValidateGlb(data, profile, sha256));
+#endif
+        }
+
+        /// <summary>Logs a load that ends before its observation window closed, so no measurement is lost.</summary>
+        private void FinishObservation()
+        {
+            if (observed == null) return;
+            if (observed.Outcome == "pending") observed.Outcome = "superseded";
+            Debug.Log(observed.ToString());
+            observed = null;
         }
 
         private async Task Send(LoadSession pending, UnityWebRequest request, int timeout, bool model = false)
@@ -373,9 +479,9 @@ namespace MusiyoBetsknate.Museum
             finally { pending.Request = null; }
         }
 
-        private static bool WithinTriangleBudget(GameObject content, string profile)
+        private static bool WithinTriangleBudget(GameObject content, string profile, out long triangles)
         {
-            long triangles = 0;
+            triangles = 0;
             foreach (var filter in content.GetComponentsInChildren<MeshFilter>()) triangles += CountTriangles(filter.sharedMesh);
             foreach (var skin in content.GetComponentsInChildren<SkinnedMeshRenderer>()) triangles += CountTriangles(skin.sharedMesh);
             return triangles > 0 && triangles <= ModelResourcePolicy.TriangleLimit(profile);
@@ -398,6 +504,7 @@ namespace MusiyoBetsknate.Museum
             var previous = session;
             session = null;
             previous?.Cancel();
+            PoseHeld = false;
             if (studyLight != null) studyLight.enabled = false;
             interaction?.CancelModel();
             Progress = 0;

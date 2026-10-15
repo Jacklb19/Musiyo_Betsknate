@@ -1,9 +1,22 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "menu_distance": 1.8,
   "menu_width": 1.4,
+  "menu_settle_seconds": 0.25,
+  "menu_settle_turn_speed": 40,
+  "menu_placement_timeout": 1.5,
   "ray_length": 6,
   "walk_speed": 1.2,
+  "run_speed": 2.4,
+  "run_acceleration": 2.5,
+  "outdoor_ground_objects": ["Terreno_Valle_Provisional", "Sendero_Jajan"],
+  "outdoor_rooms": ["room.arrival"],
+  "default_turn_mode": "continuous",
   "snap_turn_degrees": 30,
+  "continuous_turn_speeds": [45, 75, 105, 135],
+  "default_continuous_turn_speed": 75,
+  "turn_deadzone": 0.2,
+  "grab_reach": 0.12,
+  "grab_max_distance": 1.5,
   "device_height": 1.65
 }

@@ -41,6 +41,12 @@ namespace MusiyoBetsknate.Museum
         public event Action Changed;
         public event Action SubtitleChanged;
         public bool PausedByDistance => pausedByDistance;
+        /// <summary>Timed fragments of the narration, from its published WebVTT subtitles; empty when it has none.</summary>
+        public System.Collections.Generic.IReadOnlyList<SubtitleCue> Cues => cues;
+        /// <summary>Record whose narration is loaded or playing; pieces of one point may share it.</summary>
+        public string NarratedSlug => narratedSlug;
+        /// <summary>Counts every start of playback from the beginning, including Repeat, so readers can follow from the top.</summary>
+        public int Starts { get; private set; }
 
         private void Awake()
         {
@@ -116,6 +122,7 @@ namespace MusiyoBetsknate.Museum
             pausedByDistance = false;
             source.Stop();
             source.Play();
+            Starts++;
             SetState(NarrationState.Playing, MuseumInterfaceText.Get("narration_playing"));
             UpdateSubtitle();
         }
@@ -222,6 +229,7 @@ namespace MusiyoBetsknate.Museum
             source.transform.position = interaction.ActivePoint.Anchor.LookTarget.position;
             source.clip = clip;
             source.Play();
+            Starts++;
             SetState(NarrationState.Playing, MuseumInterfaceText.Get("narration_playing"));
             OnInteractionChanged();
             if (presence.Away) OnPresenceChanged(true);

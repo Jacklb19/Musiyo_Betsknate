@@ -202,6 +202,22 @@ namespace MusiyoBetsknate.Museum
             }
             return false;
         }
+        /// <summary>
+        /// Walkable path between two floor positions on the museum's navigation mesh, built from its colliders, so it
+        /// goes round walls, the lagoon's rim and pedestals. False when either end is off the mesh or they do not connect.
+        /// </summary>
+        public bool TryPathBetween(Vector3 start, Vector3 destination, out Vector3[] corners)
+        {
+            corners = Array.Empty<Vector3>();
+            if (!EnsureNavigation()) return false;
+            var filter = new NavMeshQueryFilter { agentTypeID = agentType, areaMask = NavMesh.AllAreas };
+            if (!NavMesh.SamplePosition(start, out var from, 2, filter) || !NavMesh.SamplePosition(destination, out var to, .6f, filter)
+                || !NavMesh.CalculatePath(from.position, to.position, filter, path)
+                || path.status != NavMeshPathStatus.PathComplete || path.corners.Length < 1) return false;
+            corners = path.corners;
+            return true;
+        }
+
         private void RefreshPath()
         {
             if (visitor == null || TargetRoomKey == null) return;

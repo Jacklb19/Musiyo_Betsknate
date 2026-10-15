@@ -5,12 +5,19 @@ using UnityEngine.UI;
 
 namespace MusiyoBetsknate.Museum
 {
+    /// <summary>
+    /// Optional orientation. It has no permanent button or legend on the screen: it opens from its key or from the pause
+    /// menu, and its status shows only while it guides the visitor or for a moment after it changes.
+    /// </summary>
     public sealed class MuseumWayfindingHud : MonoBehaviour
     {
+        /// <summary>Seconds a change of orientation status, such as an arrival, stays on screen.</summary>
+        private const float StatusSeconds = 6;
         private MuseumWayfinding guide;
         private MuseumInteraction interaction;
         private Button template;
-        private Button open;
+        private string shownStatus;
+        private float statusUntil;
         private GameObject menu;
         private TMP_Text legend;
         private TMP_Text title;
@@ -23,12 +30,6 @@ namespace MusiyoBetsknate.Museum
             guide = wayfinding;
             interaction = state;
             template = buttonTemplate;
-            open = KeyedButton("wayfinding_open", transform, guide.ToggleMenu);
-            var rect = open.GetComponent<RectTransform>();
-            rect.anchorMin = rect.anchorMax = new Vector2(1, 1);
-            rect.pivot = new Vector2(1, 1);
-            rect.anchoredPosition = new Vector2(-396, -20);
-            rect.sizeDelta = new Vector2(240, 48);
             legend = Instantiate(textTemplate, transform);
             legend.name = "WayfindingStatus";
             legend.raycastTarget = false;
@@ -70,7 +71,15 @@ namespace MusiyoBetsknate.Museum
             interaction.Changed += Refresh;
             input = MuseumInput.Current;
             input.BindingsChanged += RefreshKeys;
+            shownStatus = guide.Status;
             Refresh();
+        }
+        /// <summary>True while the orientation status is on screen: while guiding, or briefly after it changed.</summary>
+        public bool StatusVisible => legend != null && legend.gameObject.activeSelf;
+        private bool StatusWanted => guide.TargetRoomKey != null || Time.unscaledTime < statusUntil;
+        private void Update()
+        {
+            if (legend != null && legend.gameObject.activeSelf && !StatusWanted) Refresh();
         }
         /// <summary>Captions that name a key are created from their text key and follow reassignments.</summary>
         private Button KeyedButton(string textKey, Transform parent, UnityEngine.Events.UnityAction action)
@@ -98,9 +107,13 @@ namespace MusiyoBetsknate.Museum
         private void Refresh()
         {
             if (guide == null || menu == null) return;
-            open.interactable = !interaction.BlocksMovement;
+            if (guide.Status != shownStatus)
+            {
+                shownStatus = guide.Status;
+                statusUntil = Time.unscaledTime + StatusSeconds;
+            }
             menu.SetActive(guide.MenuOpen);
-            legend.gameObject.SetActive(!guide.MenuOpen && !interaction.BlocksMovement);
+            legend.gameObject.SetActive(!guide.MenuOpen && !interaction.BlocksMovement && StatusWanted);
             legend.text = MuseumInterfaceText.Format("wayfinding_legend", guide.CurrentRoomName, string.IsNullOrEmpty(guide.Status) ? MuseumInterfaceText.Get("wayfinding_free") : guide.Status);
             title.text = guide.Rooms.Count == 0 ? MuseumInterfaceText.Format("wayfinding_title_empty", guide.CurrentRoomName)
                 : MuseumInterfaceText.Format("wayfinding_title", guide.CurrentRoomName);
