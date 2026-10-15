@@ -27,6 +27,9 @@ namespace MusiyoBetsknate.Museum
             public GameObject Pivot;
             public Transform[] Nodes;
             public float ExaminationScale = 1;
+            /// <summary>Size of the normalized model before any display scale.</summary>
+            public Vector3 Size;
+            public float ReadyAt;
             public RoomAnchor VisitorRoom;
             public bool Ready;
             public float Deadline;
@@ -56,6 +59,16 @@ namespace MusiyoBetsknate.Museum
         private readonly ModelExaminationPose pose = new ModelExaminationPose();
         private Light studyLight;
         private RoomAnchor[] roomAnchors;
+        private string switchSlug;
+        private float switchAt;
+        /// <summary>Changing piece within the same point waits this long before asking for the model, so quick changes never pile up requests.</summary>
+        public const float SwitchSettleSeconds = .25f;
+        /// <summary>A model that appears grows in from slightly smaller over this time.</summary>
+        public const float RevealSeconds = .25f;
+        /// <summary>Requests sent for models, for diagnostics and tests.</summary>
+        public int RequestCount { get; private set; }
+        /// <summary>Slug of the model on show or on its way, if any.</summary>
+        public string ModelSlug => session?.Slug;
         public ModelLoadState State { get; private set; }
         public float Progress { get; private set; }
         public string Status { get; private set; } = "";
@@ -114,8 +127,18 @@ namespace MusiyoBetsknate.Museum
             var selected = interaction.SelectedElement;
             if (selected != null && interaction.State != InteractionState.Paused)
             {
-                if (!selected.has_3d_model) { Release(); attemptedKey = null; }
-                else RequestModel(interaction.ActivePoint, selected.slug);
+                if (!selected.has_3d_model) { switchSlug = null; Release(); attemptedKey = null; }
+                else if (session != null && session.Point == interaction.ActivePoint && session.Slug != selected.slug
+                    || switchSlug != null && switchSlug != selected.slug)
+                {
+                    // Another piece of the same point: drop the one on show at once, ask for the new one once the choice settles.
+                    Release();
+                    attemptedKey = null;
+                    switchSlug = selected.slug;
+                    switchAt = Time.realtimeSinceStartup + SwitchSettleSeconds;
+                    SetState(ModelLoadState.Loading, MuseumInterfaceText.Get("model_loading"));
+                }
+                else if (switchSlug == null) RequestModel(interaction.ActivePoint, selected.slug);
             }
             UpdatePose();
         }
@@ -141,6 +164,16 @@ namespace MusiyoBetsknate.Museum
         private void Update()
         {
             var currentRoom = visitor != null ? roomAnchors.FirstOrDefault(room => room.Contains(visitor.position)) : null;
+            if (switchSlug != null && Time.realtimeSinceStartup >= switchAt)
+            {
+                var settled = switchSlug;
+                switchSlug = null;
+                if (interaction.SelectedElement?.slug == settled && interaction.State == InteractionState.ElementSelected)
+                    RequestModel(interaction.ActivePoint, settled);
+                else if (State == ModelLoadState.Loading && session == null) SetState(ModelLoadState.Idle, "");
+            }
+            // The appearance runs over a few frames; one frame past its end sets the final size.
+            if (session != null && session.Ready && Time.realtimeSinceStartup < session.ReadyAt + RevealSeconds + .1f) UpdatePose();
             if (session != null)
             {
                 if (State == ModelLoadState.Loading && Time.realtimeSinceStartup > session.Deadline)
@@ -155,7 +188,7 @@ namespace MusiyoBetsknate.Museum
                 else if (session.VisitorRoom == null && currentRoom != null) session.VisitorRoom = currentRoom;
             }
             if (interaction.State == InteractionState.ElementSelected && interaction.SelectedElement?.has_3d_model == true
-                && session == null && attemptedKey == null && visitor != null
+                && session == null && attemptedKey == null && switchSlug == null && visitor != null
                 && Vector3.Distance(visitor.position, interaction.ActivePoint.Anchor.transform.position)
                     <= interaction.ActivePoint.Anchor.ActivationRadius + 4)
                 RequestModel(interaction.ActivePoint, interaction.SelectedElement.slug);
@@ -200,11 +233,16 @@ namespace MusiyoBetsknate.Museum
             if (studyLight != null) studyLight.enabled = examining;
             // Pause keeps the model at its last examination pose.
             if (interaction.State == InteractionState.Paused) return;
-            var parent = examining ? viewCamera.transform : session.Point.Anchor.LookTarget;
+            // A pedestal with a mount carries the model standing on it; elsewhere it floats at the point.
+            var mount = examining ? null : session.Point.Anchor.GetComponentInChildren<PointExhibitMount>();
+            var parent = examining ? viewCamera.transform : mount != null ? mount.transform : session.Point.Anchor.LookTarget;
             if (pivot.parent != parent) pivot.SetParent(parent, false);
-            pivot.localPosition = examining ? Vector3.forward * pose.Distance : Vector3.zero;
+            float reveal = Mathf.SmoothStep(.85f, 1, Mathf.Clamp01((Time.realtimeSinceStartup - session.ReadyAt) / RevealSeconds));
+            float fit = mount != null ? PointExhibitMount.Fit(session.Size, mount.MaxFootprint, mount.MaxHeight) : 1;
+            pivot.localPosition = examining ? Vector3.forward * pose.Distance
+                : mount != null ? Vector3.up * (session.Size.y * fit * reveal * .5f) : Vector3.zero;
             pivot.localRotation = examining ? pose.Rotation : Quaternion.identity;
-            pivot.localScale = Vector3.one * (examining ? session.ExaminationScale : 1);
+            pivot.localScale = Vector3.one * (examining ? session.ExaminationScale : fit * reveal);
             int examinationLayer = LayerMask.NameToLayer("ModelExamination");
             foreach (var item in session.Nodes)
                 item.gameObject.layer = examining && examinationLayer >= 0 ? examinationLayer : 0;
@@ -220,6 +258,7 @@ namespace MusiyoBetsknate.Museum
             var pending = new LoadSession { Point = point, Slug = slug, Deadline = Time.realtimeSinceStartup + 60,
                 VisitorRoom = visitor != null ? roomAnchors.FirstOrDefault(room => room.Contains(visitor.position)) : null };
             session = pending;
+            RequestCount++;
             SetState(ModelLoadState.Loading, MuseumInterfaceText.Get("model_loading"));
             Load(pending);
         }
@@ -281,6 +320,8 @@ namespace MusiyoBetsknate.Museum
                 var bounds = content.GetComponentsInChildren<Renderer>()[0].bounds;
                 foreach (var renderer in content.GetComponentsInChildren<Renderer>()) bounds.Encapsulate(renderer.bounds);
                 pending.ExaminationScale = ModelExaminationPose.FrameScale(bounds.size, viewCamera != null ? viewCamera.fieldOfView : 70);
+                pending.Size = bounds.size;
+                pending.ReadyAt = Time.realtimeSinceStartup;
                 pending.Ready = retained = true;
                 Progress = 1;
                 Attribution = string.Join("\n", new[] { resource.alternative_text,

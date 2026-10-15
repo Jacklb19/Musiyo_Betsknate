@@ -63,6 +63,10 @@ namespace MusiyoBetsknate.Museum
         private MuseumLecternDisplay lectern;
         private MuseumPointPresence presence;
         private MuseumInput input;
+        private GameObject carousel;
+        private TMP_Text carouselLabel;
+        private Button carouselPrevious;
+        private Button carouselNext;
         private readonly System.Collections.Generic.List<(TMP_Text caption, string textKey)> keyedCaptions = new();
 
         private void Awake()
@@ -85,6 +89,7 @@ namespace MusiyoBetsknate.Museum
             if (lectern == null) lectern = interaction.gameObject.AddComponent<MuseumLecternDisplay>();
             lectern.Configure((RectTransform)panel.transform, visitor != null ? visitor.GetComponentInChildren<Camera>() : null);
             CreateNarrationInterface();
+            CreateCarouselInterface();
             var wayfinding = interaction.GetComponent<MuseumWayfinding>();
             if (wayfinding == null) wayfinding = interaction.gameObject.AddComponent<MuseumWayfinding>();
             wayfinding.Configure(visitor != null ? visitor.transform : null);
@@ -258,6 +263,7 @@ namespace MusiyoBetsknate.Museum
             retryButton.gameObject.SetActive(loader.State == TourLoadState.Unavailable);
             bool paused = interaction.State == InteractionState.Paused;
             RefreshModelInterface();
+            RefreshCarousel();
             RefreshNarrationInterface();
             RefreshStationInterface();
             pauseButton.GetComponentInChildren<TMP_Text>().text = paused ? MuseumInterfaceText.Get("resume") : MuseumInterfaceText.Get("pause");
@@ -417,6 +423,76 @@ namespace MusiyoBetsknate.Museum
             return button;
         }
 
+        /// <summary>
+        /// A point with several pieces that have a model shows one at a time: Previous and Next choose among them with
+        /// the same selection as the element list, and the counter names the piece on show.
+        /// </summary>
+        private void CreateCarouselInterface()
+        {
+            carousel = new GameObject("PieceCarousel", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+            carousel.transform.SetParent(elementList.parent, false);
+            carousel.transform.SetSiblingIndex(panelText.transform.GetSiblingIndex() + 1);
+            var row = carousel.GetComponent<HorizontalLayoutGroup>();
+            row.spacing = 8;
+            row.childControlWidth = row.childControlHeight = true;
+            row.childForceExpandWidth = false;
+            row.childForceExpandHeight = true;
+            carousel.GetComponent<LayoutElement>().preferredHeight = 64;
+            carouselPrevious = ModelButton("carousel_previous", carousel.transform, () => StepCarousel(-1));
+            carouselPrevious.name = "CarouselPrevious";
+            carouselLabel = Instantiate(panelText, carousel.transform);
+            carouselLabel.name = "CarouselPosition";
+            carouselLabel.richText = false;
+            carouselLabel.alignment = TextAlignmentOptions.Center;
+            carouselLabel.fontSize = panelText.fontSize * .85f;
+            if (carouselLabel.TryGetComponent<LayoutElement>(out var labelLayout)) { labelLayout.minHeight = 0; labelLayout.flexibleWidth = 1; }
+            else carouselLabel.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
+            carouselNext = ModelButton("carousel_next", carousel.transform, () => StepCarousel(1));
+            carouselNext.name = "CarouselNext";
+            foreach (var button in new[] { carouselPrevious, carouselNext })
+            {
+                var layout = button.GetComponent<LayoutElement>();
+                layout.preferredWidth = 150;
+                layout.flexibleWidth = 0;
+            }
+            carousel.SetActive(false);
+        }
+
+        /// <summary>Indices, in the point's element list, of the pieces that have a model.</summary>
+        private System.Collections.Generic.List<int> CarouselPieces()
+        {
+            var pieces = new System.Collections.Generic.List<int>();
+            var point = interaction.ActivePoint;
+            if (point == null || !point.HasContent) return pieces;
+            for (int index = 0; index < point.Content.elements.Length; index++)
+                if (point.Content.elements[index].has_3d_model) pieces.Add(index);
+            return pieces;
+        }
+
+        /// <summary>Moves to the previous or next piece, wrapping around; from the common record it starts at either end.</summary>
+        public bool StepCarousel(int direction)
+        {
+            var pieces = CarouselPieces();
+            if (pieces.Count < 2 || interaction.State != InteractionState.ElementSelected) return false;
+            var elements = interaction.ActivePoint.Content.elements;
+            int current = pieces.FindIndex(index => elements[index] == interaction.SelectedElement);
+            int next = current < 0 ? (direction > 0 ? 0 : pieces.Count - 1) : (current + direction + pieces.Count) % pieces.Count;
+            return interaction.SelectElement(pieces[next]);
+        }
+
+        private void RefreshCarousel()
+        {
+            if (carousel == null) return;
+            var pieces = CarouselPieces();
+            bool shown = pieces.Count >= 2 && interaction.State == InteractionState.ElementSelected;
+            carousel.SetActive(shown);
+            if (!shown) return;
+            var elements = interaction.ActivePoint.Content.elements;
+            int current = pieces.FindIndex(index => elements[index] == interaction.SelectedElement);
+            carouselLabel.text = current < 0 ? MuseumInterfaceText.Format("carousel_overview", pieces.Count)
+                : MuseumInterfaceText.Format("carousel_position", current + 1, pieces.Count, elements[pieces[current]].title);
+        }
+
         private void RefreshModelInterface()
         {
             if (model == null) return;
@@ -484,8 +560,10 @@ namespace MusiyoBetsknate.Museum
         {
             if (narration == null) return;
             bool paused = interaction.State == InteractionState.Paused;
-            bool selected = interaction.SelectedElement?.has_narration == true && !paused;
-            bool silent = interaction.SelectedElement != null && !interaction.SelectedElement.has_narration && !paused
+            // Pieces of one point share the narration of its common record when they have none of their own.
+            var heard = MuseumNarration.NarrationFor(interaction.ActivePoint, interaction.SelectedElement);
+            bool selected = heard?.has_narration == true && !paused;
+            bool silent = heard != null && !heard.has_narration && !paused
                 && interaction.State != InteractionState.Reading;
             narrationText.gameObject.SetActive(selected || silent);
             narrationText.text = silent ? MuseumInterfaceText.Get("narration_not_published")
