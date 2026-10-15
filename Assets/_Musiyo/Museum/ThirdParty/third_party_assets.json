@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "note": "Third-party set dressing in the museum scene. Only the listed files are in the repository; the downloaded packages stay outside it.",
+  "assets": [
+    {
+      "name": "Wooden Lantern 01",
+      "author": "James Ray Cock",
+      "publisher": "Poly Haven",
+      "source": "https://polyhaven.com/a/wooden_lantern_01",
+      "license": "CC0 1.0",
+      "license_url": "https://polyhaven.com/license",
+      "retrieved": "2026-10-15",
+      "source_files_sha256": {
+        "wooden_lantern_01_1k.gltf": "2380275a5c90bf3442c426f3363e826e6b1ceff12a7e65f83b03cc8fac70a099",
+        "wooden_lantern_01.bin": "65c6b1a776c66d4170dab3657f0809b1a8a88219507589d6c9aad70ffbe687a3"
+      },
+      "derivation": "Blender 5.2 collapse decimation to 20% (8321 to 1662 triangles), exported as FBX without textures. The 1k textures are copied unchanged; the ARM textures are not used.",
+      "files": {
+        "PolyHaven/WoodenLantern01/wooden_lantern_01_museum.fbx": "bf7097af088674466021df66c4060e174e3dd7ccffbd99f7db948512992be660",
+        "PolyHaven/WoodenLantern01/wooden_lantern_01_diff_1k.jpg": "5a346e7e3335e9502eb4e25178d16ba29ae49786b75853d7bd36b386edf7a30d",
+        "PolyHaven/WoodenLantern01/wooden_lantern_01_nor_gl_1k.jpg": "06a7d3bb7342b5aa96d8c22d46883153df8948b59cab26e19f0e91ba82dba9ef",
+        "PolyHaven/WoodenLantern01/wooden_lantern_01_glass_diff_1k.jpg": "1bfced8c9470ea01e73085439e8cee0c44c8ee8199b806a22cc4f2434ae2f151",
+        "PolyHaven/WoodenLantern01/wooden_lantern_01_glass_nor_gl_1k.jpg": "0aaab86f76172aeb7ccfa5f5c7f047f616726e6b3ce6636e162caf633f173c0a"
+      }
+    },
+    {
+      "name": "LowPoly Crops Pack (Corn_4)",
+      "author": "Quaternius",
+      "publisher": "OpenGameArt",
+      "source": "https://opengameart.org/node/126983",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "retrieved": "2026-10-15",
+      "source_files_sha256": {
+        "nature_crops_pack_by_quaternius.zip": "48de7f1e092750a3832501e79d1463abeec8218c76090fc4b81fa8dfccacdb52"
+      },
+      "derivation": "One FBX file extracted unchanged from the package.",
+      "files": {
+        "Quaternius/CropsPack/Corn_4.fbx": "efa76806e992dcf7fa8597d0b327e06319a81b4d1d6aef9b93251bd54479ef61"
+      }
+    }
+  ]
+}
