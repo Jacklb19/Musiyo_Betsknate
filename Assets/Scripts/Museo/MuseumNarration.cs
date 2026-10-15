@@ -74,11 +74,29 @@ namespace MusiyoBetsknate.Museum
         }
         private void OnDestroy() { if (source != null) Destroy(source.gameObject); }
 
+        private string narratedSlug;
+
+        /// <summary>
+        /// The narration an element is heard with: its own, or, among the several pieces of one point, the narration of
+        /// the point's common record, which keeps playing while the visitor moves between the pieces.
+        /// </summary>
+        public static ElementSummaryContractV1 NarrationFor(TourPoint point, ElementSummaryContractV1 element)
+        {
+            if (element == null || element.has_narration) return element;
+            var elements = point != null && point.HasContent ? point.Content.elements : null;
+            if (elements == null || !element.has_3d_model || elements.Count(candidate => candidate.has_3d_model) < 2) return element;
+            return elements.FirstOrDefault(candidate => !candidate.has_3d_model && candidate.has_narration) ?? element;
+        }
+
         private void Select(ElementSummaryContractV1 element)
         {
+            var target = NarrationFor(interaction.ActivePoint, element);
+            if (target != null && target.has_narration && target.slug == narratedSlug && State != NarrationState.Idle
+                && State != NarrationState.Unavailable) return;
             Clear();
-            if (element == null || !element.has_narration) return;
-            loading = StartCoroutine(Load(element.slug));
+            if (target == null || !target.has_narration) return;
+            narratedSlug = target.slug;
+            loading = StartCoroutine(Load(target.slug));
         }
         public void Retry() => Select(interaction.SelectedElement);
         public void SetVolume(float volume)
@@ -244,6 +262,7 @@ namespace MusiyoBetsknate.Museum
         { subtitlesRequest?.Abort(); subtitlesRequest?.Dispose(); subtitlesRequest = null; }
         public void Clear()
         {
+            narratedSlug = null;
             if (loading != null) StopCoroutine(loading);
             if (subtitlesLoading != null) StopCoroutine(subtitlesLoading);
             loading = subtitlesLoading = null;

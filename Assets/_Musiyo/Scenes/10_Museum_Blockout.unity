@@ -2961,6 +2961,52 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2716331297534372313, guid: d20af424b95c2e747a2dba9b1bdd89e7, type: 3}
   m_PrefabInstance: {fileID: 367863339}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &400858180
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 400858181}
+  - component: {fileID: 400858182}
+  m_Layer: 0
+  m_Name: ExhibitMount
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &400858181
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 400858180}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 1, z: -0, w: 0}
+  m_LocalPosition: {x: 7.1054274e-15, y: 1.1999998, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 689490653}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &400858182
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 400858180}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8573aa2b88085d49ad2519d16a347c6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MusiyoBetsknate.Runtime::MusiyoBetsknate.Museum.PointExhibitMount
+  maxFootprint: 0.84
+  maxHeight: 1.2
 --- !u!1 &406453428
 GameObject:
   m_ObjectHideFlags: 0
@@ -5511,6 +5557,7 @@ Transform:
   m_Children:
   - {fileID: 528719412}
   - {fileID: 2074869114}
+  - {fileID: 400858181}
   m_Father: {fileID: 2090920790}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &689490654
