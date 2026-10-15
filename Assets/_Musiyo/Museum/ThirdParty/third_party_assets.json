@@ -40,6 +40,46 @@
       }
     },
     {
+      "name": "Fern 02",
+      "author": "Rob Tuytel, Rico Cilliers",
+      "publisher": "Poly Haven",
+      "source": "https://polyhaven.com/a/fern_02",
+      "license": "CC0 1.0",
+      "license_url": "https://polyhaven.com/license",
+      "retrieved": "2026-10-15",
+      "source_files_sha256": {
+        "fern_02_1k.gltf": "33974295ee19670af4877705fc7d91f33f42d6302f0d44a625e072271223031f",
+        "fern_02.bin": "fe1abb762bcbbc7ad9e86925c8080437a62add257d9280e9142fdc85c226e64c"
+      },
+      "derivation": "Blender 5.2: the four variants of the 1k glTF exported unchanged in shape to one FBX (meshes only, each with its origin at the centre of its base, named PlanterLeaves_1..4). Colour and OpenGL normal textures copied unchanged; the ARM texture is not used. Used for the planter plants of the arrival path and the courtyard, standing on the measured spots of the delivered stand-ins.",
+      "files": {
+        "PolyHaven/Fern02/fern_02_museum.fbx": "e7630082bac79033f93926d5b27c89d8886f95f8ee101117d113345c5b193a10",
+        "PolyHaven/Fern02/fern_02_diff_1k.jpg": "a828a6e7b4c01c826911e2eac4b3afc7457dab7b3b392a31c681ed88b7d50029",
+        "PolyHaven/Fern02/fern_02_nor_gl_1k.jpg": "45bce132c6e96a0864bc89ab5da51361ab3f4afa83a6669ae499ab5ca811f621"
+      }
+    },
+    {
+      "name": "Flower Empodium",
+      "author": "Jenelle van Heerden, Rico Cilliers",
+      "publisher": "Poly Haven",
+      "source": "https://polyhaven.com/a/flower_empodium",
+      "license": "CC0 1.0",
+      "license_url": "https://polyhaven.com/license",
+      "retrieved": "2026-10-15",
+      "source_files_sha256": {
+        "flower_empodium_1k.gltf": "3f39d6b7dba6de81014f5ce41e43ac1204a45bfe146cbb425515103c4c5e9798",
+        "flower_empodium.bin": "32256fa72adcf06602f5d80d1b98d2042c546bb3c65aa81a871ffbe22c834a5c"
+      },
+      "derivation": "Blender 5.2: the five variants exported to one FBX (meshes only, origin at the base, FlowerClump_1..5; 1 to 3 carry blooms). The red and white colour textures are copies of the original in which only the petal pixels were recoloured, keeping their shading; the yellow one is unchanged. Stands where the delivered flower heads were, in the three colours the delivery gives them.",
+      "files": {
+        "PolyHaven/FlowerEmpodium/flower_empodium_museum.fbx": "0d0d10f8a3e8c42f25f8fa79ba7a57452b39fb3c3b316f8d6f2ffa84ae416d13",
+        "PolyHaven/FlowerEmpodium/flower_empodium_diff_1k.jpg": "eca8de7f24d5612d918ddd02339698f9c44b00ad5a9d2fb61d6acda267786129",
+        "PolyHaven/FlowerEmpodium/flower_empodium_diff_1k_red.jpg": "34692ecd3067ea6c77ad0d735ed8b69d15089c64fbd1f3b9df8776ceab6f69cc",
+        "PolyHaven/FlowerEmpodium/flower_empodium_diff_1k_white.jpg": "dd6470bb283d457a47871ba878103e71e63da755dfe6b8cc1d29b65eb55609b0",
+        "PolyHaven/FlowerEmpodium/flower_empodium_nor_gl_1k.jpg": "c752bc6905810e552816189c7e157d111bb9b64402eab9625271a5b4fad4c1ab"
+      }
+    },
+    {
       "name": "Kloppenheim 03 (Pure Sky)",
       "author": "Greg Zaal (original), Jarod Guest (sky edits)",
       "publisher": "Poly Haven",
