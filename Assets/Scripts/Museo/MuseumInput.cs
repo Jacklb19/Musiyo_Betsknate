@@ -18,7 +18,9 @@ namespace MusiyoBetsknate.Museum
         /// <summary>A model is being examined.</summary>
         Examine,
         /// <summary>Entry and pause menus.</summary>
-        Menu
+        Menu,
+        /// <summary>The visitor writes text: keys type, so walking and every shortcut are silent. The pointer still chooses.</summary>
+        Typing
     }
 
     /// <summary>
@@ -35,7 +37,8 @@ namespace MusiyoBetsknate.Museum
             { MuseumInputContext.Visit, new[] { "Pointer", "Common", "Locomotion", "Visit" } },
             { MuseumInputContext.Panel, new[] { "Pointer", "Common", "Visit", "Navigation" } },
             { MuseumInputContext.Examine, new[] { "Pointer", "Common", "Visit", "Examine" } },
-            { MuseumInputContext.Menu, new[] { "Pointer", "Common", "Navigation" } }
+            { MuseumInputContext.Menu, new[] { "Pointer", "Common", "Navigation" } },
+            { MuseumInputContext.Typing, new[] { "Pointer" } }
         };
         private static MuseumInput current;
         private readonly Dictionary<InputAction, InputActionReference> references = new();

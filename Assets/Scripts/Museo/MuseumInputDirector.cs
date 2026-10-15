@@ -11,6 +11,7 @@ namespace MusiyoBetsknate.Museum
         private MuseumInteraction interaction;
         private MuseumVisitFlow flow;
         private MuseumWayfinding wayfinding;
+        private MuseumGuide guide;
 
         /// <summary>Returns the director of a visit, adding it on first use, with the context already applied.</summary>
         public static MuseumInputDirector Ensure(MuseumInteraction state)
@@ -27,6 +28,7 @@ namespace MusiyoBetsknate.Museum
             {
                 Watch();
                 if (flow != null && flow.BlocksInput || interaction.State == InteractionState.Paused) return MuseumInputContext.Menu;
+                if (guide != null && guide.Typing && interaction.State == InteractionState.GuideQuestion) return MuseumInputContext.Typing;
                 if (wayfinding != null && wayfinding.MenuOpen) return MuseumInputContext.Panel;
                 if (interaction.State == InteractionState.ModelExamination) return MuseumInputContext.Examine;
                 return interaction.BlocksMovement || interaction.HoldsVisitor ? MuseumInputContext.Panel : MuseumInputContext.Visit;
@@ -52,6 +54,7 @@ namespace MusiyoBetsknate.Museum
             }
             if (flow == null && TryGetComponent(out flow)) flow.Changed += Apply;
             if (wayfinding == null && TryGetComponent(out wayfinding)) wayfinding.Changed += Apply;
+            if (guide == null && TryGetComponent(out guide)) guide.Changed += Apply;
         }
 
         private void OnEnable() => Apply();
@@ -61,6 +64,7 @@ namespace MusiyoBetsknate.Museum
             if (interaction != null) interaction.Changed -= Apply;
             if (flow != null) flow.Changed -= Apply;
             if (wayfinding != null) wayfinding.Changed -= Apply;
+            if (guide != null) guide.Changed -= Apply;
         }
     }
 }

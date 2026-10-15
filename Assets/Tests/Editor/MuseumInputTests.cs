@@ -58,6 +58,26 @@ namespace MusiyoBetsknate.Tests
         }
 
         [Test]
+        public void WritingSilencesWalkingAndEveryShortcutButKeepsThePointer()
+        {
+            input.SetContext(MuseumInputContext.Typing);
+            Assert.That(input.Click.enabled && input.Point.enabled, Is.True);
+            foreach (var key in new[] { keyboard.wKey, keyboard.gKey, keyboard.hKey, keyboard.rKey, keyboard.mKey, keyboard.fKey,
+                keyboard.xKey, keyboard.digit1Key, keyboard.spaceKey, keyboard.enterKey, keyboard.backspaceKey,
+                keyboard.escapeKey, keyboard.tabKey, keyboard.upArrowKey })
+            {
+                Press(key);
+                Assert.That(input.Move.ReadValue<Vector2>(), Is.EqualTo(Vector2.zero), key.name);
+                Assert.That(input.Navigate.ReadValue<Vector2>(), Is.EqualTo(Vector2.zero), key.name);
+                foreach (var action in new[] { input.Guide, input.Wayfinding, input.NarrationRepeat, input.NarrationMute,
+                    input.NarrationPause, input.Detail, input.Examine, input.ChooseElement, input.Confirm, input.Back,
+                    input.Pause, input.Next, input.Interact })
+                    Assert.That(action.WasPressedThisFrame(), Is.False, key.name + " " + action.name);
+                Release(key);
+            }
+        }
+
+        [Test]
         public void OneKeyPressNeverWalksAndMovesTheFocusTogether()
         {
             foreach (var context in Contexts)

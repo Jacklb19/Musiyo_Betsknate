@@ -167,10 +167,63 @@ namespace MusiyoBetsknate.Tests
             guide.Close();
             Assert.That(interaction.State, Is.EqualTo(InteractionState.Exploration));
             Assert.That(runtime.Apply(Contract(available: true), out error), Is.True, error);
-            Assert.That(guide.Message, Does.Contain("todavía no puede enviar preguntas"));
+            Assert.That(guide.Message, Does.Contain("Escribe tu pregunta"));
             Assert.That(runtime.Apply(Contract(withGuide: false), out error), Is.True, error);
             Assert.That(guide.Present, Is.False);
             Assert.That(interaction.OpenGuide(), Is.False, "Without a published guide there is nobody to ask.");
+        }
+
+        [Test]
+        public void QuestionsGoToTheTourServiceOnlyWhereTheGuideIsOffered()
+        {
+            var loader = root.AddComponent<TourLoader>();
+            var settings = new UnityEditor.SerializedObject(loader);
+            // A local port nobody listens on: the request fails at once and reaches no running service.
+            settings.FindProperty("apiBase").stringValue = "http://127.0.0.1:9/api/v1";
+            settings.ApplyModifiedPropertiesWithoutUndo();
+            var guide = root.AddComponent<MuseumGuide>();
+            guide.Configure(visitor);
+            visitor.position = new Vector3(0, 1, 19);
+            Assert.That(runtime.Apply(Contract(available: false), out var error), Is.True, error);
+            Assert.That(guide.Ask(), Is.True);
+            Assert.That(guide.Send("¿Qué hay en el fogón?"), Is.False, "The tour does not offer the guide.");
+            Assert.That(guide.Client.State, Is.EqualTo(GuideQuestionState.Idle));
+            guide.Close();
+
+            Assert.That(runtime.Apply(Contract(available: true), out error), Is.True, error);
+            Assert.That(guide.Ask(), Is.True);
+            var director = MuseumInputDirector.Ensure(interaction);
+            guide.Typing = true;
+            Assert.That(director.Desired, Is.EqualTo(MuseumInputContext.Typing));
+            Assert.That(guide.Send("¿Qué hay en el fogón?"), Is.True);
+            Assert.That(guide.Client.Endpoint, Is.EqualTo("http://127.0.0.1:9/api/v1/guide/questions"));
+            Assert.That(guide.Client.State, Is.EqualTo(GuideQuestionState.Sending));
+            guide.Close();
+            Assert.That(guide.Client.State, Is.EqualTo(GuideQuestionState.Idle), "Leaving the conversation abandons the question.");
+            Assert.That(guide.Client.Question, Is.EqualTo("¿Qué hay en el fogón?"), "The question stays for a manual retry.");
+            Assert.That(guide.Typing, Is.False);
+            Assert.That(director.Desired, Is.Not.EqualTo(MuseumInputContext.Typing));
+
+            Assert.That(guide.Ask(), Is.True);
+            Assert.That(guide.Retry(), Is.True);
+            visitor.position = new Vector3(0, 1, -58);
+            guide.Refresh();
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.Exploration), "Walking away ends the conversation.");
+            Assert.That(guide.Client.Busy, Is.False);
+        }
+
+        [Test]
+        public void CitationsArePlacedInTheMuseumOnlyWhenTheTourHoldsThem()
+        {
+            var guide = root.AddComponent<MuseumGuide>();
+            var contract = Contract(available: true);
+            contract.rooms[2].points[0].elements = new[] { new ElementSummaryContractV1 { slug = "synthetic-item", title = "Ficha sintética" } };
+            Assert.That(runtime.Apply(contract, out var error), Is.True, error);
+            var inTour = guide.Locate(new GuideCitationContractV1 { element_slug = "synthetic-item", title = "Ficha sintética" });
+            Assert.That(inTour, Is.Not.Null);
+            Assert.That(guide.RoomOf(inTour), Is.EqualTo("room.overlook"));
+            Assert.That(guide.Locate(new GuideCitationContractV1 { element_slug = "elsewhere", title = "Otra ficha" }), Is.Null,
+                "A cited record outside the tour has no place in the museum.");
         }
 
         [Test]
