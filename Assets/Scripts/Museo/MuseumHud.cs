@@ -113,6 +113,9 @@ namespace MusiyoBetsknate.Museum
             menu.Configure(visitFlow, interaction, loader, preferences, menuPrefab);
             welcomeView = menu.View.Welcome;
             CreateStationInterface();
+            var header = statusText.transform.parent as RectTransform;
+            var controlBar = header != null && header.parent != null ? header.parent.Find("Controls") as RectTransform : null;
+            gameObject.AddComponent<MuseumHudPresence>().Configure(visitFlow, interaction, loader, header, controlBar);
             ApplyPreferences();
         }
 
@@ -150,6 +153,7 @@ namespace MusiyoBetsknate.Museum
             if (arrival != null) arrival.Changed += Refresh;
             if (guide != null) guide.Changed += Refresh;
             if (farewell != null) farewell.Changed += Refresh;
+            if (interaction.TryGetComponent<MuseumWayfinding>(out var orientation)) orientation.Changed += Refresh;
             if (model != null) model.Changed += Refresh;
             presence.Changed += OnPresenceChanged;
             if (narration != null)
@@ -180,6 +184,7 @@ namespace MusiyoBetsknate.Museum
             if (arrival != null) arrival.Changed -= Refresh;
             if (guide != null) guide.Changed -= Refresh;
             if (farewell != null) farewell.Changed -= Refresh;
+            if (interaction.TryGetComponent<MuseumWayfinding>(out var orientation)) orientation.Changed -= Refresh;
             if (model != null) model.Changed -= Refresh;
             presence.Changed -= OnPresenceChanged;
             if (narration != null)
@@ -519,6 +524,9 @@ namespace MusiyoBetsknate.Museum
             welcomeCard = welcomeView.gameObject;
             welcomeTitle = welcomeView.Title;
             welcomeBody = welcomeView.Body;
+            // The route and key list are longer than one line of the card.
+            welcomeBody.textWrappingMode = TextWrappingModes.Normal;
+            welcomeBody.overflowMode = TextOverflowModes.Overflow;
             welcomeCard.SetActive(false);
         }
 
@@ -542,6 +550,8 @@ namespace MusiyoBetsknate.Museum
             // The examined model fills the view, so its keys stay readable even with the stand out of sight.
             if (!visitFlow.BlocksInput && interaction.State == InteractionState.ModelExamination && lectern.InWorld)
                 prompt = MuseumInterfaceText.Get("examination_controls").Trim();
+            // The orientation menu covers the same corner; its own title says where the visitor is.
+            if (interaction.GetComponent<MuseumWayfinding>()?.MenuOpen == true) prompt = "";
             stationText.text = prompt;
             stationText.gameObject.SetActive(!string.IsNullOrEmpty(prompt));
             returnButton.gameObject.SetActive(exploring && !welcome && farewell != null && farewell.AtEnd && farewell.CanReturn);

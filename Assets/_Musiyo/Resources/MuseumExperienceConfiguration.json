@@ -39,5 +39,7 @@
   "muted_text_color": "#C2CCBE",
   "secondary_accent_color": "#B86850",
   "entry_backdrop": "museum",
-  "entry_mask_element": "matachin-mask"
+  "entry_mask_element": "matachin-mask",
+  "header_hint_seconds": 8,
+  "controls_hint_seconds": 20
 }

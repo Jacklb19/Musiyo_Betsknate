@@ -6,6 +6,8 @@
     "arrival_body": "Exploración libre. Ruta sugerida de unos {0} minutos: {1}.\nAcércate a un punto o míralo para activarlo. {input:next} y {input:confirm} lo seleccionan con el teclado. Cada punto muestra sus elementos, su ficha y su narración con transcripción.\n{input:wayfinding}: orientación opcional · {input:guide}: guía · {input:pause}: pausa y ajustes",
     "guide_name": "Guía",
     "guide_prompt": "{0} · {input:guide}: conversar con el guía",
+    "hud_controls": "{input:move_forward} {input:move_left} {input:move_back} {input:move_right}: caminar · {input:sprint}: más rápido · Clic: mirar con el ratón\n{input:next}: elegir punto · {input:interact}: activar · {input:detail}: ficha · {input:wayfinding}: orientación · {input:guide}: guía · {input:pause}: pausa",
+    "hud_controls_xr": "Palanca izquierda: caminar · Palanca derecha: girar · Gatillo: elegir · Botón de menú: pausa",
     "guide_ready": "Escribe tu pregunta sobre el museo y pulsa {input:confirm}. Cada respuesta cita las fichas en que se basa.",
     "guide_sending": "Buscando en las fichas del museo…",
     "guide_answered": "Respuesta basada en las fichas citadas:",
