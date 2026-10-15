@@ -71,6 +71,70 @@ namespace MusiyoBetsknate.Tests
         }
 
         [UnityTest]
+        public IEnumerator ApproachOpensAPointWhereverTheVisitorLooksAndReentryOpensItAgain()
+        {
+            var root = new GameObject("ProximityWithoutGazePlayTest");
+            root.SetActive(false);
+            var runtime = root.AddComponent<TourRuntime>();
+            var interaction = root.AddComponent<MuseumInteraction>();
+            var input = root.AddComponent<DesktopPointInput>();
+            var room = new GameObject("Room");
+            room.transform.SetParent(root.transform);
+            room.AddComponent<RoomAnchor>().Configure("room.test");
+            var pointObject = new GameObject("Point");
+            pointObject.transform.SetParent(room.transform);
+            pointObject.transform.position = Vector3.forward * 3;
+            pointObject.AddComponent<PointAnchor>().Configure("point.test", 1.8f, pointObject.transform);
+            pointObject.AddComponent<TourPoint>();
+            // A wall between the eye and the exhibit, and the visitor looking the other way: neither may hold the point shut.
+            var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            wall.transform.SetParent(root.transform);
+            wall.transform.position = Vector3.forward * 2.4f + Vector3.up;
+            wall.transform.localScale = new Vector3(3, 3, .1f);
+            var observer = new GameObject("Observer");
+            observer.transform.SetParent(root.transform);
+            var camera = new GameObject("Eye").AddComponent<Camera>();
+            camera.transform.SetParent(observer.transform, false);
+            camera.transform.localPosition = Vector3.up * 1.65f;
+            observer.transform.SetPositionAndRotation(Vector3.zero, Quaternion.Euler(0, 180, 0));
+            input.Configure(observer.transform, camera);
+            root.SetActive(true);
+            try
+            {
+                var contract = new TourContractV1 { schema_version = 1,
+                    tour = new TourMetadataContractV1 { key = "museum-main", name = "Test" },
+                    rooms = new[] { new RoomContractV1 { key = "room.test", name = "Test", order = 0,
+                        points = new[] { new PointContractV1 { key = "point.test", name = "Test", order = 0,
+                            activation = new[] { "proximity" },
+                            elements = new[] { new ElementSummaryContractV1 { slug = "synthetic-element", title = "Test" } } } } } }
+                };
+                Assert.That(runtime.Apply(contract, out var error), Is.True, error);
+                yield return new WaitForSecondsRealtime(.6f);
+                Assert.That(interaction.ActivePoint, Is.Null, "Outside the radius nothing opens.");
+                observer.transform.position = Vector3.forward * 1.6f;
+                float opened = Time.realtimeSinceStartup;
+                float limit = opened + 3;
+                while (interaction.ActivePoint == null && Time.realtimeSinceStartup < limit) yield return null;
+                Assert.That(interaction.ActivePoint, Is.Not.Null, "Approaching opens the point facing away and behind a wall.");
+                Assert.That(Time.realtimeSinceStartup - opened, Is.LessThan(MuseumExperienceConfiguration.Current.PointOpenSeconds + .5f));
+                Assert.That(interaction.LastSource, Is.EqualTo(ActivationSource.Proximity));
+
+                interaction.Close();
+                yield return new WaitForSecondsRealtime(.8f);
+                Assert.That(interaction.ActivePoint, Is.Null, "A point the visitor closed stays closed while they stay.");
+
+                observer.transform.position = Vector3.back * 2;
+                yield return new WaitForSecondsRealtime(.3f);
+                observer.transform.position = Vector3.forward * 1.6f;
+                limit = Time.realtimeSinceStartup + 3;
+                while (interaction.ActivePoint == null && Time.realtimeSinceStartup < limit) yield return null;
+                Assert.That(interaction.ActivePoint, Is.Not.Null, "Stepping out and back in opens it again.");
+            }
+            finally { Object.Destroy(root); }
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator ApproachingAnotherPointOpensItOnceTheVisitorHasLeftTheActiveOne()
         {
             var root = new GameObject("PointTakeoverPlayTest");

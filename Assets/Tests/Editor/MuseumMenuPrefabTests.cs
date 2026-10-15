@@ -299,9 +299,11 @@ namespace MusiyoBetsknate.Tests
             MuseumInput.Current.SetSpatial(true);
             menu.SetSpatial(true);
             menu.View.Main.Controls.onClick.Invoke();
-            Assert.That(menu.View.Controls.Description.text, Does.Contain("Quest 2"));
+            // The device in use is a Quest 3 while Quest 2 stays the reference, so the guidance names neither.
+            Assert.That(menu.View.Controls.Description.text, Does.Contain("visor").And.Not.Contain("Quest 2"));
             var hints = Array.Find(menu.View.Controls.GetComponentsInChildren<MuseumInterfaceLabel>(true), label => label.TextKey == "menu_controls");
-            Assert.That(hints.GetComponent<TMPro.TMP_Text>().text, Does.Contain("gatillo").And.Contain("Botón Y"));
+            Assert.That(hints.GetComponent<TMPro.TMP_Text>().text, Does.Contain("gatillo").And.Contain("Botón Y")
+                .And.Contain("Agarre").And.Contain("Botón B"), "Grabbing and the automatic tour are explained on the controls page.");
             Assert.That(menu.View.Controls.Bindings.gameObject.activeSelf, Is.False);
             Assert.That(menu.View.Controls.RestoreBindings.gameObject.activeSelf, Is.False);
             Assert.That(menu.View.Controls.Back.gameObject.activeInHierarchy, Is.True);
@@ -310,8 +312,27 @@ namespace MusiyoBetsknate.Tests
             menu.View.Main.Settings.onClick.Invoke();
             Assert.That(menu.View.Settings.Sensitivity.gameObject.activeSelf, Is.False);
             Assert.That(EventSystem.current.currentSelectedGameObject, Is.SameAs(menu.View.Settings.Volume.gameObject));
+            // Headset turning: continuous by default, steps on request, each with its own caption.
+            var turning = menu.TurnModeButton.GetComponentInChildren<TMPro.TMP_Text>();
+            Assert.That(menu.TurnModeButton.gameObject.activeInHierarchy, Is.True);
+            Assert.That(turning.text, Is.EqualTo(MuseumInterfaceText.Get("turn_mode_continuous")));
+            Assert.That(menu.TurnSpeedButton.gameObject.activeInHierarchy, Is.True);
+            menu.TurnModeButton.onClick.Invoke();
+            Assert.That(menu.Preferences.Turn(MuseumTurnMode.Continuous), Is.EqualTo(MuseumTurnMode.Snap));
+            Assert.That(turning.text, Is.EqualTo(MuseumInterfaceText.Get("turn_mode_snap")));
+            Assert.That(menu.TurnSpeedButton.gameObject.activeSelf, Is.False, "Speed only applies to continuous turning.");
+            menu.TurnModeButton.onClick.Invoke();
+            float speed = MuseumXrConfiguration.Current.TurnSpeed(menu.Preferences.TurnSpeed);
+            menu.TurnSpeedButton.onClick.Invoke();
+            Assert.That(MuseumXrConfiguration.Current.TurnSpeed(menu.Preferences.TurnSpeed), Is.Not.EqualTo(speed));
+            Assert.That(menu.TurnSpeedButton.GetComponentInChildren<TMPro.TMP_Text>().text,
+                Does.Contain(MuseumXrConfiguration.Current.TurnSpeed(menu.Preferences.TurnSpeed).ToString()));
+            menu.View.Settings.Reset.onClick.Invoke();
+            Assert.That(menu.Preferences.TurnMode, Is.Null);
             menu.SetSpatial(false);
             Assert.That(menu.View.Settings.Sensitivity.gameObject.activeSelf, Is.True);
+            Assert.That(menu.TurnModeButton.gameObject.activeSelf, Is.False, "A desktop has no headset turning.");
+            Assert.That(menu.TurnSpeedButton.gameObject.activeSelf, Is.False);
         }
 
         [Test]

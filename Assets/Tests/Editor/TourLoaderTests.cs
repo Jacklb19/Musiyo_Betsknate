@@ -34,8 +34,20 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(states, Is.EqualTo(new[] { TourLoadState.Loading, TourLoadState.Unavailable }));
                 Assert.That(loader.State, Is.EqualTo(TourLoadState.Unavailable));
                 Assert.That(loader.Status, Is.EqualTo(MuseumInterfaceText.Get("tour_unavailable")));
+                Assert.That(loader.RetryScheduled, Is.True, "An unreachable service is tried again without the visitor's help.");
+                Assert.That(loader.RetryInSeconds, Is.EqualTo(MuseumExperienceConfiguration.Current.ServiceRetrySeconds[0]).Within(.5f));
             }
             finally { UnityEngine.Object.DestroyImmediate(root); }
+        }
+
+        [Test]
+        public void RetriesWaitLongerEachTimeUpToTheLastConfiguredWait()
+        {
+            var waits = new[] { 5f, 10f, 30f };
+            Assert.That(TourLoader.RetryDelay(waits, 1), Is.EqualTo(5));
+            Assert.That(TourLoader.RetryDelay(waits, 2), Is.EqualTo(10));
+            Assert.That(TourLoader.RetryDelay(waits, 3), Is.EqualTo(30));
+            Assert.That(TourLoader.RetryDelay(waits, 12), Is.EqualTo(30));
         }
 
         [Test]
