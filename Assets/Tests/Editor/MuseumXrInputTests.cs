@@ -78,6 +78,65 @@ namespace MusiyoBetsknate.Tests
             Assert.That(input.Pause.WasPressedThisFrame(), Is.True);
         }
 
+        private (OculusTouchControllerProfile.OculusTouchController left, OculusTouchControllerProfile.OculusTouchController right) AddControllers()
+        {
+            InputSystem.RegisterLayout<UnityEngine.XR.OpenXR.Input.HapticControl>("Haptic");
+            InputSystem.RegisterLayout<UnityEngine.XR.OpenXR.Input.PoseControl>("Pose");
+            InputSystem.RegisterLayout(typeof(OculusTouchControllerProfile.OculusTouchController),
+                matches: new UnityEngine.InputSystem.Layouts.InputDeviceMatcher()
+                    .WithInterface("XRInputV1").WithProduct("Oculus Touch Controller OpenXR"));
+            var description = new UnityEngine.InputSystem.Layouts.InputDeviceDescription
+            {
+                interfaceName = "XRInputV1", manufacturer = "OpenXR", product = "Oculus Touch Controller OpenXR Left",
+                capabilities = JsonUtility.ToJson(new UnityEngine.InputSystem.XR.XRDeviceDescriptor
+                {
+                    inputFeatures = new System.Collections.Generic.List<UnityEngine.InputSystem.XR.XRFeatureDescriptor>
+                    {
+                        new UnityEngine.InputSystem.XR.XRFeatureDescriptor
+                        { name = "thumbstick", featureType = UnityEngine.InputSystem.XR.FeatureType.Axis2D }
+                    }
+                })
+            };
+            var left = (OculusTouchControllerProfile.OculusTouchController)InputSystem.AddDevice(description);
+            description.product = "Oculus Touch Controller OpenXR Right";
+            var right = (OculusTouchControllerProfile.OculusTouchController)InputSystem.AddDevice(description);
+            InputSystem.SetDeviceUsage(left, "LeftHand"); InputSystem.SetDeviceUsage(right, "RightHand");
+            return (left, right);
+        }
+
+        [Test]
+        public void ControllerTurningGrabbingRunningAndTheTourStaySilentInMenus()
+        {
+            var (left, right) = AddControllers();
+            input.SetSpatial(true);
+            input.SetContext(MuseumInputContext.Menu);
+            Set(right.thumbstick, Vector2.right);
+            Press(right.gripPressed);
+            Press(right.secondaryButton);
+            Press(left.thumbstickClicked);
+            Assert.That(input.Turn.ReadValue<Vector2>(), Is.EqualTo(Vector2.zero), "A menu never turns the visitor.");
+            Assert.That(input.Grab.IsPressed(), Is.False, "A menu never takes a piece.");
+            Assert.That(input.AutoTour.WasPressedThisFrame(), Is.False);
+            Assert.That(input.Sprint.WasPressedThisFrame(), Is.False);
+            Release(right.gripPressed); Release(right.secondaryButton); Release(left.thumbstickClicked);
+            Set(right.thumbstick, Vector2.zero);
+
+            input.SetContext(MuseumInputContext.Visit);
+            Set(right.thumbstick, new Vector2(.6f, 0));
+            Assert.That(input.Turn.ReadValue<Vector2>().x, Is.EqualTo(.6f).Within(.01f), "The right stick's sideways value reaches turning.");
+            Press(right.gripPressed);
+            Assert.That(input.Grab.WasPressedThisFrame(), Is.True);
+            Press(right.secondaryButton);
+            Assert.That(input.AutoTour.WasPressedThisFrame(), Is.True);
+            Press(left.thumbstickClicked);
+            Assert.That(input.Sprint.WasPressedThisFrame(), Is.True);
+            Assert.That(input.Click.IsPressed(), Is.False, "The grip and the buttons never act as the trigger.");
+
+            input.SetContext(MuseumInputContext.Typing);
+            Assert.That(input.Grab.enabled, Is.False);
+            Assert.That(input.Turn.enabled, Is.False);
+        }
+
         [Test]
         public void SpatialModuleUsesTheSharedTrackedActionsAndWorldOrigin()
         {
@@ -101,7 +160,7 @@ namespace MusiyoBetsknate.Tests
 
         [TestCase("menu_distance", "0")]
         [TestCase("walk_speed", "10")]
-        [TestCase("snap_turn_degrees", "90")]
+        [TestCase("snap_turn_degrees", "120")]
         public void UnsafeSpatialConfigurationIsRejected(string property, string value)
         {
             var json = Resources.Load<TextAsset>("MuseumXrConfiguration").text;

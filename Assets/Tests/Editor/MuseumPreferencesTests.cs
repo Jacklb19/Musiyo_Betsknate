@@ -28,7 +28,7 @@ namespace MusiyoBetsknate.Tests
         }
 
         [TestCase("invalid")]
-        [TestCase("{\"schema_version\":2,\"sensitivity\":0.3,\"volume\":0.5,\"subtitles\":false}")]
+        [TestCase("{\"schema_version\":3,\"sensitivity\":0.3,\"volume\":0.5,\"subtitles\":false}")]
         [TestCase("{\"schema_version\":1,\"sensitivity\":-3,\"volume\":0.5,\"subtitles\":false}")]
         [TestCase("{\"schema_version\":1,\"sensitivity\":0.3,\"volume\":9,\"subtitles\":false}")]
         [TestCase("{\"sensitivity\":0.3,\"volume\":0.5,\"subtitles\":false}")]
@@ -42,6 +42,30 @@ namespace MusiyoBetsknate.Tests
         }
 
         [Test]
+        public void TurningChoiceIsSavedAndEarlierPreferencesKeepTheirValues()
+        {
+            var settings = MuseumExperienceConfiguration.Current;
+            var earlier = MuseumVisitorPreferences.Load(settings,
+                "{\"schema_version\":1,\"sensitivity\":0.3,\"volume\":0.5,\"subtitles\":false}");
+            Assert.That(earlier.Sensitivity, Is.EqualTo(.3f));
+            Assert.That(earlier.Turn(MuseumTurnMode.Continuous), Is.EqualTo(MuseumTurnMode.Continuous),
+                "A visitor who never chose follows the shipped default.");
+            earlier.SetTurnMode(MuseumTurnMode.Snap);
+            earlier.SetTurnSpeed(105);
+            var loaded = MuseumVisitorPreferences.Load(settings, earlier.Serialize());
+            Assert.That(loaded.Turn(MuseumTurnMode.Continuous), Is.EqualTo(MuseumTurnMode.Snap));
+            Assert.That(loaded.TurnSpeed, Is.EqualTo(105));
+            loaded.Reset();
+            Assert.That(loaded.TurnMode, Is.Null);
+            Assert.That(loaded.TurnSpeed, Is.EqualTo(0));
+            var odd = MuseumVisitorPreferences.Load(settings,
+                "{\"schema_version\":2,\"sensitivity\":0.3,\"volume\":0.5,\"subtitles\":true,\"turn_mode\":\"spin\",\"turn_speed\":9000}");
+            Assert.That(odd.TurnMode, Is.Null);
+            Assert.That(odd.TurnSpeed, Is.EqualTo(0));
+            Assert.That(odd.Sensitivity, Is.EqualTo(.3f), "An unknown turning value does not discard the other preferences.");
+        }
+
+        [Test]
         public void NonFiniteChangesCannotPoisonAudioOrLookSettings()
         {
             var settings = MuseumExperienceConfiguration.Current;
@@ -52,7 +76,13 @@ namespace MusiyoBetsknate.Tests
             Assert.That(preferences.Sensitivity, Is.EqualTo(settings.DefaultSensitivity));
         }
 
-        [TestCase("schema_version", 5)]
+        [TestCase("schema_version", 4)]
+        [TestCase("point_open_seconds", -1)]
+        [TestCase("model_load_frame_budget_ms", 0)]
+        [TestCase("grab_return_seconds", 0)]
+        [TestCase("reading_follow_line", 1)]
+        [TestCase("auto_tour_speed", 9)]
+        [TestCase("auto_tour_stuck_seconds", 0)]
         [TestCase("entry_glide_seconds", 0)]
         [TestCase("entry_glide_max_distance", -1)]
         [TestCase("entry_backdrop_color", "see-through")]

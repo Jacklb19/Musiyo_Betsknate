@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -167,6 +168,23 @@ namespace MusiyoBetsknate.Tests
                 for (float waited = 0; narration.Subtitle != "Audio sintético de prueba." && waited < 5; waited += Time.unscaledDeltaTime) yield return null;
                 Assert.That(narration.Subtitle, Is.EqualTo("Audio sintético de prueba."), "The WebVTT cue in force is shown.");
 
+                // The panel follows the fragment being heard, found in the transcription from the published cues.
+                var reading = UnityEngine.Object.FindAnyObjectByType<MuseumNarrationReading>();
+                Assert.That(reading, Is.Not.Null);
+                for (float waited = 0; !reading.Aligned && waited < 3; waited += Time.unscaledDeltaTime) yield return null;
+                Assert.That(reading.Aligned, Is.True, "The synthetic cues are found in the transcription.");
+                Assert.That(reading.ActiveCue, Is.EqualTo(0));
+                var transcriptText = UnityEngine.Object.FindObjectsByType<TMPro.TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                    .First(text => text.name == "NarrationStatus");
+                Assert.That(transcriptText.text, Does.Contain(Transcript), "The transcription is shown literally, without markup.");
+                Assert.That(transcriptText.richText, Is.False, "Service text is never parsed as rich text.");
+                var follow = UnityEngine.Object.FindObjectsByType<UnityEngine.UI.Button>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                    .First(button => button.name == "FollowNarration");
+                Assert.That(follow.gameObject.activeSelf, Is.False, "Following needs no button while it follows.");
+                reading.Suspend();
+                Assert.That(reading.Following, Is.False, "Scrolling by hand stops following.");
+                Assert.That(follow.gameObject.activeSelf, Is.True, "The visitor can ask to follow again.");
+
                 // Walking away pauses where it was; coming back resumes from there.
                 var near = visitor.transform.position;
                 var radius = point.Anchor.ActivationRadius + MuseumExperienceConfiguration.Current.PointLeaveMargin + 1;
@@ -195,6 +213,9 @@ namespace MusiyoBetsknate.Tests
                 narration.Repeat();
                 yield return null;
                 Assert.That(narration.PlaybackTime, Is.LessThan(.3f), "Repeat starts from the beginning.");
+                yield return null;
+                Assert.That(reading.Following, Is.True, "Repeating follows the narration again.");
+                Assert.That(reading.ActiveCue, Is.EqualTo(0), "Back at the first fragment.");
 
                 interaction.SetPaused(true);
                 Assert.That(narration.State, Is.EqualTo(NarrationState.Paused), "Pausing the visit pauses the narration.");
