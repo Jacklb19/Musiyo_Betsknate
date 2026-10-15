@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "note": "Third-party set dressing in the museum scene. Only the listed files are in the repository; the downloaded packages stay outside it.",
+  "note": "Third-party set dressing, sky and music of the museum scene. Only the listed files are in the repository; the downloaded packages stay outside it. None of them represents or is attributed to Kamëntsá or Inga culture; plants are neutral greenery with no species or use claimed.",
   "assets": [
     {
       "name": "Wooden Lantern 01",
@@ -37,6 +37,78 @@
       "derivation": "One FBX file extracted unchanged from the package.",
       "files": {
         "Quaternius/CropsPack/Corn_4.fbx": "efa76806e992dcf7fa8597d0b327e06319a81b4d1d6aef9b93251bd54479ef61"
+      }
+    },
+    {
+      "name": "Fern 02",
+      "author": "Rob Tuytel, Rico Cilliers",
+      "publisher": "Poly Haven",
+      "source": "https://polyhaven.com/a/fern_02",
+      "license": "CC0 1.0",
+      "license_url": "https://polyhaven.com/license",
+      "retrieved": "2026-10-15",
+      "source_files_sha256": {
+        "fern_02_1k.gltf": "33974295ee19670af4877705fc7d91f33f42d6302f0d44a625e072271223031f",
+        "fern_02.bin": "fe1abb762bcbbc7ad9e86925c8080437a62add257d9280e9142fdc85c226e64c"
+      },
+      "derivation": "Blender 5.2: the four variants of the 1k glTF exported unchanged in shape to one FBX (meshes only, each with its origin at the centre of its base, named PlanterLeaves_1..4). Colour and OpenGL normal textures copied unchanged; the ARM texture is not used. Used for the planter plants of the arrival path and the courtyard, standing on the measured spots of the delivered stand-ins.",
+      "files": {
+        "PolyHaven/Fern02/fern_02_museum.fbx": "e7630082bac79033f93926d5b27c89d8886f95f8ee101117d113345c5b193a10",
+        "PolyHaven/Fern02/fern_02_diff_1k.jpg": "a828a6e7b4c01c826911e2eac4b3afc7457dab7b3b392a31c681ed88b7d50029",
+        "PolyHaven/Fern02/fern_02_nor_gl_1k.jpg": "45bce132c6e96a0864bc89ab5da51361ab3f4afa83a6669ae499ab5ca811f621"
+      }
+    },
+    {
+      "name": "Flower Empodium",
+      "author": "Jenelle van Heerden, Rico Cilliers",
+      "publisher": "Poly Haven",
+      "source": "https://polyhaven.com/a/flower_empodium",
+      "license": "CC0 1.0",
+      "license_url": "https://polyhaven.com/license",
+      "retrieved": "2026-10-15",
+      "source_files_sha256": {
+        "flower_empodium_1k.gltf": "3f39d6b7dba6de81014f5ce41e43ac1204a45bfe146cbb425515103c4c5e9798",
+        "flower_empodium.bin": "32256fa72adcf06602f5d80d1b98d2042c546bb3c65aa81a871ffbe22c834a5c"
+      },
+      "derivation": "Blender 5.2: the five variants exported to one FBX (meshes only, origin at the base, FlowerClump_1..5; 1 to 3 carry blooms). The red and white colour textures are copies of the original in which only the petal pixels were recoloured, keeping their shading; the yellow one is unchanged. Stands where the delivered flower heads were, in the three colours the delivery gives them.",
+      "files": {
+        "PolyHaven/FlowerEmpodium/flower_empodium_museum.fbx": "0d0d10f8a3e8c42f25f8fa79ba7a57452b39fb3c3b316f8d6f2ffa84ae416d13",
+        "PolyHaven/FlowerEmpodium/flower_empodium_diff_1k.jpg": "eca8de7f24d5612d918ddd02339698f9c44b00ad5a9d2fb61d6acda267786129",
+        "PolyHaven/FlowerEmpodium/flower_empodium_diff_1k_red.jpg": "34692ecd3067ea6c77ad0d735ed8b69d15089c64fbd1f3b9df8776ceab6f69cc",
+        "PolyHaven/FlowerEmpodium/flower_empodium_diff_1k_white.jpg": "dd6470bb283d457a47871ba878103e71e63da755dfe6b8cc1d29b65eb55609b0",
+        "PolyHaven/FlowerEmpodium/flower_empodium_nor_gl_1k.jpg": "c752bc6905810e552816189c7e157d111bb9b64402eab9625271a5b4fad4c1ab"
+      }
+    },
+    {
+      "name": "Kloppenheim 03 (Pure Sky)",
+      "author": "Greg Zaal (original), Jarod Guest (sky edits)",
+      "publisher": "Poly Haven",
+      "source": "https://polyhaven.com/a/kloppenheim_03_puresky",
+      "license": "CC0 1.0",
+      "license_url": "https://polyhaven.com/license",
+      "retrieved": "2026-10-15",
+      "source_files_sha256": {
+        "kloppenheim_03_puresky_4k.hdr": "f906a7334e5d57007fa5516bd141df2ada8fdc3d2ba0c8bdf445d64f1bbb010a"
+      },
+      "derivation": "Blender 5.2 (bundled numpy): the 4k HDR scaled so the median of the upper hemisphere maps to 0.32, an ACES filmic approximation (Narkowicz 2015) and sRGB encoding, saved as a 4096 x 2048 JPEG (quality 92). Chosen over farm_field_puresky and kloofendal_28d_misty_puresky for its broken cloud cover. It is a cloud panorama only, not a view of the Sibundoy valley.",
+      "files": {
+        "PolyHaven/Kloppenheim03PureSky/museum_sky_kloppenheim_03_4k.jpg": "350c2adba0bd70d0ca4c0931c68e9b4da38725c27e62e1608cd81518530f577c"
+      }
+    },
+    {
+      "name": "First Light Particles",
+      "author": "Yoiyami",
+      "publisher": "OpenGameArt",
+      "source": "https://opengameart.org/node/182244",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "retrieved": "2026-10-15",
+      "source_files_sha256": {
+        "first_light_particles.wav": "f0538a1a67450cc1d5e305fad5bc0d5d422ad809f720d695ab356e55fbe40fc5"
+      },
+      "derivation": "Blender 5.2 audio library: the 48 kHz stereo WAV (131.72 s) re-encoded to OGG Vorbis at 160 kbit/s, same length, nothing cut or mixed. Soft piano and synthesizer pads, no percussion and no instrument associated with a particular tradition. The author asks for no attribution and appreciates \"Music by Yoiyami (CC0)\". Looped in the museum with a 9 s crossfade.",
+      "files": {
+        "OpenGameArt/FirstLightParticles/first_light_particles.ogg": "8690569b315b91efd8b7fcc1a477b6925513b137d8cca3ff0ed50e0ee798342e"
       }
     }
   ]

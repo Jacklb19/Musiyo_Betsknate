@@ -70,7 +70,9 @@ namespace MusiyoBetsknate.Tests
                         {
                             materials++;
                             Assert.That(AssetDatabase.GetAssetPath(material), Does.StartWith(MaterialFolder + platform.folder + "/"), renderer.name);
-                            Assert.That(material.shader.name, Is.EqualTo(platform.shader), material.name);
+                            // The lagoon has its own shader on every profile.
+                            Assert.That(material.shader.name, Is.EqualTo(material.name == "M_Agua_Laguna" ? "Musiyo/Lagoon Water" : platform.shader),
+                                material.name);
                         }
                     Assert.That(materials, Is.GreaterThan(150), "Every mesh of the museum carries a profile material.");
                 }
