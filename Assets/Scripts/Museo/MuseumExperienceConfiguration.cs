@@ -52,6 +52,10 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("entry_backdrop")] public string EntryBackdrop = "museum";
         /// <summary>Record whose published model the mask backdrop shows, if the record allows reuse.</summary>
         [JsonProperty("entry_mask_element")] public string EntryMaskElement = "";
+        /// <summary>Seconds the title header stays after the visit starts or resumes.</summary>
+        [JsonProperty("header_hint_seconds")] public float HeaderHintSeconds = 8;
+        /// <summary>Seconds the key reminder stays after the visit starts or resumes.</summary>
+        [JsonProperty("controls_hint_seconds")] public float ControlsHintSeconds = 20;
         private static MuseumExperienceConfiguration current;
 
         public static MuseumExperienceConfiguration Current
@@ -92,6 +96,8 @@ namespace MusiyoBetsknate.Museum
             ColorValue(result.SelectedColor); ColorValue(result.PointerColor);
             ColorValue(result.MutedTextColor); ColorValue(result.SecondaryAccentColor);
             MuseumEntryBackdrop.Parse(result.EntryBackdrop);
+            if (!Positive(result.HeaderHintSeconds) || !Positive(result.ControlsHintSeconds))
+                throw new InvalidOperationException("Invalid museum interface hint durations.");
             return result;
         }
 

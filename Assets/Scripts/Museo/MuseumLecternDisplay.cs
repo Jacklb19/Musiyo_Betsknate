@@ -16,7 +16,10 @@ namespace MusiyoBetsknate.Museum
         private RectTransform panel;
         private Transform screenParent;
         private int screenSibling;
-        private Vector2 screenAnchorMin, screenAnchorMax, screenPivot, screenPosition;
+        private Vector2 screenAnchorMin, screenAnchorMax, screenPivot, screenPosition, screenSize;
+        private ScrollRect scroll;
+        /// <summary>A floating screen is never shorter than this, so its buttons keep their place.</summary>
+        private const float MinimumHeight = 300;
         private RectTransform surface;
         private CanvasGroup group;
         private GraphicRaycaster raycaster;
@@ -48,6 +51,8 @@ namespace MusiyoBetsknate.Museum
             screenAnchorMax = panel.anchorMax;
             screenPivot = panel.pivot;
             screenPosition = panel.anchoredPosition;
+            screenSize = panel.sizeDelta;
+            panel.TryGetComponent(out scroll);
 
             var root = new GameObject("LecternScreen", typeof(RectTransform), typeof(Canvas), typeof(CanvasGroup), typeof(GraphicRaycaster));
             root.transform.SetParent(transform, false);
@@ -134,6 +139,7 @@ namespace MusiyoBetsknate.Museum
                 panel.anchorMax = screenAnchorMax;
                 panel.pivot = screenPivot;
                 panel.anchoredPosition = screenPosition;
+                panel.sizeDelta = screenSize;
             }
             else
             {
@@ -224,6 +230,18 @@ namespace MusiyoBetsknate.Museum
         }
 
         private void Update() => Advance(Time.unscaledDeltaTime);
+
+        /// <summary>A floating screen is as tall as what it shows, up to the height of the screen panel, so short texts leave no empty board.</summary>
+        private void LateUpdate()
+        {
+            if (!InWorld || scroll == null || scroll.viewport == null || scroll.content == null) return;
+            float chrome = panel.rect.height - scroll.viewport.rect.height;
+            float height = Mathf.Clamp(chrome + LayoutUtility.GetPreferredHeight(scroll.content), MinimumHeight, screenSize.y);
+            if (Mathf.Abs(panel.sizeDelta.y - height) < .5f) return;
+            panel.sizeDelta = new Vector2(panel.sizeDelta.x, height);
+            surface.sizeDelta = panel.sizeDelta + Vector2.one * (Border * 2);
+            Apply();
+        }
 
         /// <summary>Moves the fold by one time step; tests call it directly.</summary>
         public void Advance(float elapsed)
