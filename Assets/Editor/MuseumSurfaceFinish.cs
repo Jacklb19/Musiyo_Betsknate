@@ -19,6 +19,26 @@ namespace MusiyoBetsknate.Editor
 
         [JsonProperty("schema_version")] public int SchemaVersion;
         [JsonProperty("macro_variation")] public MacroVariation Macro;
+        [JsonProperty("water")] public WaterSurface Water;
+
+        /// <summary>The lagoon's own shader and its values per profile; the mesh and colliders stay as delivered.</summary>
+        public sealed class WaterSurface
+        {
+            [JsonProperty("material")] public string Material;
+            [JsonProperty("shader")] public string Shader;
+            [JsonProperty("profiles")] public Dictionary<string, WaterProfile> Profiles = new Dictionary<string, WaterProfile>();
+        }
+
+        public sealed class WaterProfile
+        {
+            [JsonProperty("deep_color")] public string DeepColor;
+            [JsonProperty("facing_color")] public string FacingColor;
+            [JsonProperty("reflection")] public float Reflection;
+            [JsonProperty("wave_length_m")] public float WaveLength;
+            [JsonProperty("wave_slope")] public float WaveSlope;
+            [JsonProperty("wave_speed")] public float WaveSpeed;
+            [JsonProperty("glint")] public float Glint;
+        }
 
         public sealed class MacroVariation
         {
@@ -38,7 +58,44 @@ namespace MusiyoBetsknate.Editor
                 throw new InvalidOperationException("Invalid museum surface finish: " + AssetPath);
             foreach (var period in finish.Macro.TexturePeriods.Values)
                 if (!(period > 0)) throw new InvalidOperationException("Invalid texture period in " + AssetPath);
+            if (finish.Water != null)
+            {
+                if (string.IsNullOrEmpty(finish.Water.Material) || string.IsNullOrEmpty(finish.Water.Shader))
+                    throw new InvalidOperationException("Invalid water surface in " + AssetPath);
+                foreach (var water in finish.Water.Profiles.Values)
+                    if (water == null || !(water.WaveLength > 0) || water.Reflection < 0 || water.Reflection > 1 || water.WaveSlope < 0
+                        || water.WaveSpeed < 0 || water.Glint < 0 || !ColorUtility.TryParseHtmlString(water.DeepColor, out _)
+                        || !ColorUtility.TryParseHtmlString(water.FacingColor, out _))
+                        throw new InvalidOperationException("Invalid water profile in " + AssetPath);
+            }
             return finish;
+        }
+
+        /// <summary>Water values for a profile's material, or null when the material is not the lagoon's.</summary>
+        public WaterProfile WaterFor(string profile, string material)
+            => Water != null && Water.Material == material && Water.Profiles.TryGetValue(profile, out var water) ? water : null;
+
+        /// <summary>Gives a delivered material the lagoon shader with the profile's values.</summary>
+        public void ApplyWater(Material material, WaterProfile water)
+        {
+            var shader = UnityEngine.Shader.Find(Water.Shader);
+            if (shader == null) throw new InvalidOperationException("Missing shader: " + Water.Shader);
+            var defaults = new Material(shader);
+            material.shader = shader;
+            material.CopyPropertiesFromMaterial(defaults);
+            UnityEngine.Object.DestroyImmediate(defaults);
+            material.shaderKeywords = new string[0];
+            ColorUtility.TryParseHtmlString(water.DeepColor, out var deep);
+            ColorUtility.TryParseHtmlString(water.FacingColor, out var facing);
+            material.SetColor("_DeepColor", deep);
+            material.SetColor("_ShallowColor", facing);
+            material.SetTexture("_SkyTex", AssetDatabase.LoadAssetAtPath<Texture2D>(MuseumAtmosphereTools.PanoramaPath));
+            material.SetFloat("_Reflection", water.Reflection);
+            material.SetFloat("_WaveLength", water.WaveLength);
+            material.SetFloat("_WaveSlope", water.WaveSlope);
+            material.SetFloat("_WaveSpeed", water.WaveSpeed);
+            material.SetFloat("_Glint", water.Glint);
+            material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
         }
 
         public bool Varies(string profile, string material)

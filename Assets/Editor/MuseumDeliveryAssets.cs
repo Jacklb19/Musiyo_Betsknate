@@ -67,7 +67,8 @@ namespace MusiyoBetsknate.Editor
             foreach (var profile in manifest.Profiles)
             {
                 var shader = Shader.Find(profile.Shader);
-                foreach (var entry in profile.Materials.Where(entry => finish.Macro.TexturePeriods.ContainsKey(entry.Name)))
+                foreach (var entry in profile.Materials.Where(entry => finish.Macro.TexturePeriods.ContainsKey(entry.Name)
+                    || finish.WaterFor(profile.Name, entry.Name) != null))
                 {
                     var material = AssetDatabase.LoadAssetAtPath<Material>(MuseumDeliveryManifest.MaterialPath(profile.Name, entry.Name));
                     Apply(material, shader, entry, profile.Name);
@@ -131,6 +132,10 @@ namespace MusiyoBetsknate.Editor
 
         private static void Apply(Material material, Shader shader, MuseumDeliveryManifest.MaterialEntry entry, string profile)
         {
+            // The lagoon has its own shader; see the water section of surface_finish.json.
+            var surface = MuseumSurfaceFinish.Load();
+            var water = surface.WaterFor(profile, entry.Name);
+            if (water != null) { surface.ApplyWater(material, water); return; }
             // Start from the shader defaults so a rebuilt material keeps nothing from an earlier delivery.
             var defaults = new Material(shader);
             material.shader = shader;
