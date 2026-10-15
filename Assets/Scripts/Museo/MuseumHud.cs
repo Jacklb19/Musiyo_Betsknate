@@ -452,7 +452,8 @@ namespace MusiyoBetsknate.Museum
             foreach (var button in new[] { carouselPrevious, carouselNext })
             {
                 var layout = button.GetComponent<LayoutElement>();
-                layout.preferredWidth = 150;
+                // Wide enough for "Siguiente" on one line; the counter takes what is left.
+                layout.minWidth = layout.preferredWidth = 170;
                 layout.flexibleWidth = 0;
             }
             carousel.SetActive(false);
