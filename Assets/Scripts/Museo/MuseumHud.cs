@@ -101,8 +101,12 @@ namespace MusiyoBetsknate.Museum
             farewell.Configure(visitorTransform);
             var entry = interaction.GetComponent<MuseumEntryView>();
             if (entry == null) entry = interaction.gameObject.AddComponent<MuseumEntryView>();
+            var backdrop = interaction.GetComponent<MuseumEntryBackdrop>();
+            if (backdrop == null) backdrop = interaction.gameObject.AddComponent<MuseumEntryBackdrop>();
+            var settings = MuseumExperienceConfiguration.Current;
+            backdrop.Configure(MuseumEntryBackdrop.Parse(settings.EntryBackdrop), () => loader.ApiBase, settings.EntryMaskElement);
             entry.Configure(visitor != null ? visitor.GetComponentInChildren<Camera>() : null, visitorTransform,
-                interaction.GetComponentInChildren<MuseumEntryViewpoint>(true));
+                interaction.GetComponentInChildren<MuseumEntryViewpoint>(true), backdrop);
             var menu = GetComponent<MuseumMenuHud>();
             if (menu == null) menu = gameObject.AddComponent<MuseumMenuHud>();
             menu.Configure(visitFlow, interaction, loader, preferences, menuPrefab);

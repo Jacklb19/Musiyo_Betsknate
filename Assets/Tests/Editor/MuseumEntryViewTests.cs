@@ -163,6 +163,93 @@ namespace MusiyoBetsknate.Tests
             Assert.That(flow.Transition, Is.EqualTo(EntryTransition.Fade));
         }
 
+        [TestCase(null, EntryBackdropKind.Museum)]
+        [TestCase("museum", EntryBackdropKind.Museum)]
+        [TestCase(" Dark ", EntryBackdropKind.Dark)]
+        [TestCase("hearth", EntryBackdropKind.Hearth)]
+        [TestCase("mask", EntryBackdropKind.Mask)]
+        public void BackdropChoicesAreReadFromConfiguration(string value, EntryBackdropKind expected)
+            => Assert.That(MuseumEntryBackdrop.Parse(value), Is.EqualTo(expected));
+
+        [Test]
+        public void TheMuseumStaysTheEntryUntilAnotherBackdropIsChosen()
+        {
+            Assert.That(MuseumEntryBackdrop.Parse(configuration.EntryBackdrop), Is.EqualTo(EntryBackdropKind.Museum));
+            Assert.Throws<System.InvalidOperationException>(() => MuseumEntryBackdrop.Parse("forest"));
+        }
+
+        [Test]
+        public void AScenicBackdropSetsTheDaylightAsideAndTheGlideStillEndsAtTheEyes()
+        {
+            var sun = new GameObject("EntryTestSun").AddComponent<Light>();
+            sun.type = LightType.Directional;
+            var ambient = RenderSettings.ambientLight;
+            var ambientMode = RenderSettings.ambientMode;
+            bool fog = RenderSettings.fog;
+            var backdrop = root.AddComponent<MuseumEntryBackdrop>();
+            try
+            {
+                backdrop.Configure(EntryBackdropKind.Hearth);
+                entry.Configure(visitorCamera, visitor.transform, viewpoint, backdrop);
+                Assert.That(entry.BackdropActive, Is.True);
+                var stage = entry.StageCamera;
+                Assert.That(Vector3.Distance(stage.transform.position, backdrop.CameraPose.position), Is.LessThan(.001f));
+                Assert.That(backdrop.Shown, Is.True);
+                Assert.That(sun.enabled, Is.False, "The museum's daylight does not reach the set.");
+                Assert.That(stage.clearFlags, Is.EqualTo(CameraClearFlags.SolidColor));
+
+                flow.BeginVisit();
+                Assert.That(flow.Transition, Is.EqualTo(EntryTransition.Glide));
+                Assert.That(flow.TransitionSeconds, Is.EqualTo(configuration.EntryGlideSeconds + configuration.EntryFadeSeconds).Within(.001f));
+                Advance(configuration.EntryMenuFadeShare * .5f);
+                Assert.That(backdrop.Shown, Is.True, "The set stays while the screen goes dark.");
+                Advance(configuration.EntryMenuFadeShare * .6f);
+                Assert.That(backdrop.Shown, Is.False);
+                Assert.That(sun.enabled, Is.True);
+                Assert.That(RenderSettings.ambientLight, Is.EqualTo(ambient));
+                Assert.That(RenderSettings.ambientMode, Is.EqualTo(ambientMode));
+                Assert.That(RenderSettings.fog, Is.EqualTo(fog));
+                Assert.That(stage.clearFlags, Is.Not.EqualTo(CameraClearFlags.SolidColor).Or.EqualTo(visitorCamera.clearFlags));
+                Assert.That(Vector3.Distance(stage.transform.position, anchor.transform.position), Is.LessThan(.15f),
+                    "The glide starts at the museum viewpoint once the set is gone.");
+                Advance(1);
+                Assert.That(flow.Phase, Is.EqualTo(VisitPhase.Exploring));
+                Assert.That(entry.Staged, Is.False);
+                Assert.That(visitorCamera.enabled, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(sun.gameObject);
+                RenderSettings.ambientLight = ambient;
+                RenderSettings.ambientMode = ambientMode;
+                RenderSettings.fog = fog;
+            }
+        }
+
+        [Test]
+        public void AHeadsetNeverShowsTheScenicBackdrop()
+        {
+            entry.HeadsetActive = () => true;
+            var backdrop = root.AddComponent<MuseumEntryBackdrop>();
+            backdrop.Configure(EntryBackdropKind.Dark);
+            entry.Configure(visitorCamera, visitor.transform, viewpoint, backdrop);
+            Assert.That(entry.BackdropActive, Is.False);
+            Assert.That(backdrop.Shown, Is.False);
+            Assert.That(visitorCamera.enabled, Is.True);
+        }
+
+        [Test]
+        public void ARecordThatRestrictsReuseIsNeverTurnedIntoABackdrop()
+        {
+            Assert.That(MuseumEntryBackdrop.MayDecorate(new MusiyoBetsknate.Museo.ElementContractV1
+            {
+                restrictions = new[] { new MusiyoBetsknate.Museo.RestrictionContractV1 { kind = "no_reuse", description = "Vista previa." } }
+            }), Is.False);
+            Assert.That(MuseumEntryBackdrop.MayDecorate(new MusiyoBetsknate.Museo.ElementContractV1
+            { restrictions = new MusiyoBetsknate.Museo.RestrictionContractV1[0] }), Is.True);
+            Assert.That(MuseumEntryBackdrop.MayDecorate(null), Is.False);
+        }
+
         [Test]
         public void RemovingTheEntryViewReturnsTheVisitorCamera()
         {

@@ -41,9 +41,29 @@ namespace MusiyoBetsknate.Museum
                     Place(column, entryColumn, margin, width, height);
                     rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
                     rect.offsetMin = rect.offsetMax = Vector2.zero;
+                    Fit(page, column, height);
                 }
-                else Place(rect, false, margin, width, height);
+                else
+                {
+                    Place(rect, false, margin, width, height);
+                    Fit(page, rect, height);
+                }
             }
+        }
+
+        /// <summary>
+        /// A page as tall as what it holds, up to its authored height, so short pages leave no empty panel below their
+        /// last option. Longer pages keep scrolling.
+        /// </summary>
+        private static void Fit(MuseumMenuPageView page, RectTransform frame, float height)
+        {
+            var scroll = page.Scroll;
+            if (scroll == null || scroll.viewport == null || scroll.content == null || !page.gameObject.activeInHierarchy) return;
+            LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)page.transform);
+            float chrome = frame.rect.height - scroll.viewport.rect.height;
+            float content = LayoutUtility.GetPreferredHeight(scroll.content);
+            if (chrome <= 0 || content <= 0) return;
+            frame.sizeDelta = new Vector2(frame.sizeDelta.x, Mathf.Min(height, chrome + content));
         }
         private static void Place(RectTransform rect, bool left, float margin, float width, float height)
         {
