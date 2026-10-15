@@ -1,5 +1,5 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "entry_fade_seconds": 1.1,
   "entry_menu_fade_share": 0.4,
   "entry_glide_seconds": 2.6,
@@ -40,6 +40,19 @@
   "secondary_accent_color": "#B86850",
   "entry_backdrop": "museum",
   "entry_mask_element": "matachin-mask",
-  "header_hint_seconds": 8,
-  "controls_hint_seconds": 20
+  "point_open_seconds": 0.25,
+  "service_retry_seconds": [5, 10, 20, 30],
+  "model_load_frame_budget_ms": 4,
+  "model_cache_entries": 2,
+  "model_cache_bytes": 20000000,
+  "grab_return_seconds": 0.45,
+  "grab_desktop_distance": 0.75,
+  "grab_desktop_reach": 3.0,
+  "grab_desktop_rotation": 0.35,
+  "reading_follow_line": 0.3,
+  "reading_follow_seconds": 0.35,
+  "auto_tour_speed": 0.7,
+  "auto_tour_acceleration": 0.8,
+  "auto_tour_stop_seconds": 6,
+  "auto_tour_stuck_seconds": 3
 }

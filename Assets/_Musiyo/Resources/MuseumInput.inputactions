@@ -368,7 +368,7 @@
           "initialStateCheck": false
         },
         {
-          "name": "SnapTurn",
+          "name": "Turn",
           "type": "Value",
           "id": "8acaff7a-66e4-43e5-a3ce-49ba0b73d211",
           "expectedControlType": "Vector2",
@@ -583,7 +583,18 @@
           "interactions": "",
           "processors": "",
           "groups": "XR",
-          "action": "SnapTurn",
+          "action": "Turn",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "60e13cc0-47fe-4294-b07b-88d8625df021",
+          "path": "<OculusTouchController>{LeftHand}/thumbstickClicked",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "Sprint",
           "isComposite": false,
           "isPartOfComposite": false
         }
@@ -678,6 +689,24 @@
           "name": "ChooseElement",
           "type": "Button",
           "id": "3aad0ceb-a66a-557f-9a9e-2b0613101afc",
+          "expectedControlType": "Button",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": false
+        },
+        {
+          "name": "Grab",
+          "type": "Button",
+          "id": "b1d30cea-98c5-4334-b342-6b57b27ba3ca",
+          "expectedControlType": "Button",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": false
+        },
+        {
+          "name": "AutoTour",
+          "type": "Button",
+          "id": "36b03226-e298-4435-a0c8-1c275b929686",
           "expectedControlType": "Button",
           "processors": "",
           "interactions": "",
@@ -913,6 +942,50 @@
           "processors": "",
           "groups": "XR",
           "action": "ScrollPanel",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "17bcc8c5-8bc3-4c5f-a6d2-7aefb2486435",
+          "path": "<Mouse>/rightButton",
+          "interactions": "",
+          "processors": "",
+          "groups": "KeyboardMouse",
+          "action": "Grab",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "193a797b-e0b1-4ba6-999e-45fec5fda99d",
+          "path": "<OculusTouchController>{RightHand}/gripPressed",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "Grab",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "62932ec6-78b6-4698-b44b-3a85d916bb23",
+          "path": "<Keyboard>/o",
+          "interactions": "",
+          "processors": "",
+          "groups": "KeyboardMouse",
+          "action": "AutoTour",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "27e0b0b6-7c92-4683-822c-3ea1f1dd3798",
+          "path": "<OculusTouchController>{RightHand}/secondaryButton",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "AutoTour",
           "isComposite": false,
           "isPartOfComposite": false
         }

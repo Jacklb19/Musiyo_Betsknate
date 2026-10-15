@@ -180,8 +180,10 @@ namespace MusiyoBetsknate.Museum
             }
             if (input.Interact.WasPressedThisFrame() && nearestPoint != null)
             { interaction.Activate(nearestPoint, ActivationSource.Proximity); return; }
-            bool facing = nearestPoint != null && PointActivation.IsFacing(nearestPoint, viewCamera.transform, 4, 60);
-            if (proximityDwell.Step(nearestPoint != null ? nearestPoint.Anchor.Key : null, facing, Time.unscaledDeltaTime, .8f))
+            // Standing within a point's radius opens it, wherever the visitor looks. The short wait only keeps a step
+            // across the edge from flickering; a point closed by the visitor stays closed until they step out of it.
+            if (proximityDwell.Step(nearestPoint != null ? nearestPoint.Anchor.Key : null, nearestPoint != null,
+                    Time.unscaledDeltaTime, MuseumExperienceConfiguration.Current.PointOpenSeconds))
             { interaction.Activate(nearestPoint, ActivationSource.Proximity); return; }
             if (gazeDwell.Step(gazePoint != null ? gazePoint.Anchor.Key : null, gazePoint != null, Time.unscaledDeltaTime, 1.2f))
                 interaction.Activate(gazePoint, ActivationSource.Gaze);

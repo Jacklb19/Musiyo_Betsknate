@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using Unity.XR.CoreUtils;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
+using UnityEngine.XR;
 using TrackedPoseDriver = UnityEngine.InputSystem.XR.TrackedPoseDriver;
 
 namespace MusiyoBetsknate.Museum
@@ -12,6 +14,8 @@ namespace MusiyoBetsknate.Museum
     /// <summary>Spatial presentation shares the visitor, action asset, views and EventSystem with desktop.</summary>
     public sealed class MuseumXrHost : MonoBehaviour
     {
+        /// <summary>A head cannot turn this far between two frames; such a jump is the tracking space being recentred.</summary>
+        private const float RecenterJumpDegrees = 45;
         private MuseumInput input;
         private MuseumInteraction interaction;
         private MuseumVisitFlow flow;
@@ -25,14 +29,30 @@ namespace MusiyoBetsknate.Museum
         private LineRenderer rayLine;
         private InputSystemUIInputModule module;
         private TrackedDeviceRaycaster menuRaycaster;
+        private readonly MenuPlacementGate menuGate = new MenuPlacementGate();
+        private readonly SnapTurnGate snapTurn = new SnapTurnGate();
+        private readonly List<XRInputSubsystem> subsystems = new List<XRInputSubsystem>();
+        private RoomAnchor[] rooms;
+        private HashSet<string> outdoorRooms;
+        private HashSet<string> outdoorGround;
+        private Color rayColor;
+        private Color reachColor;
+        private float? lastHeadYaw;
         private bool menuVisible;
-        private bool menuPlaced;
-        private bool turnArmed;
         private bool moveArmed;
+        private bool runRequested;
         private float verticalSpeed;
         public XROrigin Origin { get; private set; }
         public Transform TrackingOrigin => trackingOrigin;
         public bool Ready => Origin != null;
+        /// <summary>True while a menu waits for a valid, steady head before it is placed in front of it.</summary>
+        public bool MenuPlacementPending => menuGate.Pending;
+        /// <summary>Walking speed in use, in metres per second; it only exceeds walking outside the museum.</summary>
+        public float Speed { get; private set; }
+        public bool Outdoors { get; private set; }
+        /// <summary>Turning in use: the visitor's choice or the shipped default.</summary>
+        public MuseumTurnMode TurnMode => menu.Preferences?.Turn(configuration.DefaultTurn) ?? configuration.DefaultTurn;
+        public float TurnSpeed => configuration.TurnSpeed(menu.Preferences?.TurnSpeed ?? 0);
 
         public void Configure(DesktopVisitorController desktop, MuseumInteraction state, MuseumMenuHud presenter, Canvas host)
         {
@@ -40,7 +60,7 @@ namespace MusiyoBetsknate.Museum
             if (desktop == null || state == null || presenter == null || host == null || EventSystem.current == null)
                 throw new ArgumentException("Spatial host requires the existing visitor, menu, Canvas and EventSystem.");
             input = MuseumInput.Current;
-            configuration = MuseumXrConfiguration.Load();
+            configuration = MuseumXrConfiguration.Current;
             interaction = state; menu = presenter; canvas = host;
             flow = interaction.GetComponent<MuseumVisitFlow>();
             visitor = desktop.transform; body = desktop.GetComponent<CharacterController>();
@@ -74,6 +94,9 @@ namespace MusiyoBetsknate.Museum
             interaction.GetComponent<MuseumGuide>()?.Configure(head.transform);
             interaction.GetComponent<MuseumFarewell>()?.Configure(head.transform);
             interaction.GetComponent<MuseumWayfinding>()?.Configure(head.transform);
+            interaction.GetComponent<MuseumServiceNotice>()?.Configure(head.transform);
+            interaction.GetComponent<MuseumModelGrab>()?.ConfigureSpatial(trackingOrigin);
+            interaction.GetComponent<MuseumAutoTour>()?.Configure(body, head.transform);
             if (canvas.TryGetComponent<CanvasScaler>(out var scaler)) scaler.enabled = false;
             if (canvas.TryGetComponent<GraphicRaycaster>(out var graphics)) graphics.enabled = false;
             canvas.renderMode = RenderMode.WorldSpace;
@@ -92,26 +115,56 @@ namespace MusiyoBetsknate.Museum
             rayLine.useWorldSpace = true; rayLine.positionCount = 2;
             rayLine.startWidth = .004f; rayLine.endWidth = .002f;
             rayLine.sharedMaterial = Resources.Load<Material>("MuseumXrPointer");
-            rayLine.startColor = rayLine.endColor = MuseumExperienceConfiguration.ColorValue(MuseumExperienceConfiguration.Current.AccentColor);
+            rayColor = MuseumExperienceConfiguration.ColorValue(MuseumExperienceConfiguration.Current.AccentColor);
+            reachColor = MuseumExperienceConfiguration.ColorValue(MuseumExperienceConfiguration.Current.SecondaryAccentColor);
+            rayLine.startColor = rayLine.endColor = rayColor;
             rayLine.enabled = false;
-            PlaceMenu();
+            rooms = interaction.Runtime.GetComponentsInChildren<RoomAnchor>(true);
+            outdoorRooms = new HashSet<string>(configuration.OutdoorRooms, StringComparer.Ordinal);
+            outdoorGround = new HashSet<string>(configuration.OutdoorGroundObjects, StringComparer.Ordinal);
+            Speed = configuration.WalkSpeed;
+            // The first menu waits for a real head pose; the visitor may be looking anywhere when the application starts.
             menuVisible = VisibleMenu;
+            if (menuVisible) RequestMenuPlacement();
             flow.Changed += RefreshPosition;
             interaction.Changed += RefreshPosition;
+            SubsystemManager.GetSubsystems(subsystems);
+            foreach (var subsystem in subsystems) subsystem.trackingOriginUpdated += OnTrackingOriginUpdated;
         }
 
         private bool VisibleMenu => flow.Phase == VisitPhase.Menu || interaction.State == InteractionState.Paused;
+        private bool HeadTracked => (input.HeadState.ReadValue<int>() & 3) == 3;
+
         private void RefreshPosition()
         {
             bool visible = VisibleMenu;
-            if (visible && !menuVisible) PlaceMenu();
+            // Every opening is placed anew in front of the gaze; while it stays open it stays where it is.
+            if (visible && !menuVisible) RequestMenuPlacement();
+            if (!visible) menuGate.Cancel();
             menuVisible = visible;
+            ShowCanvas();
         }
+
+        /// <summary>The system recentred the view: an open menu moves in front of the new forward direction.</summary>
+        private void OnTrackingOriginUpdated(XRInputSubsystem subsystem)
+        {
+            if (menuVisible) RequestMenuPlacement();
+        }
+
+        private void RequestMenuPlacement()
+        {
+            menuGate.Request();
+            ShowCanvas();
+        }
+
+        /// <summary>A menu waiting for its place stays hidden instead of showing at the side of the view.</summary>
+        private void ShowCanvas() => canvas.enabled = !(menuVisible && menuGate.Pending);
 
         /// <summary>The menu stays where it opened. It never pulls the visitor's view along.</summary>
         public void PlaceMenu()
         {
             var forward = Vector3.ProjectOnPlane(head.transform.forward, Vector3.up).normalized;
+            if (forward.sqrMagnitude < .01f) forward = Vector3.ProjectOnPlane(head.transform.up, Vector3.up).normalized;
             if (forward.sqrMagnitude < .01f) forward = visitor.forward;
             canvas.transform.SetPositionAndRotation(head.transform.position + forward * configuration.MenuDistance,
                 Quaternion.LookRotation(forward, Vector3.up));
@@ -120,40 +173,74 @@ namespace MusiyoBetsknate.Museum
         private void Update()
         {
             if (!Ready) return;
-            if ((input.HeadState.ReadValue<int>() & 3) != 3) { turnArmed = moveArmed = false; verticalSpeed = 0; return; }
+            if (!HeadTracked) { StopWalking(); return; }
             bool blocked = flow.BlocksInput || interaction.BlocksMovement || interaction.HoldsVisitor
                 || interaction.GetComponent<MuseumWayfinding>()?.MenuOpen == true || input.Context != MuseumInputContext.Visit
                 || flow.InputConsumedThisFrame;
-            if (blocked) { verticalSpeed = 0; turnArmed = moveArmed = false; return; }
-            var turn = input.SnapTurn.ReadValue<Vector2>().x;
-            if (Mathf.Abs(turn) < .25f) turnArmed = true;
-            if (turnArmed && Mathf.Abs(turn) > .7f)
+            if (blocked) { StopWalking(); return; }
+            var stick = input.Turn.ReadValue<Vector2>();
+            float degrees;
+            if (TurnMode == MuseumTurnMode.Snap) degrees = snapTurn.Step(stick.x, configuration.SnapTurnDegrees);
+            else
             {
-                visitor.RotateAround(head.transform.position, Vector3.up, Mathf.Sign(turn) * configuration.SnapTurnDegrees);
-                turnArmed = false;
+                // Switching to steps while the stick is held must not fire a step at once.
+                snapTurn.Disarm();
+                degrees = MuseumTurning.ContinuousDegrees(stick, configuration.TurnDeadzone, TurnSpeed, Time.deltaTime);
             }
+            // The play area turns around the head, so the view turns in place and head tracking is untouched.
+            if (degrees != 0) visitor.RotateAround(head.transform.position, Vector3.up, degrees);
             var move = Vector2.ClampMagnitude(input.Move.ReadValue<Vector2>(), 1);
-            if (move.sqrMagnitude < .04f) moveArmed = true;
+            if (move.sqrMagnitude < .04f) { moveArmed = true; runRequested = false; }
             if (!moveArmed) move = Vector2.zero;
+            if (input.Sprint.WasPressedThisFrame() && move.sqrMagnitude >= .04f) runRequested = !runRequested;
+            Outdoors = runRequested && MuseumOutdoors.Contains(Feet(), rooms, outdoorRooms, outdoorGround, visitor);
+            float target = Outdoors ? configuration.RunSpeed : configuration.WalkSpeed;
+            // Running eases in outside and eases out faster at a door, so indoor speed is never exceeded for long.
+            Speed = Mathf.MoveTowards(Speed, target,
+                configuration.RunAcceleration * (target < Speed ? 2 : 1) * Time.deltaTime);
             var forward = Vector3.ProjectOnPlane(head.transform.forward, Vector3.up).normalized;
             var direction = forward * move.y + Vector3.Cross(Vector3.up, forward) * move.x;
             if (body.isGrounded && verticalSpeed < 0) verticalSpeed = -1;
             verticalSpeed += Physics.gravity.y * Time.deltaTime;
-            body.Move((direction * configuration.WalkSpeed + Vector3.up * verticalSpeed) * Time.deltaTime);
+            body.Move((direction * Speed + Vector3.up * verticalSpeed) * Time.deltaTime);
+        }
+
+        private void StopWalking()
+        {
+            verticalSpeed = 0;
+            snapTurn.Disarm();
+            moveArmed = runRequested = Outdoors = false;
+            Speed = configuration.WalkSpeed;
+        }
+
+        /// <summary>Floor point under the visitor's head, where the visitor actually stands in the play area.</summary>
+        private Vector3 Feet()
+        {
+            var feet = visitor.TransformPoint(body.center) - Vector3.up * (body.height * .5f);
+            return new Vector3(head.transform.position.x, feet.y, head.transform.position.z);
         }
 
         private void LateUpdate()
         {
             if (!Ready) return;
-            if (!menuPlaced && (input.HeadState.ReadValue<int>() & 3) == 3) { PlaceMenu(); menuPlaced = true; }
-            bool tracked = input.RightTracked.IsPressed() && (input.HeadState.ReadValue<int>() & 3) == 3;
+            bool headTracked = HeadTracked;
+            float yaw = head.transform.eulerAngles.y;
+            if (headTracked && lastHeadYaw.HasValue && menuVisible && !menuGate.Pending
+                && Mathf.Abs(Mathf.DeltaAngle(lastHeadYaw.Value, yaw)) > RecenterJumpDegrees)
+                RequestMenuPlacement();
+            lastHeadYaw = headTracked ? yaw : (float?)null;
+            if (menuGate.Step(headTracked, yaw, Time.unscaledDeltaTime, configuration.MenuSettleSeconds,
+                    configuration.MenuSettleTurnSpeed, configuration.MenuPlacementTimeout))
+            { PlaceMenu(); ShowCanvas(); }
+            bool tracked = input.RightTracked.IsPressed() && headTracked;
             bool interfaceOpen = flow.BlocksInput || interaction.State == InteractionState.Paused
                 || interaction.GetComponent<MuseumArrival>()?.Visible == true
                 || interaction.GetComponent<MuseumWayfinding>()?.MenuOpen == true;
             // The visit chrome cannot receive a click through an exhibit's floating screen.
             menuRaycaster.enabled = interfaceOpen;
             module.enabled = tracked;
-            rayLine.enabled = tracked;
+            var grab = interaction.GetComponent<MuseumModelGrab>();
+            rayLine.enabled = tracked && grab?.Held != true;
             var display = interaction.GetComponent<MuseumLecternDisplay>();
             if (!tracked) { display?.ClearAim(); return; }
             var position = trackingOrigin.TransformPoint(input.RightPosition.ReadValue<Vector3>());
@@ -161,6 +248,9 @@ namespace MusiyoBetsknate.Museum
             var ray = new Ray(position, rotation * Vector3.forward);
             float distance = Physics.Raycast(ray, out var hit, configuration.RayLength, Physics.DefaultRaycastLayers,
                 QueryTriggerInteraction.Ignore) ? hit.distance : configuration.RayLength;
+            // A piece within reach of the ray is shown with the second accent, so the visitor knows the grip takes it.
+            if (grab != null && grab.Hovered && grab.HoverDistance > 0) distance = Mathf.Min(distance, grab.HoverDistance);
+            rayLine.startColor = rayLine.endColor = grab?.Hovered == true ? reachColor : rayColor;
             rayLine.SetPosition(0, position); rayLine.SetPosition(1, ray.GetPoint(distance));
             var pointerDevice = input.Click.activeControl?.device;
             bool overInterface = pointerDevice != null && module.IsPointerOverGameObject(pointerDevice.deviceId);
@@ -175,6 +265,7 @@ namespace MusiyoBetsknate.Museum
 
         private void OnDestroy()
         {
+            foreach (var subsystem in subsystems) subsystem.trackingOriginUpdated -= OnTrackingOriginUpdated;
             if (flow != null) flow.Changed -= RefreshPosition;
             if (interaction != null) interaction.Changed -= RefreshPosition;
             if (input != null && input.Alive) input.SetSpatial(false);

@@ -18,6 +18,8 @@ namespace MusiyoBetsknate.Museum
         private bool captured;
         private bool lockObserved;
         public float LookSensitivity => lookSensitivity;
+        /// <summary>While a held piece takes the mouse and look keys to turn, the view stays still.</summary>
+        public bool LookSuspended { get; set; }
         public Vector3 PlanarVelocity => planarVelocity;
         /// <summary>Unscaled time of the last pause caused by the browser releasing the pointer.</summary>
         public float PointerReleasePauseTime { get; private set; } = float.NegativeInfinity;
@@ -129,7 +131,7 @@ namespace MusiyoBetsknate.Museum
                 CapturePointer(false);
             else if (input.Click.WasPressedThisFrame() && (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject()))
                 CapturePointer(true);
-            if (!blocked)
+            if (!blocked && !LookSuspended)
             {
                 var delta = captured && PointerLocked ? input.Look.ReadValue<Vector2>() * lookSensitivity : Vector2.zero;
                 if (!choosing) delta += input.KeyboardLook.ReadValue<Vector2>() * (configuration.KeyboardLookSpeed * Time.deltaTime);

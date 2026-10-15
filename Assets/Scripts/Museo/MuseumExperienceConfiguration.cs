@@ -52,10 +52,33 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("entry_backdrop")] public string EntryBackdrop = "museum";
         /// <summary>Record whose published model the mask backdrop shows, if the record allows reuse.</summary>
         [JsonProperty("entry_mask_element")] public string EntryMaskElement = "";
-        /// <summary>Seconds the title header stays after the visit starts or resumes.</summary>
-        [JsonProperty("header_hint_seconds")] public float HeaderHintSeconds = 8;
-        /// <summary>Seconds the key reminder stays after the visit starts or resumes.</summary>
-        [JsonProperty("controls_hint_seconds")] public float ControlsHintSeconds = 20;
+        /// <summary>Seconds inside a point's radius before its screen opens; short, so walking past an edge does not flicker.</summary>
+        [JsonProperty("point_open_seconds")] public float PointOpenSeconds;
+        /// <summary>Waits, in seconds, between automatic attempts to reach the museum service after it failed.</summary>
+        [JsonProperty("service_retry_seconds")] public float[] ServiceRetrySeconds;
+        /// <summary>Milliseconds per frame a published model may spend loading, so a piece never stalls the view.</summary>
+        [JsonProperty("model_load_frame_budget_ms")] public float ModelLoadFrameBudgetMs;
+        /// <summary>Downloaded pieces kept in memory, so switching between two pieces does not download them again.</summary>
+        [JsonProperty("model_cache_entries")] public int ModelCacheEntries;
+        [JsonProperty("model_cache_bytes")] public int ModelCacheBytes;
+        /// <summary>Seconds a released piece takes to glide back to its exhibition pose.</summary>
+        [JsonProperty("grab_return_seconds")] public float GrabReturnSeconds;
+        /// <summary>On a desktop, how far in front of the eyes a held piece floats, in metres.</summary>
+        [JsonProperty("grab_desktop_distance")] public float GrabDesktopDistance;
+        /// <summary>On a desktop, how far away a piece can be taken from, in metres.</summary>
+        [JsonProperty("grab_desktop_reach")] public float GrabDesktopReach;
+        /// <summary>Mouse rotation of a held piece, in degrees per unit of mouse movement.</summary>
+        [JsonProperty("grab_desktop_rotation")] public float GrabDesktopRotation;
+        /// <summary>Height of the viewport, from its top, where the fragment being heard is kept.</summary>
+        [JsonProperty("reading_follow_line")] public float ReadingFollowLine;
+        /// <summary>Seconds the panel takes to reach the fragment being heard.</summary>
+        [JsonProperty("reading_follow_seconds")] public float ReadingFollowSeconds;
+        [JsonProperty("auto_tour_speed")] public float AutoTourSpeed;
+        [JsonProperty("auto_tour_acceleration")] public float AutoTourAcceleration;
+        /// <summary>Shortest time the automatic tour stays at a point, also when it has no narration.</summary>
+        [JsonProperty("auto_tour_stop_seconds")] public float AutoTourStopSeconds;
+        /// <summary>A walk that makes no progress for this long gives up on its current stop.</summary>
+        [JsonProperty("auto_tour_stuck_seconds")] public float AutoTourStuckSeconds;
         private static MuseumExperienceConfiguration current;
 
         public static MuseumExperienceConfiguration Current
@@ -73,7 +96,7 @@ namespace MusiyoBetsknate.Museum
         public static MuseumExperienceConfiguration Parse(string json)
         {
             var result = JsonConvert.DeserializeObject<MuseumExperienceConfiguration>(json);
-            if (result == null || result.SchemaVersion != 4 || !Positive(result.EntryFadeSeconds)
+            if (result == null || result.SchemaVersion != 5 || !Positive(result.EntryFadeSeconds)
                 || !Positive(result.PanelFadeSeconds) || !Positive(result.PanelScrollStep) || result.PanelScrollStep > 1
                 || result.ModelControlColumns < 1 || !Positive(result.EntryMenuFadeShare) || result.EntryMenuFadeShare >= 1
                 || !Positive(result.EntryGlideSeconds) || !Positive(result.EntryGlideMaxDistance)
@@ -96,8 +119,19 @@ namespace MusiyoBetsknate.Museum
             ColorValue(result.SelectedColor); ColorValue(result.PointerColor);
             ColorValue(result.MutedTextColor); ColorValue(result.SecondaryAccentColor);
             MuseumEntryBackdrop.Parse(result.EntryBackdrop);
-            if (!Positive(result.HeaderHintSeconds) || !Positive(result.ControlsHintSeconds))
-                throw new InvalidOperationException("Invalid museum interface hint durations.");
+            if (!Finite(result.PointOpenSeconds) || result.PointOpenSeconds < 0 || result.PointOpenSeconds > 3
+                || result.ServiceRetrySeconds == null || result.ServiceRetrySeconds.Length == 0
+                || Array.Exists(result.ServiceRetrySeconds, wait => !Finite(wait) || wait < 1 || wait > 600)
+                || !Positive(result.ModelLoadFrameBudgetMs) || result.ModelLoadFrameBudgetMs > 20
+                || result.ModelCacheEntries < 0 || result.ModelCacheEntries > 4 || result.ModelCacheBytes < 0
+                || !Positive(result.GrabReturnSeconds) || result.GrabReturnSeconds > 3
+                || !Positive(result.GrabDesktopDistance) || !Positive(result.GrabDesktopReach)
+                || result.GrabDesktopReach < result.GrabDesktopDistance || !Positive(result.GrabDesktopRotation)
+                || !Positive(result.ReadingFollowLine) || result.ReadingFollowLine >= 1 || !Positive(result.ReadingFollowSeconds)
+                || !Positive(result.AutoTourSpeed) || result.AutoTourSpeed > result.WalkSpeed
+                || !Positive(result.AutoTourAcceleration) || !Positive(result.AutoTourStopSeconds)
+                || !Positive(result.AutoTourStuckSeconds))
+                throw new InvalidOperationException("Invalid museum interaction settings.");
             return result;
         }
 

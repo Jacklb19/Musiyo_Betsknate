@@ -10,10 +10,15 @@ namespace MusiyoBetsknate.Museum
     public sealed class MuseumVisitorPreferences
     {
         public const string StorageKey = "musiyo.visitor-preferences.v1";
-        [JsonProperty("schema_version", Required = Required.Always)] private int schemaVersion = 1;
+        private const int Version = 2;
+        [JsonProperty("schema_version", Required = Required.Always)] private int schemaVersion = Version;
         [JsonProperty("sensitivity", Required = Required.Always)] public float Sensitivity { get; private set; }
         [JsonProperty("volume", Required = Required.Always)] public float Volume { get; private set; }
         [JsonProperty("subtitles", Required = Required.Always)] public bool Subtitles { get; private set; }
+        /// <summary>Headset turning chosen by the visitor, or null to follow the shipped default.</summary>
+        [JsonProperty("turn_mode")] public string TurnMode { get; private set; }
+        /// <summary>Continuous turning speed chosen by the visitor, or 0 to follow the shipped default.</summary>
+        [JsonProperty("turn_speed")] public float TurnSpeed { get; private set; }
         [JsonIgnore] private MuseumExperienceConfiguration configuration;
         public event Action Changed;
 
@@ -25,13 +30,19 @@ namespace MusiyoBetsknate.Museum
                 try { result = JsonConvert.DeserializeObject<MuseumVisitorPreferences>(saved); }
                 catch (JsonException) { }
             }
-            if (result == null || result.schemaVersion != 1 || !MuseumExperienceConfiguration.Finite(result.Sensitivity)
+            // Version 1 had no turning preferences; its other values carry over unchanged.
+            if (result == null || result.schemaVersion != 1 && result.schemaVersion != Version
+                || !MuseumExperienceConfiguration.Finite(result.Sensitivity)
                 || result.Sensitivity < settings.MinimumSensitivity || result.Sensitivity > settings.MaximumSensitivity
                 || !MuseumExperienceConfiguration.Finite(result.Volume) || result.Volume < 0 || result.Volume > 1)
             {
                 result = new MuseumVisitorPreferences { Sensitivity = settings.DefaultSensitivity,
                     Volume = settings.DefaultVolume, Subtitles = settings.DefaultSubtitles };
             }
+            if (MuseumTurning.ParseMode(result.TurnMode) == null) result.TurnMode = null;
+            if (!MuseumExperienceConfiguration.Finite(result.TurnSpeed) || result.TurnSpeed < MuseumTurning.MinimumSpeed
+                || result.TurnSpeed > MuseumTurning.MaximumSpeed) result.TurnSpeed = 0;
+            result.schemaVersion = Version;
             result.configuration = settings;
             return result;
         }
@@ -49,11 +60,22 @@ namespace MusiyoBetsknate.Museum
             Changed?.Invoke();
         }
         public void SetSubtitles(bool value) { Subtitles = value; Changed?.Invoke(); }
+        public void SetTurnMode(MuseumTurnMode mode) { TurnMode = MuseumTurning.Name(mode); Changed?.Invoke(); }
+        public void SetTurnSpeed(float degreesPerSecond)
+        {
+            if (!MuseumExperienceConfiguration.Finite(degreesPerSecond)) return;
+            TurnSpeed = Mathf.Clamp(degreesPerSecond, MuseumTurning.MinimumSpeed, MuseumTurning.MaximumSpeed);
+            Changed?.Invoke();
+        }
+        /// <summary>Turning the visitor chose, or the shipped default.</summary>
+        public MuseumTurnMode Turn(MuseumTurnMode fallback) => MuseumTurning.ParseMode(TurnMode) ?? fallback;
         public void Reset()
         {
             Sensitivity = configuration.DefaultSensitivity;
             Volume = configuration.DefaultVolume;
             Subtitles = configuration.DefaultSubtitles;
+            TurnMode = null;
+            TurnSpeed = 0;
             Changed?.Invoke();
         }
         public string Serialize() => JsonConvert.SerializeObject(this);

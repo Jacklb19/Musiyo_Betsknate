@@ -34,6 +34,10 @@ namespace MusiyoBetsknate.Museum
         private Slider sensitivity;
         private Slider volume;
         private Button subtitles;
+        private Button turnMode;
+        private Button turnSpeed;
+        private Button autoTour;
+        private Button orientation;
         private MenuPage page;
         private bool wasVisible;
         private bool wasEntry;
@@ -49,6 +53,14 @@ namespace MusiyoBetsknate.Museum
         private bool spatial;
         private readonly System.Collections.Generic.List<System.Action> removeListeners = new();
         public MuseumMenuView View => view;
+        public MuseumVisitorPreferences Preferences => preferences;
+        /// <summary>Headset-only turning choices, added beside the subtitles option of the settings page.</summary>
+        public Button TurnModeButton => turnMode;
+        public Button TurnSpeedButton => turnSpeed;
+        /// <summary>Starts the automatic tour from the pause menu, or stops it while it runs.</summary>
+        public Button AutoTourButton => autoTour;
+        /// <summary>Opens the optional orientation from the pause menu; the visit screen has no permanent button for it.</summary>
+        public Button OrientationButton => orientation;
 
         public void Configure(MuseumVisitFlow visit, MuseumInteraction state, TourLoader tourLoader,
             MuseumVisitorPreferences visitorPreferences, MuseumMenuView prefab = null)
@@ -88,6 +100,12 @@ namespace MusiyoBetsknate.Museum
             subtitles = view.Settings.Subtitles;
             settingsBack = view.Settings.Back;
             controlsBack = view.Controls.Back;
+            turnMode ??= AddOption(subtitles, "TurnMode", "turn_mode_continuous");
+            turnSpeed ??= AddOption(turnMode, "TurnSpeed", "turn_speed");
+            autoTour ??= AddOption(view.Pause.Primary, "AutoTour", "auto_tour_start");
+            orientation ??= AddOption(autoTour, "Orientation", "wayfinding_open");
+            turnMode.gameObject.SetActive(spatial);
+            turnSpeed.gameObject.SetActive(spatial);
             sensitivity.minValue = configuration.MinimumSensitivity;
             sensitivity.maxValue = configuration.MaximumSensitivity;
             volume.minValue = 0; volume.maxValue = 1;
@@ -114,6 +132,10 @@ namespace MusiyoBetsknate.Museum
                 Listen(homePage.Catalog, ReturnToCatalog);
             }
             Listen(subtitles, ToggleSubtitles);
+            Listen(turnMode, ToggleTurnMode);
+            Listen(turnSpeed, NextTurnSpeed);
+            Listen(autoTour, ToggleAutoTour);
+            Listen(orientation, OpenOrientation);
             Listen(view.Settings.Reset, preferences.Reset);
             Listen(settingsBack, OpenHome);
             Listen(controlsBack, OpenHome);
@@ -128,6 +150,21 @@ namespace MusiyoBetsknate.Museum
             input.BindingsChanged += RefreshKeys;
             BuildRebindRows();
             SyncSettings(); Refresh();
+        }
+
+        /// <summary>
+        /// A further option made from an authored button of the same page, placed right after it, so it shares its look,
+        /// layout and keyboard order. Its caption comes from the interface catalog.
+        /// </summary>
+        private static Button AddOption(Button template, string name, string textKey)
+        {
+            var option = Instantiate(template, template.transform.parent, false);
+            option.name = name;
+            option.onClick = new Button.ButtonClickedEvent();
+            option.transform.SetSiblingIndex(template.transform.GetSiblingIndex() + 1);
+            foreach (var label in option.GetComponentsInChildren<MuseumInterfaceLabel>(true)) label.TextKey = textKey;
+            option.GetComponentInChildren<TMP_Text>(true).text = MuseumInterfaceText.Get(textKey);
+            return option;
         }
 
         /// <summary>One row per key the visitor may change, in the order of the binding list; the row layout belongs to its prefab.</summary>
@@ -162,6 +199,7 @@ namespace MusiyoBetsknate.Museum
             view.Controls.Bindings.gameObject.SetActive(!value);
             view.Controls.RestoreBindings.gameObject.SetActive(!value);
             view.Controls.BindingStatus.gameObject.SetActive(!value);
+            turnMode.gameObject.SetActive(value);
             Refresh();
         }
 
@@ -203,6 +241,27 @@ namespace MusiyoBetsknate.Museum
         private void OpenControls() => ShowPage(MenuPage.Controls);
         private void OpenHome() => ShowPage(MenuPage.Home);
         private void ToggleSubtitles() => preferences.SetSubtitles(!preferences.Subtitles);
+        private void ToggleTurnMode()
+        {
+            var shipped = MuseumXrConfiguration.Current.DefaultTurn;
+            preferences.SetTurnMode(preferences.Turn(shipped) == MuseumTurnMode.Continuous ? MuseumTurnMode.Snap : MuseumTurnMode.Continuous);
+        }
+        private void NextTurnSpeed() => preferences.SetTurnSpeed(MuseumXrConfiguration.Current.NextTurnSpeed(preferences.TurnSpeed));
+        private void ToggleAutoTour()
+        {
+            var tour = interaction.GetComponent<MuseumAutoTour>();
+            if (tour == null) return;
+            if (tour.Active) { tour.Stop(); Refresh(); return; }
+            ResumeVisit();
+            tour.Begin();
+        }
+        private void OpenOrientation()
+        {
+            var wayfinding = interaction.GetComponent<MuseumWayfinding>();
+            if (wayfinding == null) return;
+            ResumeVisit();
+            if (!wayfinding.MenuOpen) wayfinding.ToggleMenu();
+        }
         private void ReturnToCatalog()
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -225,6 +284,15 @@ namespace MusiyoBetsknate.Museum
             sensitivity.SetValueWithoutNotify(preferences.Sensitivity);
             volume.SetValueWithoutNotify(preferences.Volume);
             subtitles.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Get(preferences.Subtitles ? "hide_subtitles" : "show_subtitles");
+            var xr = MuseumXrConfiguration.Current;
+            var turning = preferences.Turn(xr.DefaultTurn);
+            turnMode.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Get(
+                turning == MuseumTurnMode.Continuous ? "turn_mode_continuous" : "turn_mode_snap");
+            turnSpeed.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Format("turn_speed", xr.TurnSpeed(preferences.TurnSpeed));
+            // The speed only applies to continuous turning.
+            turnSpeed.gameObject.SetActive(spatial && turning == MuseumTurnMode.Continuous);
+            var tour = interaction != null ? interaction.GetComponent<MuseumAutoTour>() : null;
+            autoTour.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Get(tour != null && tour.Active ? "auto_tour_stop" : "auto_tour_start");
         }
         private void ShowPage(MenuPage selected)
         {
@@ -285,6 +353,8 @@ namespace MusiyoBetsknate.Museum
             controls.SetActive(page == MenuPage.Controls);
             begin.gameObject.SetActive(entry);
             resume.gameObject.SetActive(!entry);
+            autoTour.gameObject.SetActive(!entry && interaction.GetComponent<MuseumAutoTour>() != null);
+            orientation.gameObject.SetActive(!entry && interaction.GetComponent<MuseumWayfinding>() != null);
             mainMenu.gameObject.SetActive(!entry);
             foreach (var homePage in new[] { view.Main, view.Pause })
             {

@@ -94,7 +94,11 @@ namespace MusiyoBetsknate.Museum
         public InputAction RightPosition { get; }
         public InputAction RightRotation { get; }
         public InputAction RightTracked { get; }
-        public InputAction SnapTurn { get; }
+        /// <summary>Right stick of a headset: turns the visitor, continuously or in steps.</summary>
+        public InputAction Turn { get; }
+        /// <summary>Takes the published piece that the pointer or hand reaches; releasing it sends it back.</summary>
+        public InputAction Grab { get; }
+        public InputAction AutoTour { get; }
         public bool Spatial { get; private set; }
 
         /// <summary>The instance every museum component shares, created on first use with the visitor's saved keys.</summary>
@@ -156,7 +160,8 @@ namespace MusiyoBetsknate.Museum
             HeadPosition = Find("Tracking/HeadPosition"); HeadRotation = Find("Tracking/HeadRotation");
             HeadState = Find("Tracking/HeadState"); RightPosition = Find("Tracking/RightPosition");
             RightRotation = Find("Tracking/RightRotation"); RightTracked = Find("Tracking/RightTracked");
-            SnapTurn = Find("Locomotion/SnapTurn");
+            Turn = Find("Locomotion/Turn");
+            Grab = Find("Visit/Grab"); AutoTour = Find("Visit/AutoTour");
             foreach (var maps in ContextMaps.Values)
                 foreach (var map in maps) Asset.FindActionMap(map, true);
             Bindings = new MuseumInputBindings(this);
