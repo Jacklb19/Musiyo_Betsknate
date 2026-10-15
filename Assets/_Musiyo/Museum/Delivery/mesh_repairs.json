@@ -11,5 +11,17 @@
       "Techo_Fogon_Fleco_Paja": { "delivered_triangles": 384, "coincident_triangles": 48 },
       "Techo_Instrumentos_Fleco_Paja": { "delivered_triangles": 462, "coincident_triangles": 44 }
     }
+  },
+  "extended_rafters": {
+    "reason": "In the master and in the delivery the north and south rafters of the characters corridor stop 1.99 m short of the inner beam (Personajes_Viga_N and _S, centred at |z| 8.0 m) and end in the air under the thatch, just past the welcome room. Each end face is moved rigidly along its own rafter's slope until it rests on the beam. The east and west rafters, and the four that already reach the roof hips, stay as delivered. Plan convention, metres.",
+    "objects": {
+      "Personajes_Estructura_Madera_Anillo": {
+        "minimum_height_m": 3.3,
+        "maximum_abs_x_m": 10.1,
+        "delivered_end_abs_z_m": 9.99,
+        "repaired_end_abs_z_m": 8.0,
+        "expected_rafters": 22
+      }
+    }
   }
 }
