@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "note": "Corrections made while importing the delivered model. The delivery files and the external masters stay unchanged.",
+  "two_sided_cards": {
+    "reason": "Thatch fringe teeth face both ways and some are doubled. Drawn double-sided, half of them are lit from behind and the doubled ones fight in depth. Each face is kept once and given an explicit back face, so the material can draw one side.",
+    "material": "M_Paja_DS",
+    "objects": {
+      "Portada_Fleco_Paja": { "delivered_triangles": 84, "coincident_triangles": 10 },
+      "Techo_Bienvenida_Fleco_Paja": { "delivered_triangles": 741, "coincident_triangles": 67 },
+      "Techo_Corredor_Fleco_Paja": { "delivered_triangles": 3507, "coincident_triangles": 389 },
+      "Techo_Fogon_Fleco_Paja": { "delivered_triangles": 384, "coincident_triangles": 48 },
+      "Techo_Instrumentos_Fleco_Paja": { "delivered_triangles": 462, "coincident_triangles": 44 }
+    }
+  }
+}

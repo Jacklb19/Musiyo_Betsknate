@@ -33,6 +33,29 @@ namespace MusiyoBetsknate.Editor
             Debug.Log("Museum delivery assets built: " + manifest.Profiles.Count + " material sets and " + MuseumDeliveryManifest.PrefabPath + ".");
         }
 
+        /// <summary>
+        /// Reimports the model so its mesh repairs apply, and rebuilds only the materials those repairs change.
+        /// </summary>
+        [MenuItem("Musiyo/Museum Delivery/Apply Mesh Repairs")]
+        public static void ApplyMeshRepairs()
+        {
+            var manifest = MuseumDeliveryManifest.Load();
+            var repairs = MuseumMeshRepairs.Load();
+            AssetDatabase.ImportAsset(MuseumDeliveryManifest.ModelPath, ImportAssetOptions.ForceUpdate);
+            foreach (var profile in manifest.Profiles)
+            {
+                var shader = Shader.Find(profile.Shader);
+                foreach (var entry in profile.Materials.Where(entry => repairs.DrawsOneSide(entry.Name)))
+                {
+                    var material = AssetDatabase.LoadAssetAtPath<Material>(MuseumDeliveryManifest.MaterialPath(profile.Name, entry.Name));
+                    Apply(material, shader, entry);
+                    EditorUtility.SetDirty(material);
+                }
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log("Museum mesh repairs applied to " + repairs.Cards.Objects.Count + " objects.");
+        }
+
         public static string TexturePath(string file) => MuseumDeliveryManifest.TextureFolder + "/" + file;
 
         private static void ConfigureTextures(MuseumDeliveryManifest manifest)
@@ -95,8 +118,10 @@ namespace MusiyoBetsknate.Editor
             // A connected colour texture replaces the colour value in the source; the leftover value must not tint it.
             material.SetColor("_BaseColor", textured ? Color.white : Linear(entry.BaseColor).gamma);
             if (textured) material.SetTexture("_BaseMap", Texture(entry.BaseColorTexture));
-            material.SetFloat("_Cull", (float)(entry.DoubleSided ? CullMode.Off : CullMode.Back));
-            material.doubleSidedGI = entry.DoubleSided;
+            // Pieces repaired with explicit back faces draw one side; see mesh_repairs.json.
+            bool doubleSided = entry.DoubleSided && !MuseumMeshRepairs.Load().DrawsOneSide(entry.Name);
+            material.SetFloat("_Cull", (float)(doubleSided ? CullMode.Off : CullMode.Back));
+            material.doubleSidedGI = doubleSided;
             material.SetFloat("_Smoothness", 1 - entry.Roughness);
             if (shader.name == LitShader)
             {
