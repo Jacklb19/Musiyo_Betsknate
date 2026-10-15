@@ -108,6 +108,37 @@ namespace MusiyoBetsknate.Tests
         }
 
         [Test]
+        public void MusicCanBeSilencedIndependentlyAndResetsWithTheOtherPreferences()
+        {
+            var music = root.AddComponent<MuseumMusic>();
+            menu.Configure(flow, interaction, loader, preferences);
+            float narrationVolume = preferences.Volume;
+            menu.MusicLevelSlider.value = 0;
+            Assert.That(preferences.MusicLevel, Is.Zero);
+            Assert.That(music.MusicLevel, Is.Zero);
+            Assert.That(preferences.Volume, Is.EqualTo(narrationVolume));
+            menu.View.Settings.Reset.onClick.Invoke();
+            Assert.That(music.MusicLevel, Is.EqualTo(1));
+            Assert.That(menu.MusicLevelSlider.value, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void CompanionUsesNeutralCatalogCopyAndKeepsCulturalRemarksExternal()
+        {
+            var settings = MuseumCompanionSettings.Current;
+            Assert.That(settings.Remarks, Is.Empty);
+            Assert.That(settings.MaskElement, Is.Empty);
+            Assert.That(settings.InterfaceRemarks, Has.Count.EqualTo(6));
+            var remarks = new MuseumCompanionRemarks(settings);
+            Assert.That(remarks.Tick(new CompanionMoment(0, "room.welcome", true, true, false)), Is.Null);
+            remarks.Tick(new CompanionMoment(10, "room.welcome", true, false, false));
+            remarks.Tick(new CompanionMoment(30, "room.welcome", true, false, false));
+            var shown = remarks.Tick(new CompanionMoment(121, "room.welcome", true, false, false));
+            Assert.That(shown?.Text, Is.EqualTo(MuseumInterfaceText.Get("companion_welcome")));
+            Assert.That(shown?.Source, Is.EqualTo("Neutral visitor interface copy"));
+        }
+
+        [Test]
         public void DisabledPresenterUnsubscribesAndReturnsWhenEnabled()
         {
             menu.enabled = false;

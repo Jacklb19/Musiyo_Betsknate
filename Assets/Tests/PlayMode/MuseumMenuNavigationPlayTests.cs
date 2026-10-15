@@ -65,6 +65,15 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(menu.View.Settings.Volume.gameObject));
                 yield return Tap(keyboard.wKey);
                 Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(menu.View.Settings.Sensitivity.gameObject));
+                yield return Tap(keyboard.sKey);
+                float narrationVolume = preferences.Volume;
+                yield return Tap(keyboard.sKey);
+                Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(menu.MusicLevelSlider.gameObject));
+                float musicLevel = preferences.MusicLevel;
+                yield return Tap(keyboard.leftArrowKey);
+                Assert.That(preferences.MusicLevel, Is.LessThan(musicLevel));
+                Assert.That(preferences.Volume, Is.EqualTo(narrationVolume), "Music adjustment preserves narration volume.");
+                Assert.That(input.Move.enabled, Is.False);
                 yield return Tap(keyboard.backspaceKey);
                 Assert.That(menu.View.Main.gameObject.activeSelf, Is.True);
                 Press(keyboard.leftShiftKey);

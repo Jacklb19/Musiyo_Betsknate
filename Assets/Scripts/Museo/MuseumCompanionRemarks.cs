@@ -23,6 +23,15 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("source")] public string Source;
     }
 
+    /// <summary>Operational interface copy, kept separate from approved cultural remarks.</summary>
+    [Preserve]
+    public sealed class CompanionInterfaceRemark
+    {
+        [JsonProperty("id")] public string Id;
+        [JsonProperty("zone")] public string Zone;
+        [JsonProperty("text_key")] public string TextKey;
+    }
+
     /// <summary>Behaviour of the companion, read from <c>Resources/MuseumCompanion.json</c>.</summary>
     [Preserve]
     public sealed class MuseumCompanionSettings
@@ -56,6 +65,7 @@ namespace MusiyoBetsknate.Museum
         /// <summary>Record whose model the companion may wear, only where the record allows reuse; empty for none.</summary>
         [JsonProperty("mask_element")] public string MaskElement = "";
         [JsonProperty("remarks")] public List<CompanionRemark> Remarks = new List<CompanionRemark>();
+        [JsonProperty("interface_remarks")] public List<CompanionInterfaceRemark> InterfaceRemarks = new();
 
         private static MuseumCompanionSettings current;
         public static MuseumCompanionSettings Current
@@ -86,6 +96,13 @@ namespace MusiyoBetsknate.Museum
                 || string.IsNullOrWhiteSpace(remark.Text)) || result.Remarks.Select(remark => remark.Id).Distinct().Count() != result.Remarks.Count)
                 throw new InvalidOperationException("Invalid companion remark.");
             result.MaskElement ??= "";
+            result.InterfaceRemarks ??= new();
+            if (result.InterfaceRemarks.Any(remark => remark == null || string.IsNullOrWhiteSpace(remark.Id)
+                || string.IsNullOrWhiteSpace(remark.Zone) || string.IsNullOrWhiteSpace(remark.TextKey)
+                || MuseumInterfaceText.Current.Find(remark.TextKey) == null)
+                || result.InterfaceRemarks.Select(remark => remark.Id).Concat(result.Remarks.Select(remark => remark.Id))
+                    .Distinct().Count() != result.InterfaceRemarks.Count + result.Remarks.Count)
+                throw new InvalidOperationException("Invalid companion interface remark.");
             return result;
         }
     }
@@ -131,6 +148,11 @@ namespace MusiyoBetsknate.Museum
         {
             this.settings = settings ?? throw new ArgumentNullException(nameof(settings));
             remarks = settings.Remarks.Concat(extra ?? Enumerable.Empty<CompanionRemark>()).Where(remark => remark.Approved).ToList();
+            Add(settings.InterfaceRemarks.Select(remark => new CompanionRemark
+            {
+                Id = remark.Id, Zone = remark.Zone, Text = MuseumInterfaceText.Get(remark.TextKey),
+                Approved = true, Source = "Neutral visitor interface copy"
+            }));
         }
 
         /// <summary>Adds approved remarks that arrived later (for example from the content service); others are ignored.</summary>

@@ -28,7 +28,7 @@ namespace MusiyoBetsknate.Tests
         }
 
         [TestCase("invalid")]
-        [TestCase("{\"schema_version\":3,\"sensitivity\":0.3,\"volume\":0.5,\"subtitles\":false}")]
+        [TestCase("{\"schema_version\":4,\"sensitivity\":0.3,\"volume\":0.5,\"subtitles\":false}")]
         [TestCase("{\"schema_version\":1,\"sensitivity\":-3,\"volume\":0.5,\"subtitles\":false}")]
         [TestCase("{\"schema_version\":1,\"sensitivity\":0.3,\"volume\":9,\"subtitles\":false}")]
         [TestCase("{\"sensitivity\":0.3,\"volume\":0.5,\"subtitles\":false}")]
@@ -72,8 +72,30 @@ namespace MusiyoBetsknate.Tests
             var preferences = MuseumVisitorPreferences.Load(settings, null);
             preferences.SetVolume(float.NaN);
             preferences.SetSensitivity(float.PositiveInfinity);
+            preferences.SetMusicLevel(float.NaN);
             Assert.That(preferences.Volume, Is.EqualTo(settings.DefaultVolume));
             Assert.That(preferences.Sensitivity, Is.EqualTo(settings.DefaultSensitivity));
+            Assert.That(preferences.MusicLevel, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void MusicChoiceMigratesWithoutChangingNarrationAndSurvivesReload()
+        {
+            var settings = MuseumExperienceConfiguration.Current;
+            var preferences = MuseumVisitorPreferences.Load(settings,
+                "{\"schema_version\":2,\"sensitivity\":0.3,\"volume\":0.5,\"subtitles\":false,\"turn_mode\":\"snap\",\"turn_speed\":105}");
+            Assert.That(preferences.MusicLevel, Is.EqualTo(1));
+            preferences.SetMusicLevel(0);
+            var loaded = MuseumVisitorPreferences.Load(settings, preferences.Serialize());
+            Assert.That(loaded.MusicLevel, Is.Zero);
+            Assert.That(loaded.Volume, Is.EqualTo(.5f));
+            Assert.That(loaded.TurnMode, Is.EqualTo("snap"));
+            loaded.Reset();
+            Assert.That(loaded.MusicLevel, Is.EqualTo(1));
+            var invalid = MuseumVisitorPreferences.Load(settings,
+                "{\"schema_version\":3,\"sensitivity\":0.3,\"volume\":0.5,\"subtitles\":false,\"music_level\":9}");
+            Assert.That(invalid.MusicLevel, Is.EqualTo(1));
+            Assert.That(invalid.Volume, Is.EqualTo(.5f));
         }
 
         [TestCase("schema_version", 4)]
