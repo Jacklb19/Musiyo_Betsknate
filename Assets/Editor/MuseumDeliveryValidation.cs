@@ -124,6 +124,7 @@ namespace MusiyoBetsknate.Editor
                 errors.Add("The model import would alter the delivered lightmap UV channel.");
 
             var profiles = new JObject();
+            var repairs = MuseumMeshRepairs.Load();
             foreach (var profile in manifest.Profiles)
             {
                 int doubleSided = 0;
@@ -134,7 +135,8 @@ namespace MusiyoBetsknate.Editor
                     if (material == null) { errors.Add("Missing " + profile.Name + " material " + entry.Name + "."); continue; }
                     if (material.shader.name != profile.Shader) errors.Add(profile.Name + "/" + entry.Name + " uses " + material.shader.name + ".");
                     bool both = Mathf.Approximately(material.GetFloat("_Cull"), (float)CullMode.Off);
-                    if (both != entry.DoubleSided) errors.Add(profile.Name + "/" + entry.Name + " has the wrong render face.");
+                    if (both != (entry.DoubleSided && !repairs.DrawsOneSide(entry.Name)))
+                        errors.Add(profile.Name + "/" + entry.Name + " has the wrong render face.");
                     if (both) doubleSided++;
                     Check(material, "_BaseMap", entry.BaseColorTexture, profile.Name, used, errors);
                     if (material.HasProperty("_BumpMap")) Check(material, "_BumpMap", entry.NormalTexture, profile.Name, used, errors);
@@ -217,7 +219,8 @@ namespace MusiyoBetsknate.Editor
             var transforms = new Dictionary<string, Transform>();
             foreach (var transform in root.GetComponentsInChildren<Transform>(true))
                 if (transform != root) transforms[transform.name] = transform;
-            int triangles = 0, meshes = 0, lightmapChannels = 0, boxes = 0, meshColliders = 0, materialPairs = 0;
+            int triangles = 0, meshes = 0, lightmapChannels = 0, boxes = 0, meshColliders = 0, materialPairs = 0, expectedTotal = 0;
+            var repairs = MuseumMeshRepairs.Load();
             float largestStray = 0;
             var withoutLightmapChannel = new List<string>();
             foreach (var entry in manifest.Objects)
@@ -230,7 +233,9 @@ namespace MusiyoBetsknate.Editor
                 int count = 0;
                 for (int submesh = 0; submesh < mesh.subMeshCount; submesh++) count += (int)mesh.GetIndexCount(submesh) / 3;
                 triangles += count;
-                if (count != entry.Triangles) errors.Add(entry.Name + " has " + count + " triangles, the delivery lists " + entry.Triangles + ".");
+                int expectedTriangles = repairs.ExpectedTriangles(entry.Name, entry.Triangles);
+                expectedTotal += expectedTriangles;
+                if (count != expectedTriangles) errors.Add(entry.Name + " has " + count + " triangles, the delivery and its repairs give " + expectedTriangles + ".");
 
                 var size = renderer.bounds.size;
                 var expected = new Vector3(entry.Size[0], entry.Size[1], entry.Size[2]);
@@ -270,10 +275,16 @@ namespace MusiyoBetsknate.Editor
                 boxes += colliders.Count(collider => collider is BoxCollider);
                 meshColliders += colliders.Count(collider => collider is MeshCollider);
             }
-            if (triangles != manifest.Model.Triangles) errors.Add("The model has " + triangles + " triangles, the delivery lists " + manifest.Model.Triangles + ".");
+            int repairedObjects = manifest.Objects.Count(entry => entry.Mesh && repairs.Cards.Objects.ContainsKey(entry.Name));
+            if (repairedObjects != repairs.Cards.Objects.Count) errors.Add("A repaired object is missing from the delivery map.");
+            if (manifest.Objects.Sum(entry => entry.Triangles) != manifest.Model.Triangles)
+                errors.Add("The delivery map does not add up to the delivered " + manifest.Model.Triangles + " triangles.");
+            if (triangles != expectedTotal)
+                errors.Add("The model has " + triangles + " triangles; the delivery and its repairs give " + expectedTotal + ".");
             report["model"] = new JObject
             {
-                ["objects"] = transforms.Count, ["meshes"] = meshes, ["triangles"] = triangles, ["mesh_material_pairs"] = materialPairs,
+                ["objects"] = transforms.Count, ["meshes"] = meshes, ["triangles"] = triangles, ["delivered_triangles"] = manifest.Model.Triangles,
+                ["repaired_objects"] = repairedObjects, ["mesh_material_pairs"] = materialPairs,
                 ["lightmap_channels"] = lightmapChannels, ["without_lightmap_channel"] = new JArray(withoutLightmapChannel),
                 ["largest_size_or_height_difference_m"] = Math.Round(largestStray, 5),
                 ["box_colliders"] = boxes, ["mesh_colliders"] = meshColliders,
