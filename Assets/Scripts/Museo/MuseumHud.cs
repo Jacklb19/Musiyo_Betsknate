@@ -68,6 +68,7 @@ namespace MusiyoBetsknate.Museum
         private void Awake()
         {
             if (interaction == null) return;
+            MuseumAtmosphere.Current.Apply();
             preferences = MuseumVisitorPreferences.Load(MuseumExperienceConfiguration.Current,
                 PlayerPrefs.GetString(MuseumVisitorPreferences.StorageKey, ""));
             visitFlow = interaction.GetComponent<MuseumVisitFlow>();
