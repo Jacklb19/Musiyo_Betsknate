@@ -60,6 +60,8 @@ namespace MusiyoBetsknate.Tests
                 flow.BeginVisit();
                 Assert.That(flow.Transition, Is.EqualTo(EntryTransition.Fade));
                 flow.EnterImmediately();
+                // With a local API answering, the arrival card appears and rightly takes clicks; it is not an exhibit panel.
+                flow.GetComponent<MuseumArrival>()?.Dismiss();
                 yield return null;
                 Assert.That(menu.GetComponent<UnityEngine.InputSystem.UI.TrackedDeviceRaycaster>().enabled, Is.False,
                     "Visit chrome cannot receive a click through an exhibit panel.");
