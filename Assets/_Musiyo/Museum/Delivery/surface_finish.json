@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "macro_variation": {
+    "note": "Texture periods come from the surface audit (TestResults/museum-surface-audit/surfaces.csv, area-weighted median per material).",
+    "profiles": [ "web", "windows" ],
+    "period_m": 11.0,
+    "period_overrides_m": { "M_Pasto_Valle": 41.0 },
+    "texture_period_m": {
+      "M_Paja": 0.91,
+      "M_Paja_DS": 0.9,
+      "M_Pasto_Valle": 4.0,
+      "M_Piedra": 2.4,
+      "M_Piedra_DS": 2.42,
+      "M_Tierra_Apisonada": 2.07,
+      "M_Tapia": 2.0,
+      "M_Tapia_DS": 2.11,
+      "M_Madera": 2.0,
+      "M_Madera_Piso": 1.0,
+      "M_Corteza_Sauce": 1.0
+    }
+  }
+}

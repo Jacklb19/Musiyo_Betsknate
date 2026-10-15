@@ -48,12 +48,35 @@ namespace MusiyoBetsknate.Editor
                 foreach (var entry in profile.Materials.Where(entry => repairs.DrawsOneSide(entry.Name)))
                 {
                     var material = AssetDatabase.LoadAssetAtPath<Material>(MuseumDeliveryManifest.MaterialPath(profile.Name, entry.Name));
-                    Apply(material, shader, entry);
+                    Apply(material, shader, entry, profile.Name);
                     EditorUtility.SetDirty(material);
                 }
             }
             AssetDatabase.SaveAssets();
             Debug.Log("Museum mesh repairs applied to " + repairs.Cards.Objects.Count + " objects.");
+        }
+
+        /// <summary>Rebuilds only the materials the surface finish touches, in every profile.</summary>
+        [MenuItem("Musiyo/Museum Delivery/Apply Surface Finish")]
+        public static void ApplySurfaceFinish()
+        {
+            var manifest = MuseumDeliveryManifest.Load();
+            var finish = MuseumSurfaceFinish.Load();
+            if (MuseumSurfaceFinish.Texture() == null) MuseumSurfaceFinish.CreateTexture();
+            int count = 0;
+            foreach (var profile in manifest.Profiles)
+            {
+                var shader = Shader.Find(profile.Shader);
+                foreach (var entry in profile.Materials.Where(entry => finish.Macro.TexturePeriods.ContainsKey(entry.Name)))
+                {
+                    var material = AssetDatabase.LoadAssetAtPath<Material>(MuseumDeliveryManifest.MaterialPath(profile.Name, entry.Name));
+                    Apply(material, shader, entry, profile.Name);
+                    EditorUtility.SetDirty(material);
+                    count++;
+                }
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log("Museum surface finish applied to " + count + " materials.");
         }
 
         public static string TexturePath(string file) => MuseumDeliveryManifest.TextureFolder + "/" + file;
@@ -100,13 +123,13 @@ namespace MusiyoBetsknate.Editor
                         material = new Material(shader) { name = entry.Name };
                         AssetDatabase.CreateAsset(material, path);
                     }
-                    Apply(material, shader, entry);
+                    Apply(material, shader, entry, profile.Name);
                     EditorUtility.SetDirty(material);
                 }
             }
         }
 
-        private static void Apply(Material material, Shader shader, MuseumDeliveryManifest.MaterialEntry entry)
+        private static void Apply(Material material, Shader shader, MuseumDeliveryManifest.MaterialEntry entry, string profile)
         {
             // Start from the shader defaults so a rebuilt material keeps nothing from an earlier delivery.
             var defaults = new Material(shader);
@@ -138,6 +161,14 @@ namespace MusiyoBetsknate.Editor
                     material.SetFloat("_BumpScale", entry.NormalStrength);
                     material.EnableKeyword("_NORMALMAP");
                 }
+                // Large, slow variation over the most repeated textures; see surface_finish.json.
+                var finish = MuseumSurfaceFinish.Load();
+                if (finish.Varies(profile, entry.Name))
+                {
+                    material.SetTexture("_DetailAlbedoMap", MuseumSurfaceFinish.Texture());
+                    material.SetTextureScale("_DetailAlbedoMap", Vector2.one * finish.Tiling(entry.Name));
+                    material.SetFloat("_DetailAlbedoMapScale", 1);
+                }
             }
             // The simple shader keeps its default of no specular highlights, which suits the light profile.
             else if (entry.NormalTexture != null || entry.RoughnessTexture != null)
@@ -150,8 +181,19 @@ namespace MusiyoBetsknate.Editor
             }
             else material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
             // Finish as the pipeline's own inspector does, so Unity finds nothing to rewrite in the saved material.
-            if (shader.name == LitShader) BaseShaderGUI.SetMaterialKeywords(material, LitGUI.SetMaterialKeywords);
+            if (shader.name == LitShader) BaseShaderGUI.SetMaterialKeywords(material, LitGUI.SetMaterialKeywords, SetDetailKeywords);
             else BaseShaderGUI.SetMaterialKeywords(material, SimpleLitGUI.SetMaterialKeywords);
+        }
+
+        /// <summary>The rule the Lit inspector applies to its detail maps (its helper is internal to the pipeline).</summary>
+        private static void SetDetailKeywords(Material material)
+        {
+            if (!material.HasProperty("_DetailAlbedoMap") || !material.HasProperty("_DetailNormalMap")
+                || !material.HasProperty("_DetailAlbedoMapScale")) return;
+            bool scaled = material.GetFloat("_DetailAlbedoMapScale") != 1f;
+            bool detail = material.GetTexture("_DetailAlbedoMap") || material.GetTexture("_DetailNormalMap");
+            if (!scaled && detail) material.EnableKeyword("_DETAIL_MULX2"); else material.DisableKeyword("_DETAIL_MULX2");
+            if (scaled && detail) material.EnableKeyword("_DETAIL_SCALED"); else material.DisableKeyword("_DETAIL_SCALED");
         }
 
         private static Color Linear(float[] value) => new Color(value[0], value[1], value[2], 1);

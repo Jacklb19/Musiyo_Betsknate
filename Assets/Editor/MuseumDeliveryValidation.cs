@@ -125,6 +125,7 @@ namespace MusiyoBetsknate.Editor
 
             var profiles = new JObject();
             var repairs = MuseumMeshRepairs.Load();
+            var finish = MuseumSurfaceFinish.Load();
             foreach (var profile in manifest.Profiles)
             {
                 int doubleSided = 0;
@@ -138,6 +139,9 @@ namespace MusiyoBetsknate.Editor
                     if (both != (entry.DoubleSided && !repairs.DrawsOneSide(entry.Name)))
                         errors.Add(profile.Name + "/" + entry.Name + " has the wrong render face.");
                     if (both) doubleSided++;
+                    bool varied = material.HasProperty("_DetailAlbedoMap") && material.GetTexture("_DetailAlbedoMap") != null;
+                    if (varied != finish.Varies(profile.Name, entry.Name))
+                        errors.Add(profile.Name + "/" + entry.Name + " does not carry the macro variation its surface finish lists.");
                     Check(material, "_BaseMap", entry.BaseColorTexture, profile.Name, used, errors);
                     if (material.HasProperty("_BumpMap")) Check(material, "_BumpMap", entry.NormalTexture, profile.Name, used, errors);
                     if (material.HasProperty("_MetallicGlossMap"))
