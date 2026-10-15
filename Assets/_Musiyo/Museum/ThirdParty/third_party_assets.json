@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "note": "Third-party set dressing in the museum scene. Only the listed files are in the repository; the downloaded packages stay outside it.",
+  "note": "Third-party set dressing, sky and music of the museum scene. Only the listed files are in the repository; the downloaded packages stay outside it. None of them represents or is attributed to Kamëntsá or Inga culture; plants are neutral greenery with no species or use claimed.",
   "assets": [
     {
       "name": "Wooden Lantern 01",
@@ -37,6 +37,22 @@
       "derivation": "One FBX file extracted unchanged from the package.",
       "files": {
         "Quaternius/CropsPack/Corn_4.fbx": "efa76806e992dcf7fa8597d0b327e06319a81b4d1d6aef9b93251bd54479ef61"
+      }
+    },
+    {
+      "name": "Kloppenheim 03 (Pure Sky)",
+      "author": "Greg Zaal (original), Jarod Guest (sky edits)",
+      "publisher": "Poly Haven",
+      "source": "https://polyhaven.com/a/kloppenheim_03_puresky",
+      "license": "CC0 1.0",
+      "license_url": "https://polyhaven.com/license",
+      "retrieved": "2026-10-15",
+      "source_files_sha256": {
+        "kloppenheim_03_puresky_4k.hdr": "f906a7334e5d57007fa5516bd141df2ada8fdc3d2ba0c8bdf445d64f1bbb010a"
+      },
+      "derivation": "Blender 5.2 (bundled numpy): the 4k HDR scaled so the median of the upper hemisphere maps to 0.32, an ACES filmic approximation (Narkowicz 2015) and sRGB encoding, saved as a 4096 x 2048 JPEG (quality 92). Chosen over farm_field_puresky and kloofendal_28d_misty_puresky for its broken cloud cover. It is a cloud panorama only, not a view of the Sibundoy valley.",
+      "files": {
+        "PolyHaven/Kloppenheim03PureSky/museum_sky_kloppenheim_03_4k.jpg": "350c2adba0bd70d0ca4c0931c68e9b4da38725c27e62e1608cd81518530f577c"
       }
     }
   ]
