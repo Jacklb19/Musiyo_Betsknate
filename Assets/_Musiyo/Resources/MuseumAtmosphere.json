@@ -10,5 +10,9 @@
   "shadow_strength": 0.7,
   "ambient_sky": "#A3AFBA",
   "ambient_equator": "#8A877C",
-  "ambient_ground": "#4D4539"
+  "ambient_ground": "#4D4539",
+  "sky_rotation": 210,
+  "sky_exposure": 1.0,
+  "sky_exposure_headset": 0.9,
+  "sky_horizon_height": 0.1
 }
