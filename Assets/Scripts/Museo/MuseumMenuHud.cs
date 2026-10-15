@@ -33,6 +33,7 @@ namespace MusiyoBetsknate.Museum
         private Button controlsBack;
         private Slider sensitivity;
         private Slider volume;
+        private Slider musicLevel;
         private Button subtitles;
         private Button turnMode;
         private Button turnSpeed;
@@ -54,6 +55,7 @@ namespace MusiyoBetsknate.Museum
         private readonly System.Collections.Generic.List<System.Action> removeListeners = new();
         public MuseumMenuView View => view;
         public MuseumVisitorPreferences Preferences => preferences;
+        public Slider MusicLevelSlider => musicLevel;
         /// <summary>Headset-only turning choices, added beside the subtitles option of the settings page.</summary>
         public Button TurnModeButton => turnMode;
         public Button TurnSpeedButton => turnSpeed;
@@ -97,6 +99,17 @@ namespace MusiyoBetsknate.Museum
             mainMenu = view.Pause.MainMenu;
             sensitivity = view.Settings.Sensitivity;
             volume = view.Settings.Volume;
+            if (musicLevel == null)
+            {
+                musicLevel = Instantiate(volume, volume.transform.parent, false);
+                musicLevel.name = "MusicVolume";
+                var musicLabel = musicLevel.GetComponentInChildren<MuseumInterfaceLabel>(true);
+                musicLabel.TextKey = "music_volume";
+                musicLabel.RefreshText();
+                musicLevel.onValueChanged = new Slider.SliderEvent();
+                musicLevel.minValue = 0; musicLevel.maxValue = 1;
+                musicLevel.transform.SetSiblingIndex(volume.transform.GetSiblingIndex() + 1);
+            }
             subtitles = view.Settings.Subtitles;
             settingsBack = view.Settings.Back;
             controlsBack = view.Controls.Back;
@@ -142,6 +155,7 @@ namespace MusiyoBetsknate.Museum
             Listen(view.Controls.RestoreBindings, RestoreBindings);
             sensitivity.onValueChanged.AddListener(preferences.SetSensitivity);
             volume.onValueChanged.AddListener(preferences.SetVolume);
+            musicLevel.onValueChanged.AddListener(preferences.SetMusicLevel);
             flow.Changed += Refresh;
             interaction.Changed += Refresh;
             loader.Changed += Refresh;
@@ -231,6 +245,7 @@ namespace MusiyoBetsknate.Museum
             removeListeners.Clear();
             sensitivity.onValueChanged.RemoveListener(preferences.SetSensitivity);
             volume.onValueChanged.RemoveListener(preferences.SetVolume);
+            musicLevel.onValueChanged.RemoveListener(preferences.SetMusicLevel);
             flow.Changed -= Refresh; interaction.Changed -= Refresh; loader.Changed -= Refresh;
             preferences.Changed -= SyncSettings;
             bound = false;
@@ -283,6 +298,8 @@ namespace MusiyoBetsknate.Museum
         {
             sensitivity.SetValueWithoutNotify(preferences.Sensitivity);
             volume.SetValueWithoutNotify(preferences.Volume);
+            musicLevel.SetValueWithoutNotify(preferences.MusicLevel);
+            FindAnyObjectByType<MuseumMusic>()?.SetMusicLevel(preferences.MusicLevel);
             subtitles.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Get(preferences.Subtitles ? "hide_subtitles" : "show_subtitles");
             var xr = MuseumXrConfiguration.Current;
             var turning = preferences.Turn(xr.DefaultTurn);

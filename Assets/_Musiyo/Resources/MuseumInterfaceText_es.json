@@ -58,7 +58,8 @@
     "repeat_narration": "Repetir narración ({input:narration_repeat})",
     "mute_narration": "Silenciar narración ({input:narration_mute})",
     "retry_narration": "Reintentar narración",
-    "narration_volume": "Volumen de narración",
+    "narration_volume": "Volumen general",
+    "music_volume": "Volumen de música",
     "hide_subtitles": "Ocultar subtítulos",
     "show_subtitles": "Mostrar subtítulos",
     "pause_narration_keyboard": "Pausar narración ({input:narration_pause})",
@@ -221,6 +222,12 @@
     "auto_tour_finished": "Fin del recorrido automático. Puedes seguir explorando.",
     "auto_tour_blocked": "El recorrido automático no encontró un camino al siguiente punto y se detuvo. Puedes seguir explorando.",
     "auto_tour_unavailable": "El recorrido automático necesita el contenido del museo. Reintenta la conexión.",
-    "service_unavailable_hint": "Sin conexión con el servicio del museo. Se reintenta solo; también desde Pausa."
+    "service_unavailable_hint": "Sin conexión con el servicio del museo. Se reintenta solo; también desde Pausa.",
+    "companion_arrival": "Bienvenido a Musiyo Bëtsknaté. Puedes explorar a tu ritmo y detenerte donde quieras.",
+    "companion_welcome": "Aquí puedes comenzar la visita. Las fichas te permiten consultar los textos y sus fuentes.",
+    "companion_characters": "Puedes acercarte a una pieza, leer su ficha y continuar cuando quieras.",
+    "companion_instruments": "Puedes detenerte en esta sala y elegir qué ficha consultar.",
+    "companion_hearth": "Este es un buen lugar para hacer una pausa. Tú eliges cuándo continuar.",
+    "companion_overlook": "Puedes observar el entorno o volver a las salas. La visita sigue a tu ritmo."
   }
 }

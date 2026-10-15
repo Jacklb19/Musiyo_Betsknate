@@ -10,10 +10,11 @@ namespace MusiyoBetsknate.Museum
     public sealed class MuseumVisitorPreferences
     {
         public const string StorageKey = "musiyo.visitor-preferences.v1";
-        private const int Version = 2;
+        private const int Version = 3;
         [JsonProperty("schema_version", Required = Required.Always)] private int schemaVersion = Version;
         [JsonProperty("sensitivity", Required = Required.Always)] public float Sensitivity { get; private set; }
         [JsonProperty("volume", Required = Required.Always)] public float Volume { get; private set; }
+        [JsonProperty("music_level")] public float MusicLevel { get; private set; } = 1;
         [JsonProperty("subtitles", Required = Required.Always)] public bool Subtitles { get; private set; }
         /// <summary>Headset turning chosen by the visitor, or null to follow the shipped default.</summary>
         [JsonProperty("turn_mode")] public string TurnMode { get; private set; }
@@ -30,8 +31,8 @@ namespace MusiyoBetsknate.Museum
                 try { result = JsonConvert.DeserializeObject<MuseumVisitorPreferences>(saved); }
                 catch (JsonException) { }
             }
-            // Version 1 had no turning preferences; its other values carry over unchanged.
-            if (result == null || result.schemaVersion != 1 && result.schemaVersion != Version
+            // Earlier versions carry over their values and use full relative music level.
+            if (result == null || result.schemaVersion < 1 || result.schemaVersion > Version
                 || !MuseumExperienceConfiguration.Finite(result.Sensitivity)
                 || result.Sensitivity < settings.MinimumSensitivity || result.Sensitivity > settings.MaximumSensitivity
                 || !MuseumExperienceConfiguration.Finite(result.Volume) || result.Volume < 0 || result.Volume > 1)
@@ -39,6 +40,8 @@ namespace MusiyoBetsknate.Museum
                 result = new MuseumVisitorPreferences { Sensitivity = settings.DefaultSensitivity,
                     Volume = settings.DefaultVolume, Subtitles = settings.DefaultSubtitles };
             }
+            if (!MuseumExperienceConfiguration.Finite(result.MusicLevel) || result.MusicLevel < 0 || result.MusicLevel > 1)
+                result.MusicLevel = 1;
             if (MuseumTurning.ParseMode(result.TurnMode) == null) result.TurnMode = null;
             if (!MuseumExperienceConfiguration.Finite(result.TurnSpeed) || result.TurnSpeed < MuseumTurning.MinimumSpeed
                 || result.TurnSpeed > MuseumTurning.MaximumSpeed) result.TurnSpeed = 0;
@@ -60,6 +63,12 @@ namespace MusiyoBetsknate.Museum
             Changed?.Invoke();
         }
         public void SetSubtitles(bool value) { Subtitles = value; Changed?.Invoke(); }
+        public void SetMusicLevel(float value)
+        {
+            if (!MuseumExperienceConfiguration.Finite(value)) return;
+            MusicLevel = Mathf.Clamp01(value);
+            Changed?.Invoke();
+        }
         public void SetTurnMode(MuseumTurnMode mode) { TurnMode = MuseumTurning.Name(mode); Changed?.Invoke(); }
         public void SetTurnSpeed(float degreesPerSecond)
         {
@@ -73,6 +82,7 @@ namespace MusiyoBetsknate.Museum
         {
             Sensitivity = configuration.DefaultSensitivity;
             Volume = configuration.DefaultVolume;
+            MusicLevel = 1;
             Subtitles = configuration.DefaultSubtitles;
             TurnMode = null;
             TurnSpeed = 0;

@@ -16,7 +16,15 @@
   "welcome_delay_seconds": 2.0,
   "remark_seconds": 7.0,
   "dwell_seconds": 6.0,
-  "gap_seconds": 20.0,
+  "gap_seconds": 90.0,
   "mask_element": "",
-  "remarks": []
+  "remarks": [],
+  "interface_remarks": [
+    { "id": "guide-context-0", "zone": "room.arrival", "text_key": "companion_arrival" },
+    { "id": "guide-context-1", "zone": "room.welcome", "text_key": "companion_welcome" },
+    { "id": "guide-context-2", "zone": "room.characters", "text_key": "companion_characters" },
+    { "id": "guide-context-3", "zone": "room.instruments", "text_key": "companion_instruments" },
+    { "id": "guide-context-4", "zone": "room.hearth", "text_key": "companion_hearth" },
+    { "id": "guide-context-5", "zone": "room.overlook", "text_key": "companion_overlook" }
+  ]
 }

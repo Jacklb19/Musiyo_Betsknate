@@ -84,6 +84,8 @@ namespace MusiyoBetsknate.Museum
         private void Awake()
         {
             settings = MuseumMusicSettings.Current;
+            musicLevel = MuseumVisitorPreferences.Load(MuseumExperienceConfiguration.Current,
+                PlayerPrefs.GetString(MuseumVisitorPreferences.StorageKey, "")).MusicLevel;
             for (int index = 0; index < sources.Length; index++)
             {
                 var source = gameObject.AddComponent<AudioSource>();
