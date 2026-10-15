@@ -18,5 +18,15 @@
       "M_Madera_Piso": 1.0,
       "M_Corteza_Sauce": 1.0
     }
+  },
+  "water": {
+    "note": "The lagoon keeps its delivered mesh, rim, island and colliders; only its material changes. One opaque shader on every profile (no transparency, no depth or colour texture reads); the headset values are for tuning on the device.",
+    "material": "M_Agua_Laguna",
+    "shader": "Musiyo/Lagoon Water",
+    "profiles": {
+      "web": { "deep_color": "#051214", "facing_color": "#0E2A2A", "reflection": 0.55, "wave_length_m": 0.6, "wave_slope": 0.12, "wave_speed": 0.12, "glint": 1.2 },
+      "windows": { "deep_color": "#051214", "facing_color": "#0E2A2A", "reflection": 0.6, "wave_length_m": 0.55, "wave_slope": 0.13, "wave_speed": 0.12, "glint": 1.4 },
+      "quest": { "deep_color": "#051214", "facing_color": "#0E2A2A", "reflection": 0.5, "wave_length_m": 0.7, "wave_slope": 0.1, "wave_speed": 0.1, "glint": 1.0 }
+    }
   }
 }

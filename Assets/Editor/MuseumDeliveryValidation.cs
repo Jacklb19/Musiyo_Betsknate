@@ -134,6 +134,13 @@ namespace MusiyoBetsknate.Editor
                 {
                     var material = AssetDatabase.LoadAssetAtPath<Material>(MuseumDeliveryManifest.MaterialPath(profile.Name, entry.Name));
                     if (material == null) { errors.Add("Missing " + profile.Name + " material " + entry.Name + "."); continue; }
+                    // The lagoon carries its own shader on every profile; see the water section of surface_finish.json.
+                    if (finish.WaterFor(profile.Name, entry.Name) != null)
+                    {
+                        if (material.shader.name != finish.Water.Shader) errors.Add(profile.Name + "/" + entry.Name + " uses " + material.shader.name + ".");
+                        else if (material.GetTexture("_SkyTex") == null) errors.Add(profile.Name + "/" + entry.Name + " has no sky to reflect.");
+                        continue;
+                    }
                     if (material.shader.name != profile.Shader) errors.Add(profile.Name + "/" + entry.Name + " uses " + material.shader.name + ".");
                     bool both = Mathf.Approximately(material.GetFloat("_Cull"), (float)CullMode.Off);
                     if (both != (entry.DoubleSided && !repairs.DrawsOneSide(entry.Name)))
