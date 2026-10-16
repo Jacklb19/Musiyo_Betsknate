@@ -375,6 +375,15 @@
           "processors": "",
           "interactions": "",
           "initialStateCheck": true
+        },
+        {
+          "name": "Teleport",
+          "type": "Button",
+          "id": "53e462ae-6d07-588f-abc5-c9918a34446e",
+          "expectedControlType": "Button",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": false
         }
       ],
       "bindings": [
@@ -595,6 +604,17 @@
           "processors": "",
           "groups": "XR",
           "action": "Sprint",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "5d72b5e5-596a-57bf-ab44-84a6a931a9c3",
+          "path": "<OculusTouchController>{RightHand}/primaryButton",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "Teleport",
           "isComposite": false,
           "isPartOfComposite": false
         }

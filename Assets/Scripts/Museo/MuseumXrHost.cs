@@ -27,6 +27,7 @@ namespace MusiyoBetsknate.Museum
         private Canvas canvas;
         private MuseumXrConfiguration configuration;
         private LineRenderer rayLine;
+        private MuseumTeleport teleport;
         private InputSystemUIInputModule module;
         private TrackedDeviceRaycaster menuRaycaster;
         private readonly MenuPlacementGate menuGate = new MenuPlacementGate();
@@ -119,6 +120,7 @@ namespace MusiyoBetsknate.Museum
             reachColor = MuseumExperienceConfiguration.ColorValue(MuseumExperienceConfiguration.Current.SecondaryAccentColor);
             rayLine.startColor = rayLine.endColor = rayColor;
             rayLine.enabled = false;
+            teleport = new MuseumTeleport(visitor, body, rayLine.sharedMaterial, rayColor, new Color(.85f, .35f, .3f));
             rooms = interaction.Runtime.GetComponentsInChildren<RoomAnchor>(true);
             outdoorRooms = new HashSet<string>(configuration.OutdoorRooms, StringComparer.Ordinal);
             outdoorGround = new HashSet<string>(configuration.OutdoorGroundObjects, StringComparer.Ordinal);
@@ -173,11 +175,12 @@ namespace MusiyoBetsknate.Museum
         private void Update()
         {
             if (!Ready) return;
-            if (!HeadTracked) { StopWalking(); return; }
+            if (!HeadTracked) { StopWalking(); teleport.Cancel(); return; }
             bool blocked = flow.BlocksInput || interaction.BlocksMovement || interaction.HoldsVisitor
                 || interaction.GetComponent<MuseumWayfinding>()?.MenuOpen == true || input.Context != MuseumInputContext.Visit
                 || flow.InputConsumedThisFrame;
-            if (blocked) { StopWalking(); return; }
+            if (blocked) { StopWalking(); teleport.Cancel(); return; }
+            Teleport();
             var stick = input.Turn.ReadValue<Vector2>();
             float degrees;
             if (TurnMode == MuseumTurnMode.Snap) degrees = snapTurn.Step(stick.x, configuration.SnapTurnDegrees);
@@ -203,6 +206,30 @@ namespace MusiyoBetsknate.Museum
             if (body.isGrounded && verticalSpeed < 0) verticalSpeed = -1;
             verticalSpeed += Physics.gravity.y * Time.deltaTime;
             body.Move((direction * Speed + Vector3.up * verticalSpeed) * Time.deltaTime);
+        }
+
+        /// <summary>
+        /// Holding the button aims the arc from the right controller; releasing it on valid floor jumps there. A piece in
+        /// the hand or a lost controller cancels the jump.
+        /// </summary>
+        private void Teleport()
+        {
+            bool held = input.Teleport.IsPressed() && input.RightTracked.IsPressed()
+                && interaction.GetComponent<MuseumModelGrab>()?.Held != true;
+            if (!teleport.Aiming && !input.Teleport.WasPressedThisFrame()) return;
+            if (!input.RightTracked.IsPressed() || interaction.GetComponent<MuseumModelGrab>()?.Held == true) { teleport.Cancel(); return; }
+            if (held)
+            {
+                var position = trackingOrigin.TransformPoint(input.RightPosition.ReadValue<Vector3>());
+                var rotation = trackingOrigin.rotation * input.RightRotation.ReadValue<Quaternion>();
+                teleport.Aim(position, rotation * Vector3.forward, Feet(), head.transform.forward);
+                return;
+            }
+            if (teleport.Jump(Feet()))
+            {
+                verticalSpeed = 0;
+                interaction.GetComponent<MuseumAutoTour>()?.Stop();
+            }
         }
 
         private void StopWalking()
@@ -240,7 +267,7 @@ namespace MusiyoBetsknate.Museum
             menuRaycaster.enabled = interfaceOpen;
             module.enabled = tracked;
             var grab = interaction.GetComponent<MuseumModelGrab>();
-            rayLine.enabled = tracked && grab?.Held != true;
+            rayLine.enabled = tracked && grab?.Held != true && !teleport.Aiming;
             var display = interaction.GetComponent<MuseumLecternDisplay>();
             if (!tracked) { display?.ClearAim(); return; }
             var position = trackingOrigin.TransformPoint(input.RightPosition.ReadValue<Vector3>());

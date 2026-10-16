@@ -96,6 +96,8 @@ namespace MusiyoBetsknate.Museum
         public InputAction RightTracked { get; }
         /// <summary>Right stick of a headset: turns the visitor, continuously or in steps.</summary>
         public InputAction Turn { get; }
+        /// <summary>Held on a headset: an arc shows where the visitor would stand; releasing it jumps there.</summary>
+        public InputAction Teleport { get; }
         /// <summary>Takes the published piece that the pointer or hand reaches; releasing it sends it back.</summary>
         public InputAction Grab { get; }
         public InputAction AutoTour { get; }
@@ -160,7 +162,7 @@ namespace MusiyoBetsknate.Museum
             HeadPosition = Find("Tracking/HeadPosition"); HeadRotation = Find("Tracking/HeadRotation");
             HeadState = Find("Tracking/HeadState"); RightPosition = Find("Tracking/RightPosition");
             RightRotation = Find("Tracking/RightRotation"); RightTracked = Find("Tracking/RightTracked");
-            Turn = Find("Locomotion/Turn");
+            Turn = Find("Locomotion/Turn"); Teleport = Find("Locomotion/Teleport");
             Grab = Find("Visit/Grab"); AutoTour = Find("Visit/AutoTour");
             foreach (var maps in ContextMaps.Values)
                 foreach (var map in maps) Asset.FindActionMap(map, true);
