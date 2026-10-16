@@ -23,5 +23,312 @@
         "expected_rafters": 22
       }
     }
+  },
+  "coplanar_overlaps": {
+    "reason": "Faces of the delivered model that lie in the same plane as other faces and overlap them flicker in depth (z-fighting), worst at a distance on the headset. Found with the surface audit (plane tolerance 4 mm) and kept to the pieces a visitor can see: hidden undersides, faces above the eyes and faces inside solids are left as delivered. Where two faces overlap, the one listed in under (same side) or under_either_side (pieces drawn on both sides) is drawn and the overlapping part of the other is cut away at import; partly covered faces are split, and new corners keep the texture, lightmap and colour of the face they come from. Box colliders and the delivered bounds stay as they were. Floor bands that crossed at their corners get one mitre joint.",
+    "trims": [
+      {
+        "object": "Umbral_Bienvenida_Sur",
+        "under": ["Puerta_Bienvenida_Sur_Jamba_O"],
+        "under_either_side": ["Bienvenida_Muro_Madera_DS"],
+        "triangles_before": 12,
+        "triangles_after": 19,
+        "removed_area_m2": 0.106,
+        "where": "Entrance: the 3 cm ends of the threshold stone lie in the faces of the door posts; the posts are drawn there."
+      },
+      {
+        "object": "Sendero_Jajan",
+        "under": ["Umbral_Bienvenida_Sur"],
+        "triangles_before": 12,
+        "triangles_after": 14,
+        "removed_area_m2": 1.6,
+        "where": "Entrance: the last 0.4 m of the earth path runs under the threshold stone at the same height (0.03 m); the stone is drawn there."
+      },
+      {
+        "object": "Pasaje_Sur_Piso",
+        "under": ["Bienvenida_Piso"],
+        "triangles_before": 12,
+        "triangles_after": 35,
+        "removed_area_m2": 2.5378,
+        "where": "Welcome room to characters: the passage floor reaches into the round welcome floor at the same height; the room floor is drawn there."
+      },
+      {
+        "object": "Bienvenida_Muro_Tapia_DS",
+        "under_either_side": ["Bienvenida_Muro_Tapia_DS", "Bienvenida_Piso", "Pasaje_Sur_Piso", "Bienvenida_Zocalo_Piedra"],
+        "triangles_before": 1134,
+        "triangles_after": 1241,
+        "removed_area_m2": 35.8382,
+        "where": "Welcome room wall, drawn on both sides: its foot lies on the floors and shows in the doorways, its segments meet face to face, and its base lies behind the stone plinth."
+      },
+      {
+        "object": "Bienvenida_Muro_Madera_DS",
+        "under_either_side": ["Bienvenida_Muro_Madera_DS", "Bienvenida_Piso", "Bienvenida_Muro_Tapia_DS"],
+        "triangles_before": 24,
+        "triangles_after": 23,
+        "removed_area_m2": 0.1512,
+        "where": "Welcome room south door lining, drawn on both sides: its foot lies on the floor and its pieces meet face to face."
+      },
+      {
+        "object": "Patio_Sendero_Piedras",
+        "under": ["Patio_Sendero_Piedras"],
+        "triangles_before": 1002,
+        "triangles_after": 1531,
+        "removed_area_m2": 4.7227,
+        "where": "Patio stepping stones that overlap each other with their tops at the same height; the earlier stone is drawn."
+      },
+      {
+        "object": "Sendero_Lajas_Piedra",
+        "under": ["Sendero_Lajas_Piedra"],
+        "triangles_before": 1992,
+        "triangles_after": 2024,
+        "removed_area_m2": 0.0013,
+        "where": "Arrival path flagstones, same as the patio stones (one small overlap)."
+      },
+      {
+        "object": "Personajes_Muro_Tapia_N",
+        "under": ["Personajes_Muro_Madera_N"],
+        "triangles_before": 36,
+        "triangles_after": 40,
+        "removed_area_m2": 1.788,
+        "where": "North door of the characters room: the wood lining covers the reveal."
+      },
+      {
+        "object": "Personajes_Muro_Tapia_E",
+        "under": ["Personajes_Muro_Madera_E"],
+        "triangles_before": 36,
+        "triangles_after": 40,
+        "removed_area_m2": 1.788,
+        "where": "East door of the characters room: the wood lining covers the reveal."
+      },
+      {
+        "object": "Personajes_Muro_Sur_O",
+        "under": ["Personajes_Muro_Madera_S"],
+        "triangles_before": 32,
+        "triangles_after": 38,
+        "removed_area_m2": 0.918,
+        "where": "South door of the characters room, coming from the welcome room: the wood lining covers the reveal."
+      },
+      {
+        "object": "Personajes_Muro_Sur_E",
+        "under": ["Personajes_Muro_Madera_S"],
+        "triangles_before": 32,
+        "triangles_after": 40,
+        "removed_area_m2": 0.918,
+        "where": "Same door, east half."
+      },
+      {
+        "object": "Bienvenida_Muro_Tapia",
+        "under": ["Personajes_Muro_Madera_S"],
+        "triangles_before": 24,
+        "triangles_after": 46,
+        "removed_area_m2": 0.48,
+        "where": "South passage walls where they meet the wood lining of the characters door."
+      },
+      {
+        "object": "Fogon_Muro_Tapia",
+        "under": ["Personajes_Muro_Madera_N", "Fogon_Muro_Madera"],
+        "triangles_before": 24,
+        "triangles_after": 59,
+        "removed_area_m2": 0.867,
+        "where": "North passage walls where they meet the wood linings."
+      },
+      {
+        "object": "Instrumentos_Muro_Tapia",
+        "under": ["Personajes_Muro_Madera_E", "Instrumentos_Muro_Madera", "Personajes_Estructura_Piedra_E"],
+        "triangles_before": 24,
+        "triangles_after": 84,
+        "removed_area_m2": 1.11,
+        "where": "East passage walls where they meet the wood linings and the stone plinth."
+      },
+      {
+        "object": "Bienvenida_Techo_Paja",
+        "under": ["Bienvenida_Muro_Tapia", "Personajes_Muro_Madera_S"],
+        "under_either_side": ["Bienvenida_Muro_Tapia_DS"],
+        "triangles_before": 332,
+        "triangles_after": 393,
+        "removed_area_m2": 2.6307,
+        "where": "South passage roof: its sides reach down the passage walls; the walls are drawn there."
+      },
+      {
+        "object": "Instrumentos_Techo_Paja",
+        "under": ["Instrumentos_Muro_Tapia", "Instrumentos_Muro_Madera", "Personajes_Muro_Madera_E"],
+        "triangles_before": 68,
+        "triangles_after": 68,
+        "removed_area_m2": 1.05,
+        "where": "East passage roof, same as the south one."
+      },
+      {
+        "object": "Fogon_Techo_Paja",
+        "under": ["Personajes_Muro_Madera_N"],
+        "triangles_before": 68,
+        "triangles_after": 73,
+        "removed_area_m2": 0.003,
+        "where": "North passage roof against the characters door lining."
+      },
+      {
+        "object": "Fogon_Muro_Madera",
+        "under": ["Fogon_Muro_Madera", "Fogon_Muro_Este", "Fogon_Muro_Norte"],
+        "triangles_before": 456,
+        "triangles_after": 530,
+        "removed_area_m2": 2.909,
+        "where": "Hearth room wood walls: doubled reveal faces and the joints with the east and north walls."
+      },
+      {
+        "object": "Mirador_Muro_Madera",
+        "under": ["Fogon_Muro_Madera"],
+        "triangles_before": 24,
+        "triangles_after": 46,
+        "removed_area_m2": 0.39,
+        "where": "Overlook wall where it meets the hearth room wall."
+      },
+      {
+        "object": "Instrumentos_Muro_Madera",
+        "under": ["Instrumentos_Muro_Madera"],
+        "triangles_before": 108,
+        "triangles_after": 125,
+        "removed_area_m2": 1.788,
+        "where": "Instruments room wood walls: doubled reveal faces."
+      },
+      {
+        "object": "Personajes_Estructura_Madera_Anillo",
+        "under": ["Personajes_Estructura_Madera_Anillo"],
+        "triangles_before": 2736,
+        "triangles_after": 2867,
+        "removed_area_m2": 1.208,
+        "where": "Characters ring beams that overlap at the corners."
+      },
+      {
+        "object": "Personajes_Estructura_Piedra_N",
+        "under": ["Personajes_Estructura_Piedra_E"],
+        "triangles_before": 24,
+        "triangles_after": 25,
+        "removed_area_m2": 0.225,
+        "where": "Stone plinth corner, north-east and north-west."
+      },
+      {
+        "object": "Personajes_Estructura_Piedra_S",
+        "under": ["Personajes_Estructura_Piedra_E"],
+        "triangles_before": 24,
+        "triangles_after": 25,
+        "removed_area_m2": 0.225,
+        "where": "Stone plinth corner, south-east and south-west."
+      },
+      {
+        "object": "Personajes_Zocalo_O",
+        "under": ["Personajes_Estructura_Piedra_N", "Personajes_Estructura_Piedra_S"],
+        "triangles_before": 12,
+        "triangles_after": 24,
+        "removed_area_m2": 0.45,
+        "where": "West plinth ends against the corner stones."
+      },
+      {
+        "object": "Personajes_Viga_N",
+        "under": ["Personajes_Viga_E", "Personajes_Viga_O"],
+        "triangles_before": 12,
+        "triangles_after": 20,
+        "removed_area_m2": 0.6,
+        "where": "Inner beams that overlap at the corners."
+      },
+      {
+        "object": "Personajes_Viga_S",
+        "under": ["Personajes_Viga_E", "Personajes_Viga_O"],
+        "triangles_before": 12,
+        "triangles_after": 20,
+        "removed_area_m2": 0.6,
+        "where": "Same, south."
+      },
+      {
+        "object": "Fogon_Estructura_Corteza_Sauce",
+        "under": ["Fogon_Estructura_Corteza_Sauce", "Fogon_Estructura_Madera"],
+        "triangles_before": 384,
+        "triangles_after": 445,
+        "removed_area_m2": 0.3686,
+        "where": "Hearth roof structure."
+      },
+      {
+        "object": "Instrumentos_Estructura_Corteza_Sauce",
+        "under": ["Instrumentos_Estructura_Corteza_Sauce"],
+        "triangles_before": 432,
+        "triangles_after": 509,
+        "removed_area_m2": 0.3298,
+        "where": "Instruments roof structure."
+      },
+      {
+        "object": "Bienvenida_Estructura_Corteza_Sauce",
+        "under": ["Bienvenida_Estructura_Corteza_Sauce"],
+        "triangles_before": 384,
+        "triangles_after": 464,
+        "removed_area_m2": 0.0407,
+        "where": "Welcome roof structure."
+      },
+      {
+        "object": "Bienvenida_Estructura_Madera.001",
+        "under": ["Bienvenida_Estructura_Madera.001"],
+        "triangles_before": 2592,
+        "triangles_after": 3312,
+        "removed_area_m2": 0.173,
+        "where": "Welcome roof structure."
+      },
+      {
+        "object": "Mirador_Estructura_Madera",
+        "under": ["Mirador_Estructura_Madera"],
+        "triangles_before": 600,
+        "triangles_after": 519,
+        "removed_area_m2": 0.1574,
+        "where": "Overlook railing."
+      },
+      {
+        "object": "Fogon_Tishasha_Repisas",
+        "under": ["Fogon_Tishasha_Alacena"],
+        "triangles_before": 36,
+        "triangles_after": 42,
+        "removed_area_m2": 0.12,
+        "where": "Hearth shelves inside the cupboard: a board lies in the cupboard face."
+      },
+      {
+        "object": "Portada_Fleco_Paja",
+        "under": ["Portada_Fleco_Paja", "Portada_Techo_Paja"],
+        "triangles_before": 148,
+        "triangles_after": 144,
+        "removed_area_m2": 0.825,
+        "where": "Entrance gate fringe: teeth overlapping in one plane, and the fringe against the gate roof."
+      },
+      {
+        "object": "Techo_Bienvenida_Fleco_Paja",
+        "under": ["Techo_Bienvenida_Fleco_Paja"],
+        "triangles_before": 1348,
+        "triangles_after": 1080,
+        "removed_area_m2": 6.732,
+        "where": "Welcome roof fringe teeth overlapping in one plane."
+      },
+      {
+        "object": "Techo_Corredor_Fleco_Paja",
+        "under": ["Techo_Corredor_Fleco_Paja"],
+        "triangles_before": 6236,
+        "triangles_after": 4680,
+        "removed_area_m2": 33.4598,
+        "where": "Characters corridor roof fringe teeth overlapping in one plane."
+      },
+      {
+        "object": "Techo_Fogon_Fleco_Paja",
+        "under": ["Techo_Fogon_Fleco_Paja"],
+        "triangles_before": 672,
+        "triangles_after": 480,
+        "removed_area_m2": 4.1597,
+        "where": "Hearth roof fringe teeth overlapping in one plane."
+      },
+      {
+        "object": "Techo_Instrumentos_Fleco_Paja",
+        "under": ["Techo_Instrumentos_Fleco_Paja"],
+        "triangles_before": 836,
+        "triangles_after": 660,
+        "removed_area_m2": 3.7075,
+        "where": "Instruments roof fringe teeth overlapping in one plane."
+      }
+    ],
+    "mitred_bands": {
+      "Corredor_Cenefa_Piso": {"strips": 4, "mitred_ends": 8, "where": "Symbol band of the characters corridor floor: the four strips crossed at each corner (and left the outer corner empty); now they meet on the diagonal."},
+      "Instrumentos_Cenefa_Piso": {"strips": 4, "mitred_ends": 8, "where": "Symbol band of the instruments room floor, same correction."}
+    }
   }
 }
