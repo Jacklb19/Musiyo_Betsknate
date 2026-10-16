@@ -28,6 +28,44 @@ namespace MusiyoBetsknate.Editor
             ("overlook_sky", new Vector3(-6.8f, 1.65f, 18.5f), new Vector3(-30, 4, 18.5f)),
         };
 
+        /// <summary>
+        /// The joins the owner reported on the headset (entrance, welcome room to characters, floor band corners) and the
+        /// patio stones, at eye height and low, so faces that fight in depth show as noise.
+        /// </summary>
+        public static readonly (string name, Vector3 eye, Vector3 target)[] JoinViews =
+        {
+            ("entrance_threshold", new Vector3(.4f, 1.6f, -29.5f), new Vector3(0, .03f, -26.1f)),
+            ("entrance_threshold_low", new Vector3(-1.6f, .9f, -28.4f), new Vector3(.3f, .03f, -26)),
+            ("welcome_exit_floor", new Vector3(.5f, 1.6f, -17.6f), new Vector3(0, .1f, -13)),
+            ("welcome_exit_floor_low", new Vector3(-1.4f, .8f, -16.2f), new Vector3(.6f, 0, -13.8f)),
+            ("characters_south_door", new Vector3(-.8f, 1.6f, -14.6f), new Vector3(1.55f, 1.3f, -11.35f)),
+            ("characters_band_corner", new Vector3(-12.5f, 1.5f, -10.6f), new Vector3(-10.7f, 0, -8.7f)),
+            ("instruments_band_corner", new Vector3(18.6f, 1.6f, -6.6f), new Vector3(16, 0, -9.1f)),
+            ("instruments_band_corner_north", new Vector3(22.6f, 1.6f, -2.6f), new Vector3(25.1f, 0, .1f)),
+            ("patio_stones", new Vector3(-2.6f, 1.6f, -5.4f), new Vector3(-.4f, 0, -2.3f)),
+        };
+
+        public static void JoinsBefore() => Joins("before");
+        public static void JoinsAfter() => Joins("after");
+
+        /// <summary>
+        /// Pictures the join views with the headset set and the visitor camera's clip planes, and audits the coplanar
+        /// overlaps of the saved scene, into TestResults/world/joins; the scene is never saved here.
+        /// </summary>
+        public static void Joins(string label)
+        {
+            string folder = Path.Combine(CaptureFolder, "joins");
+            Directory.CreateDirectory(folder);
+            MuseumSurfaceAudit.Run(false, Path.Combine(folder, "audit-" + label));
+            var scene = EditorSceneManager.OpenScene(MuseumSurfaceAudit.MuseumScene, OpenSceneMode.Single);
+            MuseumSurfaceProfiles.Apply(scene, "quest");
+            MuseumFoliageBatch.Combine(scene, true);
+            MuseumAtmosphere.Current.Apply(true);
+            MuseumViewCapture.Render(Path.Combine(folder, label), JoinViews, 60, near: .3f, far: 1000);
+            EditorSceneManager.OpenScene(MuseumSurfaceAudit.MuseumScene, OpenSceneMode.Single);
+            Debug.Log("Museum join pictures and audit written: " + label + ".");
+        }
+
         public static void ApplyAll()
         {
             MuseumAtmosphereTools.CreateSky();
