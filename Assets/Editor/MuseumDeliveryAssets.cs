@@ -276,11 +276,14 @@ namespace MusiyoBetsknate.Editor
             finally { UnityEngine.Object.DestroyImmediate(instance); }
         }
 
-        /// <summary>A box where the mesh is one, so simple floors and walls stay cheap; the exact mesh otherwise.</summary>
+        /// <summary>
+        /// A box where the mesh is one, so simple floors and walls stay cheap; the exact mesh otherwise. A delivered box whose
+        /// covered faces the import trims (mesh_repairs.json) keeps its box: the walking surface does not change.
+        /// </summary>
         private static void AddCollider(MeshFilter filter)
         {
             var mesh = filter.sharedMesh;
-            if (IsBox(mesh))
+            if (IsBox(mesh, MuseumMeshRepairs.Load().Trimmed(filter.name)))
             {
                 var box = filter.gameObject.AddComponent<BoxCollider>();
                 box.center = mesh.bounds.center;
@@ -289,8 +292,11 @@ namespace MusiyoBetsknate.Editor
             else filter.gameObject.AddComponent<MeshCollider>().sharedMesh = mesh;
         }
 
-        /// <summary>Whether every vertex sits on a corner of the mesh bounds, which only an axis-aligned box does.</summary>
-        public static bool IsBox(Mesh mesh)
+        /// <summary>
+        /// Whether every vertex sits on a corner of the mesh bounds, which only an axis-aligned box does; with
+        /// <paramref name="trimmed"/>, the corners are all there and the other vertices lie on the faces of the box.
+        /// </summary>
+        public static bool IsBox(Mesh mesh, bool trimmed = false)
         {
             var bounds = mesh.bounds;
             float tolerance = bounds.size.magnitude * 1e-4f;
@@ -298,13 +304,14 @@ namespace MusiyoBetsknate.Editor
             var corners = new HashSet<int>();
             foreach (var vertex in mesh.vertices)
             {
-                int corner = 0;
+                int corner = 0, extremes = 0;
                 for (int axis = 0; axis < 3; axis++)
                 {
-                    if (Mathf.Abs(vertex[axis] - bounds.max[axis]) <= tolerance) corner |= 1 << axis;
-                    else if (Mathf.Abs(vertex[axis] - bounds.min[axis]) > tolerance) return false;
+                    if (Mathf.Abs(vertex[axis] - bounds.max[axis]) <= tolerance) { corner |= 1 << axis; extremes++; }
+                    else if (Mathf.Abs(vertex[axis] - bounds.min[axis]) <= tolerance) extremes++;
                 }
-                corners.Add(corner);
+                if (extremes == 3) corners.Add(corner);
+                else if (!trimmed || extremes == 0) return false;
             }
             return corners.Count == 8;
         }

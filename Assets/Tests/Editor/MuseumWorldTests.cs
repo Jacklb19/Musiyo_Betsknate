@@ -303,5 +303,173 @@ namespace MusiyoBetsknate.Tests
             }
             finally { EditorSceneManager.CloseScene(scene, true); }
         }
+
+        [Serializable] private sealed class RepairsFile { public CoplanarOverlaps coplanar_overlaps; }
+        [Serializable] private sealed class CoplanarOverlaps { public List<TrimEntry> trims; }
+        [Serializable] private sealed class TrimEntry { public string @object; public List<string> under; public List<string> under_either_side; }
+
+        private static Dictionary<string, MeshFilter> ImportedModel()
+            => AssetDatabase.LoadAssetAtPath<GameObject>(ModelPath).GetComponentsInChildren<MeshFilter>(true)
+                .Where(filter => filter.sharedMesh != null).GroupBy(filter => filter.name).ToDictionary(group => group.Key, group => group.First());
+
+        private static List<(Vector3 a, Vector3 b, Vector3 c)> Faces(MeshFilter filter)
+        {
+            var mesh = filter.sharedMesh;
+            var model = mesh.vertices.Select(vertex => filter.transform.localToWorldMatrix.MultiplyPoint3x4(vertex)).ToArray();
+            var faces = new List<(Vector3, Vector3, Vector3)>();
+            for (int submesh = 0; submesh < mesh.subMeshCount; submesh++)
+            {
+                var triangles = mesh.GetTriangles(submesh);
+                for (int index = 0; index + 2 < triangles.Length; index += 3)
+                    faces.Add((model[triangles[index]], model[triangles[index + 1]], model[triangles[index + 2]]));
+            }
+            return faces;
+        }
+
+        /// <summary>
+        /// Area, in m², where faces of one set lie within 4 mm of the plane of faces of another and overlap them: turned the
+        /// same way, or either way. With one set alone, each face against the earlier ones.
+        /// </summary>
+        private static double CoplanarOverlap(List<(Vector3 a, Vector3 b, Vector3 c)> first, List<(Vector3 a, Vector3 b, Vector3 c)> second, bool eitherSide)
+        {
+            bool self = ReferenceEquals(first, second);
+            double total = 0;
+            for (int i = 0; i < first.Count; i++)
+            {
+                var (a, b, c) = first[i];
+                var cross = Vector3.Cross(b - a, c - a);
+                if (cross.sqrMagnitude < 1e-12f) continue;
+                var normal = cross.normalized;
+                var x = (b - a).normalized;
+                var y = Vector3.Cross(normal, x);
+                Vector2 Flat(Vector3 point) => new Vector2(Vector3.Dot(point - a, x), Vector3.Dot(point - a, y));
+                for (int j = 0; j < (self ? i : second.Count); j++)
+                {
+                    var other = second[j];
+                    var otherCross = Vector3.Cross(other.b - other.a, other.c - other.a);
+                    if (otherCross.sqrMagnitude < 1e-12f) continue;
+                    float facing = Vector3.Dot(normal, otherCross.normalized);
+                    if (Mathf.Abs(facing) < .9995f || !eitherSide && facing < 0) continue;
+                    if (Mathf.Abs(Vector3.Dot(other.a - a, normal)) > .004f || Mathf.Abs(Vector3.Dot(other.b - a, normal)) > .004f
+                        || Mathf.Abs(Vector3.Dot(other.c - a, normal)) > .004f) continue;
+                    total += Intersection(new List<Vector2> { Flat(a), Flat(b), Flat(c) }, new List<Vector2> { Flat(other.a), Flat(other.b), Flat(other.c) });
+                }
+            }
+            return total;
+        }
+
+        private static double Intersection(List<Vector2> subject, List<Vector2> clip)
+        {
+            double Signed(List<Vector2> polygon)
+            {
+                double sum = 0;
+                for (int k = 0; k < polygon.Count; k++)
+                    sum += (double)polygon[k].x * polygon[(k + 1) % polygon.Count].y - (double)polygon[(k + 1) % polygon.Count].x * polygon[k].y;
+                return sum / 2;
+            }
+            if (Signed(clip) < 0) clip.Reverse();
+            for (int edge = 0; edge < 3 && subject.Count > 2; edge++)
+            {
+                Vector2 p = clip[edge], q = clip[(edge + 1) % 3];
+                float Side(Vector2 point) => (q.x - p.x) * (point.y - p.y) - (q.y - p.y) * (point.x - p.x);
+                var input = subject;
+                subject = new List<Vector2>();
+                for (int k = 0; k < input.Count; k++)
+                {
+                    Vector2 current = input[k], previous = input[(k + input.Count - 1) % input.Count];
+                    float now = Side(current), before = Side(previous);
+                    if (now >= 0 != before >= 0) subject.Add(previous + (current - previous) * (before / (before - now)));
+                    if (now >= 0) subject.Add(current);
+                }
+            }
+            return subject.Count < 3 ? 0 : Math.Abs(Signed(subject));
+        }
+
+        [Test]
+        public void TheReportedFloorJoinsDrawOneFloorAfterImport()
+        {
+            var model = ImportedModel();
+            // Entrance: earth path and threshold stone; welcome room to characters: passage and room floor, door lining.
+            Assert.That(CoplanarOverlap(Faces(model["Sendero_Jajan"]), Faces(model["Umbral_Bienvenida_Sur"]), false), Is.LessThan(5e-4));
+            Assert.That(CoplanarOverlap(Faces(model["Pasaje_Sur_Piso"]), Faces(model["Bienvenida_Piso"]), false), Is.LessThan(5e-4));
+            Assert.That(CoplanarOverlap(Faces(model["Personajes_Muro_Sur_E"]), Faces(model["Personajes_Muro_Madera_S"]), false), Is.LessThan(5e-4),
+                "The door from the welcome room shows its wood lining alone.");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Musiyo/Museum/Prefabs/MuseumArchitecture.prefab");
+            foreach (var name in new[] { "Sendero_Jajan", "Pasaje_Sur_Piso", "Umbral_Bienvenida_Sur" })
+            {
+                var mesh = model[name].sharedMesh;
+                // The walking surface keeps its delivered box, and the colour mapping runs on across the cut.
+                Assert.That((bool)Invoke("MuseumDeliveryAssets", "IsBox", mesh, true), Is.True, name + " still closes its box.");
+                var vertices = mesh.vertices;
+                var normals = mesh.normals;
+                var uv = mesh.uv;
+                var top = Enumerable.Range(0, mesh.vertexCount)
+                    .Where(index => normals[index].y > .99f && Mathf.Abs(vertices[index].y - mesh.bounds.max.y) < 1e-4f).ToList();
+                var points = top.Select(index => new Vector2(vertices[index].x, vertices[index].z)).ToList();
+                int o = 0;
+                int p = Enumerable.Range(0, top.Count).OrderByDescending(k => (points[k] - points[o]).sqrMagnitude).First();
+                int q = Enumerable.Range(0, top.Count).OrderByDescending(k => Mathf.Abs((points[p] - points[o]).x * (points[k] - points[o]).y
+                    - (points[p] - points[o]).y * (points[k] - points[o]).x)).First();
+                Vector2 e1 = points[p] - points[o], e2 = points[q] - points[o];
+                float det = e1.x * e2.y - e2.x * e1.y;
+                for (int k = 0; k < top.Count; k++)
+                {
+                    var d = points[k] - points[o];
+                    float s = (d.x * e2.y - e2.x * d.y) / det, t = (e1.x * d.y - d.x * e1.y) / det;
+                    var expected = uv[top[o]] + (uv[top[p]] - uv[top[o]]) * s + (uv[top[q]] - uv[top[o]]) * t;
+                    Assert.That((uv[top[k]] - expected).magnitude, Is.LessThan(1e-3f), name + " keeps one texture mapping on its top.");
+                }
+                var item = prefab.GetComponentsInChildren<Transform>(true).First(transform => transform.name == name);
+                var box = item.GetComponent<BoxCollider>();
+                Assert.That(box, Is.Not.Null, name + " keeps its box collider.");
+                Assert.That((box.size - mesh.bounds.size).magnitude, Is.LessThan(1e-4f), name + " keeps the walking surface it was delivered with.");
+            }
+        }
+
+        [Test]
+        public void EveryListedTrimLeavesNoCoplanarOverlap()
+        {
+            var repairs = JsonUtility.FromJson<RepairsFile>(File.ReadAllText("Assets/_Musiyo/Museum/Delivery/mesh_repairs.json"));
+            Assert.That(repairs.coplanar_overlaps.trims, Has.Count.GreaterThanOrEqualTo(30));
+            var model = ImportedModel();
+            foreach (var trim in repairs.coplanar_overlaps.trims)
+            {
+                var faces = Faces(model[trim.@object]);
+                foreach (var (names, eitherSide) in new[] { (trim.under, false), (trim.under_either_side, true) })
+                    foreach (var name in names ?? new List<string>())
+                    {
+                        double area = CoplanarOverlap(faces, name == trim.@object ? faces : Faces(model[name]), eitherSide);
+                        Assert.That(area, Is.LessThan(5e-4), trim.@object + " still overlaps " + name + " by " + area + " m².");
+                    }
+            }
+        }
+
+        [Test]
+        public void FloorBandsMeetOnceAtEachCorner()
+        {
+            var model = ImportedModel();
+            foreach (var name in new[] { "Corredor_Cenefa_Piso", "Instrumentos_Cenefa_Piso" })
+            {
+                var faces = Faces(model[name]);
+                Assert.That(faces, Has.Count.EqualTo(8), name + " keeps its eight triangles.");
+                Assert.That(CoplanarOverlap(faces, faces, false), Is.LessThan(1e-5), name + " strips no longer cross.");
+                var corners = faces.SelectMany(face => new[] { face.a, face.b, face.c }).ToList();
+                var low = corners.Aggregate(Vector3.Min);
+                var high = corners.Aggregate(Vector3.Max);
+                foreach (var corner in new[] { new Vector2(low.x, low.z), new Vector2(low.x, high.z), new Vector2(high.x, low.z), new Vector2(high.x, high.z) })
+                {
+                    // Just inside the outer corner, where the crossing strips used to leave a gap.
+                    var inside = corner + new Vector2(Mathf.Sign((low.x + high.x) / 2 - corner.x), Mathf.Sign((low.z + high.z) / 2 - corner.y)) * .02f;
+                    bool covered = faces.Any(face =>
+                    {
+                        var points = new[] { face.a, face.b, face.c }.Select(point => new Vector2(point.x, point.z)).ToArray();
+                        float Side(Vector2 from, Vector2 to) => (to.x - from.x) * (inside.y - from.y) - (to.y - from.y) * (inside.x - from.x);
+                        float s1 = Side(points[0], points[1]), s2 = Side(points[1], points[2]), s3 = Side(points[2], points[0]);
+                        return s1 >= 0 && s2 >= 0 && s3 >= 0 || s1 <= 0 && s2 <= 0 && s3 <= 0;
+                    });
+                    Assert.That(covered, Is.True, name + " fills its outer corner at " + corner);
+                }
+            }
+        }
     }
 }
