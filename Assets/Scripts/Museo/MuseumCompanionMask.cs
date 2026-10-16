@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using GLTFast;
@@ -12,7 +13,8 @@ namespace MusiyoBetsknate.Museum
     /// <summary>
     /// Lets the companion wear a mask that the content service publishes and allows to be reused. Nothing is embedded:
     /// the model is requested like any published model (platform variant, temporary access, hash and size checks) and
-    /// dropped with the scene. A record that restricts reuse, or has no variant for this device, is never worn. The mask
+    /// dropped with the scene. Restricted reuse needs a separate local rehearsal permission bound to the model hash;
+    /// a missing device variant never falls back to another profile. The mask
     /// keeps its proportions (uniform scale only) and is put away while the same record is on display at the visitor's
     /// point, so the guide is never mistaken for the exhibit.
     /// </summary>
@@ -27,6 +29,8 @@ namespace MusiyoBetsknate.Museum
         private GltfImport import;
         private Transform worn;
         private string element;
+        private CompanionLocalUse localUse;
+        public string AppearanceNotice { get; private set; } = "";
 
         /// <summary>
         /// Where the mask stands: empty before a request, then loading, worn, or why it is not worn (no_element, restricted,
@@ -36,16 +40,20 @@ namespace MusiyoBetsknate.Museum
         public bool Worn => worn != null;
         public event Action Changed;
 
-        private void Start()
+        private async void Start()
         {
             companion = GetComponent<MuseumCompanion>();
             interaction = FindAnyObjectByType<MuseumInteraction>();
             element = MuseumCompanionSettings.Current.MaskElement;
-            if (string.IsNullOrWhiteSpace(element)) { Finish("no_element"); return; }
             var loader = interaction != null ? interaction.GetComponent<TourLoader>() : null;
             string api = loader != null ? loader.ApiBase : TourLoader.ResolveApiBase(null, Application.absoluteURL);
             loading = new CancellationTokenSource();
-            Load(api, element, Application.platform == RuntimePlatform.Android ? "quest" : "web", loading.Token);
+            var cancel = loading.Token;
+            localUse = await ReadLocalUse(api, cancel);
+            if (this == null || cancel.IsCancellationRequested) return;
+            if (localUse != null && (string.IsNullOrEmpty(element) || element == localUse.ElementSlug)) element = localUse.ElementSlug;
+            if (string.IsNullOrWhiteSpace(element)) { Finish("no_element"); return; }
+            Load(api, element, Application.platform == RuntimePlatform.Android ? "quest" : "web", cancel);
         }
 
         private void Update()
@@ -72,8 +80,10 @@ namespace MusiyoBetsknate.Museum
                     await Send(request, 15, cancel);
                     if (!ElementContractV1.TryParse(request.downloadHandler.text, out record)) { Finish("incompatible"); return; }
                 }
-                if (!MayWear(record)) { Finish("restricted"); return; }
-                if (!ModelResourcePolicy.TrySelect(record, profile, out _, out var id)) { Finish("no_model"); return; }
+                if (!ModelResourcePolicy.TrySelect(record, profile, out var resource, out var id)) { Finish("no_model"); return; }
+                bool restricted = !MayWear(record);
+                if (restricted && (localUse == null || !localUse.Selects(record.slug, profile, id, api, Application.absoluteURL)))
+                { Finish("restricted"); return; }
                 ResourceAccessContractV1 access;
                 Uri url;
                 using (var request = new UnityWebRequest(api + "/resources/" + Uri.EscapeDataString(id) + "/access?schema_version=1", "POST"))
@@ -83,6 +93,8 @@ namespace MusiyoBetsknate.Museum
                     if (!ModelResourcePolicy.TryAccess(api, request.downloadHandler.text, profile, DateTimeOffset.UtcNow, out access, out url))
                     { Finish("no_access"); return; }
                 }
+                if (restricted && !localUse.Matches(record.slug, profile, id, access.sha256, api, Application.absoluteURL))
+                { Finish("restricted"); return; }
                 byte[] data;
                 using (var request = UnityWebRequest.Get(url))
                 {
@@ -104,15 +116,41 @@ namespace MusiyoBetsknate.Museum
                 if (!await import.InstantiateMainSceneAsync(instantiator, cancel) || !ModelExaminationPose.Normalize(model, WornSize * MuseumCompanionSettings.Current.FigureScale))
                 { Destroy(holder.gameObject); Finish("invalid_model"); return; }
                 worn = holder;
+                var credits = (record.credits ?? Array.Empty<CreditContractV1>()).Select(credit => credit.name)
+                    .Concat(new[] { resource.credit }).Where(credit => !string.IsNullOrWhiteSpace(credit)).Distinct();
+                AppearanceNotice = MuseumInterfaceText.Format("companion_appearance_notice", record.title, string.Join("; ", credits));
                 Finish("worn");
             }
             catch (OperationCanceledException) { }
             catch (Exception) { Finish("unavailable"); }
         }
 
+        private static async Task<CompanionLocalUse> ReadLocalUse(string api, CancellationToken cancel)
+        {
+            if (!CompanionLocalUse.IsLocalContext(api, Application.absoluteURL)) return null;
+            string location = Application.streamingAssetsPath.TrimEnd('/') + "/" + CompanionLocalUse.FileName;
+#if !UNITY_WEBGL || UNITY_EDITOR
+            string persistent = Path.Combine(Application.persistentDataPath, CompanionLocalUse.FileName);
+            if (File.Exists(persistent)) location = persistent;
+            else if (!location.Contains("://") && !File.Exists(location)) return null;
+            if (!location.Contains("://")) location = new Uri(Path.GetFullPath(location)).AbsoluteUri;
+#endif
+            try
+            {
+                using (var request = UnityWebRequest.Get(location))
+                {
+                    await Send(request, 3, cancel);
+                    return CompanionLocalUse.Parse(request.downloadHandler.text, DateTimeOffset.UtcNow);
+                }
+            }
+            catch (OperationCanceledException) { return null; }
+            catch (Exception) { return null; }
+        }
+
         private void Finish(string status)
         {
             Status = status;
+            Debug.Log("[MuseumCompanionAppearance] status=" + status);
             Changed?.Invoke();
         }
 

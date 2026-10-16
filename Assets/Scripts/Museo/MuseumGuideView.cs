@@ -23,6 +23,8 @@ namespace MusiyoBetsknate.Museum
         private TMP_InputField field;
         private GameObject fieldRoot;
         private TMP_Text spatialNote;
+        private TMP_Text appearanceNotice;
+        private MuseumCompanionMask companionMask;
         private TMP_Text answer;
         private Transform sources;
         private TMP_Text sourceTemplate;
@@ -53,6 +55,7 @@ namespace MusiyoBetsknate.Museum
             fieldRoot = CreateField(bodyText, content);
             spatialNote = Text(bodyText, content, "GuideSpatialNote");
             spatialNote.text = MuseumInterfaceText.Get("guide_spatial_text_pending");
+            appearanceNotice = Text(bodyText, content, "CompanionAppearanceNotice");
             var actions = new GameObject("GuideActions", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
             actions.transform.SetParent(content, false);
             var row = actions.GetComponent<HorizontalLayoutGroup>();
@@ -225,6 +228,15 @@ namespace MusiyoBetsknate.Museum
             if (open && !wasOpen) BeginTyping();
             if (!open && field.isFocused) field.DeactivateInputField();
             wasOpen = open;
+        }
+
+        private void LateUpdate()
+        {
+            if (appearanceNotice == null) return;
+            if (companionMask == null) companionMask = FindAnyObjectByType<MuseumCompanionMask>();
+            string notice = companionMask != null ? companionMask.AppearanceNotice : "";
+            appearanceNotice.gameObject.SetActive(guide != null && guide.Open && !string.IsNullOrEmpty(notice));
+            if (appearanceNotice.text != notice) appearanceNotice.text = notice;
         }
 
         private static bool Failed(GuideQuestionState state) => state == GuideQuestionState.TimedOut

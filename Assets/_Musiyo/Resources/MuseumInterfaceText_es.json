@@ -5,6 +5,7 @@
   "entries": {
     "arrival_body": "Exploración libre. Ruta sugerida de unos {0} minutos: {1}.\nAcércate a un punto para abrir su pantalla. {input:next} y {input:confirm} lo seleccionan con el teclado. Cada punto muestra sus elementos, su ficha y su narración con transcripción.\n{input:auto_tour}: recorrido automático · {input:wayfinding}: orientación opcional · {input:guide}: guía · {input:pause}: pausa y ajustes",
     "guide_name": "Guía",
+    "companion_appearance_notice": "Apariencia del acompañante: {0}. Créditos: {1}. Uso de la máscara solo para ensayo local; el acompañante no representa un papel ritual.",
     "guide_prompt": "{0} · {input:guide}: conversar con el guía",
     "carousel_previous": "Anterior",
     "carousel_next": "Siguiente",
