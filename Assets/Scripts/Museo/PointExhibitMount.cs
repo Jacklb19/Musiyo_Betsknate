@@ -18,13 +18,21 @@ namespace MusiyoBetsknate.Museum
         /// shown larger than it was modelled when the owner decides so.
         /// </summary>
         [SerializeField, Min(.1f)] private float sizeFactor = 1;
+        /// <summary>
+        /// Extra scale along the mount's own axes (x across, y up, z toward the back), for a reconstruction the owner wants
+        /// wider or deeper than it was modelled. One on every axis leaves the model's proportions as delivered.
+        /// </summary>
+        [SerializeField] private Vector3 stretch = Vector3.one;
         public float MaxFootprint => maxFootprint;
         public float MaxHeight => maxHeight;
         public bool KeepNaturalScale => keepNaturalScale;
         public float SizeFactor => sizeFactor;
+        public Vector3 Stretch => stretch;
 
-        public void Configure(float footprint, float height, bool naturalScale = false, float factor = 1)
+        public void Configure(float footprint, float height, bool naturalScale = false, float factor = 1, Vector3? axes = null)
         {
+            var shape = axes ?? Vector3.one;
+            stretch = new Vector3(Mathf.Max(.1f, shape.x), Mathf.Max(.1f, shape.y), Mathf.Max(.1f, shape.z));
             maxFootprint = Mathf.Max(.05f, footprint);
             maxHeight = Mathf.Max(.05f, height);
             keepNaturalScale = naturalScale;
@@ -40,6 +48,9 @@ namespace MusiyoBetsknate.Museum
             float fit = Fit(size, maxFootprint, maxHeight);
             return keepNaturalScale ? Mathf.Min(naturalScale * sizeFactor, fit) : fit;
         }
+
+        /// <summary>Scale of a model of this size on this mount, along each of the mount's axes.</summary>
+        public Vector3 ScaleFor(Vector3 size, float naturalScale = 1) => stretch * FitFor(size, naturalScale);
 
         /// <summary>Scale that fits a model of this size on the mount: its footprint diagonal and its height both fit.</summary>
         public static float Fit(Vector3 size, float footprint, float height)

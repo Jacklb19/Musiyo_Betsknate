@@ -71,22 +71,23 @@ namespace MusiyoBetsknate.Tests
 #if UNITY_EDITOR
         /// <summary>Built height of the Castle reconstruction, in metres; its measurements are approximate.</summary>
         private const float BuiltHeight = 4.11f;
+        private const float BuiltWidth = 3.51f;
 
         /// <summary>
         /// Variants: courtyard depth, in metres north of the room centre, of the Castle's base, and times its built size.
         /// </summary>
         private static readonly TestCaseData[] Variants =
         {
-            new TestCaseData(2.8f, 1f).Returns(null), new TestCaseData(2.8f, 1.5f).Returns(null),
-            new TestCaseData(3.4f, 2f).Returns(null), new TestCaseData(5f, 2f).Returns(null),
+            // The owner (17/10): about 4 m high and much wider than high. Height as built, width stretched.
+            new TestCaseData(3.2f, 1f, 1.7f).Returns(null), new TestCaseData(3.4f, 1f, 2.15f).Returns(null),
         };
 
         [UnityTest, TestCaseSource(nameof(Variants))]
-        public IEnumerator StandTheCastleBehindTheArcOfPedestals(float depth, float factor)
+        public IEnumerator StandTheCastleBehindTheArcOfPedestals(float depth, float factor, float wide)
         {
             var path = Environment.GetEnvironmentVariable("MUSIYO_CASTLE_GLB");
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) Assert.Ignore("Set MUSIYO_CASTLE_GLB to the Castle GLB.");
-            string variant = (depth < 4 ? "A_near" : "B_back") + "_x" + factor.ToString("0.0", CultureInfo.InvariantCulture).Replace('.', '_');
+            string variant = "wide_" + (BuiltWidth * wide).ToString("0.0", CultureInfo.InvariantCulture).Replace('.', '_') + "m";
             Directory.CreateDirectory(Folder);
             InputSystem.AddDevice<Keyboard>();
             InputSystem.AddDevice<Mouse>();
@@ -130,7 +131,7 @@ namespace MusiyoBetsknate.Tests
             var mount = new GameObject("ExhibitMount").transform;
             mount.SetParent(castle.transform, false);
             mount.SetPositionAndRotation(floor, Quaternion.LookRotation(Vector3.back, Vector3.up));
-            mount.gameObject.AddComponent<PointExhibitMount>().Configure(12, 12, true, factor);
+            mount.gameObject.AddComponent<PointExhibitMount>().Configure(12, 12, true, factor, new Vector3(wide, 1, 1.3f));
             var stand = UnityEngine.Object.FindObjectsByType<PointLectern>(FindObjectsSortMode.None).First(item => item.Point == pedestal);
             stand.Configure(anchor, stand.Board, stand.BoardSize);
 
@@ -186,7 +187,8 @@ namespace MusiyoBetsknate.Tests
                 "anything_above_top: " + roofAbove,
                 "central_pedestal_triangles_removed (body and wooden top): " + removed,
             });
-            Assert.That(bounds.size.y, Is.EqualTo(BuiltHeight * factor).Within(.15f * factor), "The Castle stands at the chosen size.");
+            Assert.That(bounds.size.y, Is.EqualTo(BuiltHeight * factor).Within(.15f * factor), "The Castle stands at the chosen height.");
+            Assert.That(bounds.size.x, Is.EqualTo(BuiltWidth * wide).Within(.2f * wide), "The Castle spreads to the chosen width.");
             Assert.That(bounds.min.y - floor.y, Is.EqualTo(0).Within(.03f), "It stands on the courtyard floor.");
 
             var camera = new GameObject("PlacementCamera").AddComponent<Camera>();

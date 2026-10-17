@@ -272,10 +272,10 @@ namespace MusiyoBetsknate.Museum
             if (session?.Pivot == null || !session.Ready) return false;
             var mount = session.Point.Anchor.GetComponentInChildren<PointExhibitMount>();
             var parent = mount != null ? mount.transform : session.Point.Anchor.LookTarget;
-            float fit = mount != null ? mount.FitFor(session.Size, session.NaturalScale) : 1;
-            position = parent.TransformPoint(mount != null ? Vector3.up * (session.Size.y * fit * .5f) : Vector3.zero);
+            var fit = mount != null ? mount.ScaleFor(session.Size, session.NaturalScale) : Vector3.one;
+            position = parent.TransformPoint(mount != null ? Vector3.up * (session.Size.y * fit.y * .5f) : Vector3.zero);
             rotation = parent.rotation;
-            localScale = Vector3.one * fit;
+            localScale = fit;
             return true;
         }
 
@@ -294,11 +294,11 @@ namespace MusiyoBetsknate.Museum
             var parent = examining ? viewCamera.transform : mount != null ? mount.transform : session.Point.Anchor.LookTarget;
             if (pivot.parent != parent) pivot.SetParent(parent, false);
             float reveal = Mathf.SmoothStep(.85f, 1, Mathf.Clamp01((Time.realtimeSinceStartup - session.ReadyAt) / RevealSeconds));
-            float fit = mount != null ? mount.FitFor(session.Size, session.NaturalScale) : 1;
+            var fit = mount != null ? mount.ScaleFor(session.Size, session.NaturalScale) : Vector3.one;
             pivot.localPosition = examining ? Vector3.forward * pose.Distance
-                : mount != null ? Vector3.up * (session.Size.y * fit * reveal * .5f) : Vector3.zero;
+                : mount != null ? Vector3.up * (session.Size.y * fit.y * reveal * .5f) : Vector3.zero;
             pivot.localRotation = examining ? pose.Rotation : Quaternion.identity;
-            pivot.localScale = Vector3.one * (examining ? session.ExaminationScale : fit * reveal);
+            pivot.localScale = examining ? Vector3.one * session.ExaminationScale : fit * reveal;
             int examinationLayer = LayerMask.NameToLayer("ModelExamination");
             foreach (var item in session.Nodes)
                 item.gameObject.layer = examining && examinationLayer >= 0 ? examinationLayer : 0;
