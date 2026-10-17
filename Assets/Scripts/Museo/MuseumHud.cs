@@ -137,6 +137,8 @@ namespace MusiyoBetsknate.Museum
             if (menu == null) menu = gameObject.AddComponent<MuseumMenuHud>();
             menu.Configure(visitFlow, interaction, loader, preferences, menuPrefab);
             welcomeView = menu.View.Welcome;
+            // Over the hearth set the entry menu reads as a title screen.
+            gameObject.AddComponent<MuseumTitleScreen>().Configure(menu.View, visitFlow, backdrop);
             CreateStationInterface();
             var header = statusText.transform.parent as RectTransform;
             var controlBar = header != null && header.parent != null ? header.parent.Find("Controls") as RectTransform : null;

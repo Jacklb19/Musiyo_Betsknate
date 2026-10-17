@@ -57,7 +57,9 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(eyes.enabled, Is.False);
                 Assert.That(RenderingCameras(), Is.EqualTo(1));
                 Assert.That(Object.FindObjectsByType<AudioListener>(FindObjectsSortMode.None).Length, Is.EqualTo(1));
-                Assert.That(Vector3.Distance(entry.StageCamera.transform.position, viewpoint.transform.position), Is.LessThan(.001f));
+                // The entry opens on the scenic set when one is chosen (the hearth since 2026-10-17), else at the museum viewpoint.
+                var opening = entry.BackdropActive ? entry.Backdrop.CameraPose.position : viewpoint.transform.position;
+                Assert.That(Vector3.Distance(entry.StageCamera.transform.position, opening), Is.LessThan(.001f));
 
                 // With or without a local service the entry settles; a failed load still lets the visitor walk in.
                 for (float waited = 0; loader.State == TourLoadState.Loading && waited < 20; waited += Time.unscaledDeltaTime) yield return null;
@@ -80,7 +82,8 @@ namespace MusiyoBetsknate.Tests
                 yield return null;
                 Assert.That(flow.Phase, Is.EqualTo(VisitPhase.Entering));
                 Assert.That(flow.Transition, Is.EqualTo(EntryTransition.Glide), "The saved viewpoint is near and in clear sight of the start.");
-                Assert.That(menu.Transition.gameObject.activeSelf, Is.False, "A glide never darkens the screen.");
+                // From the museum viewpoint the glide never darkens the screen; from a scenic set it first fades out of the set.
+                if (!entry.BackdropActive) Assert.That(menu.Transition.gameObject.activeSelf, Is.False, "A glide never darkens the screen.");
 
                 Press(keyboard.wKey);
                 float travelled = 0;

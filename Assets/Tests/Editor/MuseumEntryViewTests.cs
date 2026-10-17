@@ -172,9 +172,10 @@ namespace MusiyoBetsknate.Tests
             => Assert.That(MuseumEntryBackdrop.Parse(value), Is.EqualTo(expected));
 
         [Test]
-        public void TheMuseumStaysTheEntryUntilAnotherBackdropIsChosen()
+        public void TheOwnerChoseTheHearthAsTheEntry()
         {
-            Assert.That(MuseumEntryBackdrop.Parse(configuration.EntryBackdrop), Is.EqualTo(EntryBackdropKind.Museum));
+            // Chosen by the owner on 2026-10-17: a title screen in the dark with a live fire on the right of the menu.
+            Assert.That(MuseumEntryBackdrop.Parse(configuration.EntryBackdrop), Is.EqualTo(EntryBackdropKind.Hearth));
             Assert.Throws<System.InvalidOperationException>(() => MuseumEntryBackdrop.Parse("forest"));
         }
 

@@ -54,6 +54,8 @@ namespace MusiyoBetsknate.Museum
         public bool Active => Kind != EntryBackdropKind.Museum && root != null;
         public Transform CameraPose => cameraAnchor;
         public bool Shown => shown;
+        /// <summary>How bright the fire burns this moment, from 0 to 1; the entry menu takes its warm light from it.</summary>
+        public float FireLevel { get; private set; }
         /// <summary>Why the mask set shows no mask; empty once one is shown.</summary>
         public string MaskStatus { get; private set; } = "";
         public event Action Changed;
@@ -160,7 +162,11 @@ namespace MusiyoBetsknate.Museum
             if (!shown) return;
             float time = Time.unscaledTime;
             if (fireLight != null)
-                fireLight.intensity = 1.3f + .6f * Mathf.PerlinNoise(time * 3.1f, .3f) + .25f * Mathf.PerlinNoise(time * 11f, 4.1f);
+            {
+                float flicker = .6f * Mathf.PerlinNoise(time * 3.1f, .3f) + .25f * Mathf.PerlinNoise(time * 11f, 4.1f);
+                fireLight.intensity = 1.3f + flicker;
+                FireLevel = Mathf.Clamp01(flicker / .85f);
+            }
             if (maskAnchor != null) maskAnchor.localRotation = Quaternion.Euler(0, 180 + Mathf.Sin(time * .25f) * 14, 0);
         }
 
