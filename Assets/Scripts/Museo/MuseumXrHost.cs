@@ -41,6 +41,9 @@ namespace MusiyoBetsknate.Museum
         private float? lastHeadYaw;
         private MuseumArrival arrival;
         private MuseumWayfinding wayfinding;
+        private MuseumXrEntry entry;
+        /// <summary>The headset's entry: the scenic set during the entry menu and the veil of the way in.</summary>
+        public MuseumXrEntry Entry => entry;
         /// <summary>True while the shared canvas has something to show: a menu or the arrival card.</summary>
         private bool menuVisible;
         private bool moveArmed;
@@ -132,6 +135,9 @@ namespace MusiyoBetsknate.Museum
             arrival = interaction.GetComponent<MuseumArrival>();
             wayfinding = interaction.GetComponent<MuseumWayfinding>();
             if (Debug.isDebugBuild) gameObject.AddComponent<MuseumSurfaceProbe>().Configure(head.transform);
+            // The entry menu opens in the scenic set, away from the museum, when one is configured.
+            entry = gameObject.AddComponent<MuseumXrEntry>();
+            entry.Configure(flow, interaction.GetComponent<MuseumEntryBackdrop>(), visitor, head, () => HeadTracked);
             menuVisible = VisibleMenu;
             if (menuVisible) RequestMenuPlacement();
             else ShowCanvas();
@@ -270,6 +276,8 @@ namespace MusiyoBetsknate.Museum
         {
             if (!Ready) return;
             bool headTracked = HeadTracked;
+            // Being carried into or out of the entry set places an open menu again, in front of the new view.
+            if (entry != null && entry.Step() && menuVisible) RequestMenuPlacement();
             float yaw = head.transform.eulerAngles.y;
             if (headTracked && lastHeadYaw.HasValue && menuVisible && !menuGate.Pending
                 && Mathf.Abs(Mathf.DeltaAngle(lastHeadYaw.Value, yaw)) > RecenterJumpDegrees)

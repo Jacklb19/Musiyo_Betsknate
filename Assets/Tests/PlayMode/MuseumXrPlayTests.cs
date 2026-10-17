@@ -31,6 +31,7 @@ namespace MusiyoBetsknate.Tests
                 var camera = visitor.GetComponentInChildren<Camera>();
                 var input = MuseumInput.Current;
                 var headset = InputSystem.AddDevice<XRHMD>();
+                var museumStart = visitor.transform.position;
                 var host = menu.gameObject.AddComponent<MuseumXrHost>();
                 host.Configure(visitor, flow.GetComponent<MuseumInteraction>(), menu, menu.GetComponent<Canvas>());
                 // The visitor starts the application looking to the side.
@@ -54,6 +55,13 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(host.MenuPlacementPending, Is.False);
                 Assert.That(canvas.enabled, Is.True, "The menu shows once it has its place.");
                 AssertInFront(camera.transform, menu.transform, "The first menu opens in front of the gaze, not of the scene.");
+                var backdrop = flow.GetComponent<MuseumEntryBackdrop>();
+                if (backdrop != null && backdrop.Active)
+                {
+                    Assert.That(host.Entry.InSet, Is.True, "The entry menu opens in the scenic set, not in the museum.");
+                    Assert.That(visitor.transform.position.y, Is.EqualTo(MuseumEntryBackdrop.Origin.y).Within(.01f));
+                    Assert.That(backdrop.Shown, Is.True);
+                }
                 // A recentre moves the view in one frame; the open menu follows once, to the new forward direction.
                 Set(headset.centerEyeRotation, Quaternion.Euler(0, 10, 0));
                 yield return null;
@@ -78,7 +86,16 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(Vector3.Distance(menu.transform.position, menuPosition), Is.LessThan(.001f));
                 flow.BeginVisit();
                 Assert.That(flow.Transition, Is.EqualTo(EntryTransition.Fade));
+                // The way in darkens the view in front of the eyes before the visitor is carried into the museum.
+                for (float waited = 0; host.Entry.Veil < .5f && waited < 3; waited += Time.unscaledDeltaTime) yield return null;
+                Assert.That(host.Entry.Veil, Is.GreaterThan(.5f), "A veil in front of the eyes darkens the headset view.");
                 flow.EnterImmediately();
+                yield return null;
+                Assert.That(host.Entry.InSet, Is.False);
+                Assert.That(host.Entry.Veil, Is.EqualTo(0).Within(.001f));
+                Assert.That(Vector3.Distance(Vector3.ProjectOnPlane(visitor.transform.position - museumStart, Vector3.up), Vector3.zero),
+                    Is.LessThan(.001f), "The visit begins where the museum's visitor stands.");
+                originPosition = visitor.transform.position;
                 // With a local API answering, the arrival card appears and rightly takes clicks; it is not an exhibit panel.
                 flow.GetComponent<MuseumArrival>()?.Dismiss();
                 yield return null;

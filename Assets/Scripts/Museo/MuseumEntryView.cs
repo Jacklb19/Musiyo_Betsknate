@@ -124,7 +124,8 @@ namespace MusiyoBetsknate.Museum
 
         private void Release()
         {
-            Backdrop?.Show(false, stage);
+            // On a headset the spatial host shows the set to the head itself; the stage never owned it there.
+            if (!HeadsetActive()) Backdrop?.Show(false, stage);
             if (stage != null) stage.enabled = false;
             if (hidVisitorCamera && visitorCamera != null) visitorCamera.enabled = true;
             hidVisitorCamera = false;
