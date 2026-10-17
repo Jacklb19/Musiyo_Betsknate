@@ -14,7 +14,7 @@
   "keyboard_look_speed": 70.0,
   "maximum_pitch": 80.0,
   "point_leave_margin": 2.0,
-  "lectern_screen_width": 0.75,
+  "lectern_screen_width": 1.1,
   "lectern_unfold_seconds": 0.35,
   "lectern_viewing_distance": 1.8,
   "lectern_float_height": 1.08,

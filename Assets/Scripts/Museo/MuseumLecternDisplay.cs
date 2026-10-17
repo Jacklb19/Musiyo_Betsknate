@@ -20,6 +20,18 @@ namespace MusiyoBetsknate.Museum
         private ScrollRect scroll;
         /// <summary>A floating screen is never shorter than this, so its buttons keep their place.</summary>
         private const float MinimumHeight = 300;
+        /// <summary>
+        /// Layout width of the screen on a stand, in interface units. With the configured width of 1.1 m it reads at about
+        /// 750 units per metre, so body text of <see cref="TextSize"/> stands some 3.7 cm high.
+        /// </summary>
+        public const float InWorldWidth = 820;
+        /// <summary>A screen on a stand grows with its text up to this height (about 0.6 m), wide and low like a label.</summary>
+        public const float InWorldMaxHeight = 440;
+        /// <summary>Reading size of the screen's body text.</summary>
+        public const float TextSize = 28;
+        /// <summary>Width of the column of choices and controls on the right of the screen.</summary>
+        public const float SideColumnWidth = 260;
+        public const float ColumnGap = 20;
         private RectTransform surface;
         private CanvasGroup group;
         private GraphicRaycaster raycaster;
@@ -29,6 +41,8 @@ namespace MusiyoBetsknate.Museum
         private Transform viewer;
         private float heading;
         private bool open;
+        /// <summary>Column of choices and controls beside the reading column; its height counts toward the screen's.</summary>
+        public RectTransform SideColumn { get; set; }
 
         /// <summary>Existing stand beside the active point, or null when the stable point anchor carries the panel.</summary>
         public PointLectern Host { get; private set; }
@@ -146,6 +160,8 @@ namespace MusiyoBetsknate.Museum
                 panel.SetParent(surface, false);
                 panel.anchorMin = panel.anchorMax = panel.pivot = new Vector2(.5f, 0);
                 panel.anchoredPosition = new Vector2(0, Border);
+                panel.sizeDelta = new Vector2(InWorldWidth, InWorldMaxHeight);
+                surface.sizeDelta = panel.sizeDelta + Vector2.one * (Border * 2);
                 panel.gameObject.SetActive(true);
                 aimMark.SetAsLastSibling();
                 heading = HeadingToViewer();
@@ -236,7 +252,11 @@ namespace MusiyoBetsknate.Museum
         {
             if (!InWorld || scroll == null || scroll.viewport == null || scroll.content == null) return;
             float chrome = panel.rect.height - scroll.viewport.rect.height;
-            float height = Mathf.Clamp(chrome + LayoutUtility.GetPreferredHeight(scroll.content), MinimumHeight, screenSize.y);
+            float wanted = chrome + LayoutUtility.GetPreferredHeight(scroll.content);
+            // The controls column is never cut: the screen grows for it beyond its usual height when it must.
+            float side = SideColumn != null && SideColumn.gameObject.activeSelf ? chrome + LayoutUtility.GetPreferredHeight(SideColumn) : 0;
+            float limit = Mathf.Max(InWorldMaxHeight, Mathf.Min(side, InWorldMaxHeight * 1.5f));
+            float height = Mathf.Clamp(Mathf.Max(wanted, side), MinimumHeight, limit);
             if (Mathf.Abs(panel.sizeDelta.y - height) < .5f) return;
             panel.sizeDelta = new Vector2(panel.sizeDelta.x, height);
             surface.sizeDelta = panel.sizeDelta + Vector2.one * (Border * 2);

@@ -86,6 +86,8 @@ namespace MusiyoBetsknate.Museum
             model = interaction.GetComponent<MuseumModelPresenter>();
             if (model == null) model = interaction.gameObject.AddComponent<MuseumModelPresenter>();
             if (visitor != null) model.Configure(visitor.GetComponentInChildren<Camera>(), visitor.transform);
+            // The texts made from the panel text below share its larger reading size.
+            panelText.fontSize = MuseumLecternDisplay.TextSize;
             CreateModelInterface();
             grab = interaction.GetComponent<MuseumModelGrab>();
             if (grab == null) grab = interaction.gameObject.AddComponent<MuseumModelGrab>();
@@ -139,7 +141,42 @@ namespace MusiyoBetsknate.Museum
             var header = statusText.transform.parent as RectTransform;
             var controlBar = header != null && header.parent != null ? header.parent.Find("Controls") as RectTransform : null;
             gameObject.AddComponent<MuseumHudPresence>().Configure(visitFlow, interaction, loader, header, controlBar);
+            CreateSideColumn();
             ApplyPreferences();
+        }
+
+        /// <summary>
+        /// The point screen reads in two columns: the text scrolls on the left, and the element list, the narration and the
+        /// model controls stand in a column on the right, so the screen is wide and low like a museum label.
+        /// </summary>
+        private void CreateSideColumn()
+        {
+            var content = elementList.parent as RectTransform;
+            var viewport = content != null ? content.parent as RectTransform : null;
+            if (viewport == null) return;
+            float width = MuseumLecternDisplay.SideColumnWidth;
+            var side = new GameObject("SideColumn", typeof(RectTransform), typeof(VerticalLayoutGroup)).GetComponent<RectTransform>();
+            side.SetParent(panel.transform, false);
+            side.anchorMin = new Vector2(1, 0);
+            side.anchorMax = Vector2.one;
+            side.pivot = Vector2.one;
+            side.offsetMin = new Vector2(viewport.offsetMax.x - width, viewport.offsetMin.y);
+            side.offsetMax = new Vector2(viewport.offsetMax.x, viewport.offsetMax.y);
+            var layout = side.GetComponent<VerticalLayoutGroup>();
+            layout.spacing = 10;
+            layout.childAlignment = TextAnchor.UpperCenter;
+            layout.childControlWidth = layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+            viewport.offsetMax = new Vector2(viewport.offsetMax.x - width - MuseumLecternDisplay.ColumnGap, viewport.offsetMax.y);
+            // Reading stays in the scrolling column; everything that is chosen or pressed moves to the side, in order.
+            var moved = new System.Collections.Generic.List<Transform>();
+            foreach (Transform child in content)
+                if (child.GetComponent<TMP_Text>() == null) moved.Add(child);
+            foreach (var child in moved) child.SetParent(side, false);
+            if (modelControls != null && modelControls.TryGetComponent<GridLayoutGroup>(out var grid))
+                grid.cellSize = new Vector2((width - grid.spacing.x * (grid.constraintCount - 1)) / grid.constraintCount, grid.cellSize.y);
+            lectern.SideColumn = side;
         }
 
         private void Start()
