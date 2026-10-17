@@ -84,6 +84,10 @@ namespace MusiyoBetsknate.Tests
                 yield return null;
                 Assert.That(menu.GetComponent<UnityEngine.InputSystem.UI.TrackedDeviceRaycaster>().enabled, Is.False,
                     "Visit chrome cannot receive a click through an exhibit panel.");
+                Assert.That(canvas.enabled, Is.False,
+                    "Without a menu or the arrival card, the shared canvas is not left standing where the last menu opened.");
+                Assert.That(menu.GetComponent<MuseumSurfaceProbe>() != null, Is.EqualTo(Debug.isDebugBuild),
+                    "Development builds name large surfaces near the head in the log.");
                 // Each opening of the pause menu is placed in front of where the visitor looks now.
                 Set(headset.centerEyeRotation, Quaternion.Euler(0, 160, 0));
                 yield return null;

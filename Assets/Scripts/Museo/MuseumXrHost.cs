@@ -39,6 +39,9 @@ namespace MusiyoBetsknate.Museum
         private Color rayColor;
         private Color reachColor;
         private float? lastHeadYaw;
+        private MuseumArrival arrival;
+        private MuseumWayfinding wayfinding;
+        /// <summary>True while the shared canvas has something to show: a menu or the arrival card.</summary>
         private bool menuVisible;
         private bool moveArmed;
         private bool runRequested;
@@ -126,15 +129,26 @@ namespace MusiyoBetsknate.Museum
             outdoorGround = new HashSet<string>(configuration.OutdoorGroundObjects, StringComparer.Ordinal);
             Speed = configuration.WalkSpeed;
             // The first menu waits for a real head pose; the visitor may be looking anywhere when the application starts.
+            arrival = interaction.GetComponent<MuseumArrival>();
+            wayfinding = interaction.GetComponent<MuseumWayfinding>();
+            if (Debug.isDebugBuild) gameObject.AddComponent<MuseumSurfaceProbe>().Configure(head.transform);
             menuVisible = VisibleMenu;
             if (menuVisible) RequestMenuPlacement();
+            else ShowCanvas();
             flow.Changed += RefreshPosition;
             interaction.Changed += RefreshPosition;
+            if (arrival != null) arrival.Changed += RefreshPosition;
+            if (wayfinding != null) wayfinding.Changed += RefreshPosition;
             SubsystemManager.GetSubsystems(subsystems);
             foreach (var subsystem in subsystems) subsystem.trackingOriginUpdated += OnTrackingOriginUpdated;
         }
 
-        private bool VisibleMenu => flow.Phase == VisitPhase.Menu || interaction.State == InteractionState.Paused;
+        /// <summary>
+        /// The shared canvas shows the entry and pause menus, the orientation menu and the arrival card. Nothing else on it
+        /// is shown on a headset: left where the last menu opened, it would stand in the museum like a wall.
+        /// </summary>
+        private bool VisibleMenu => flow.Phase == VisitPhase.Menu || interaction.State == InteractionState.Paused
+            || wayfinding != null && wayfinding.MenuOpen || !flow.BlocksInput && arrival != null && arrival.Visible;
         private bool HeadTracked => (input.HeadState.ReadValue<int>() & 3) == 3;
 
         private void RefreshPosition()
@@ -159,8 +173,11 @@ namespace MusiyoBetsknate.Museum
             ShowCanvas();
         }
 
-        /// <summary>A menu waiting for its place stays hidden instead of showing at the side of the view.</summary>
-        private void ShowCanvas() => canvas.enabled = !(menuVisible && menuGate.Pending);
+        /// <summary>
+        /// A menu waiting for its place stays hidden instead of showing at the side of the view, and without a menu the
+        /// canvas is not drawn at all.
+        /// </summary>
+        private void ShowCanvas() => canvas.enabled = menuVisible && !menuGate.Pending;
 
         /// <summary>The menu stays where it opened. It never pulls the visitor's view along.</summary>
         public void PlaceMenu()
@@ -295,6 +312,8 @@ namespace MusiyoBetsknate.Museum
             foreach (var subsystem in subsystems) subsystem.trackingOriginUpdated -= OnTrackingOriginUpdated;
             if (flow != null) flow.Changed -= RefreshPosition;
             if (interaction != null) interaction.Changed -= RefreshPosition;
+            if (arrival != null) arrival.Changed -= RefreshPosition;
+            if (wayfinding != null) wayfinding.Changed -= RefreshPosition;
             if (input != null && input.Alive) input.SetSpatial(false);
         }
     }

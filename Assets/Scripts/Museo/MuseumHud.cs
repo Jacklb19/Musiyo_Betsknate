@@ -264,6 +264,9 @@ namespace MusiyoBetsknate.Museum
             Refresh();
         }
 
+        /// <summary>Point whose reading stand carries the service notice, or null.</summary>
+        private TourPoint NoticePoint => serviceNotice.Point != null && lectern.Find(serviceNotice.Point) != null ? serviceNotice.Point : null;
+
         private void TogglePause() => interaction.SetPaused(interaction.State != InteractionState.Paused);
         private void OpenDetail() => interaction.OpenDetail();
         private void OnPresenceChanged(bool away) => Refresh();
@@ -295,14 +298,16 @@ namespace MusiyoBetsknate.Museum
             pauseButton.GetComponentInChildren<TMP_Text>().text = paused ? MuseumInterfaceText.Get("resume") : MuseumInterfaceText.Get("pause");
             if (sensitivitySlider != null) sensitivitySlider.gameObject.SetActive(false);
             bool showPanel = !visitFlow.BlocksInput && !paused && interaction.State != InteractionState.Exploration;
-            // Without the museum service, the point the visitor stands at says so instead of staying silent.
+            // Without the museum service, the reading stand of the point the visitor stands at says so instead of staying
+            // silent. Points without a stand show no screen for it: a notice floating in the open turned after the visitor.
+            var noticePoint = NoticePoint;
             bool notice = !visitFlow.BlocksInput && !paused && interaction.State == InteractionState.Exploration
-                && serviceNotice.Point != null;
+                && noticePoint != null;
             serviceRetryButton.gameObject.SetActive(notice && loader.State == TourLoadState.Unavailable);
             showPanel |= notice;
             // The conversation with the guide unfolds at the guide's anchor; exhibit details at their point.
             var shownPoint = interaction.State == InteractionState.GuideQuestion ? interaction.Runtime.GuidePoint
-                : notice ? serviceNotice.Point : interaction.ActivePoint;
+                : notice ? noticePoint : interaction.ActivePoint;
             // A reading stand folds its screen while the visitor is away from the point and unfolds it on return.
             bool onStand = lectern.Find(shownPoint) != null;
             if (onStand && presence.Away) showPanel = false;
@@ -668,7 +673,7 @@ namespace MusiyoBetsknate.Museum
                 if (farewell != null && farewell.AtEnd) prompt = string.IsNullOrEmpty(prompt) ? farewell.Message : prompt + "\n" + farewell.Message;
             }
             // Without the service, a short line says so; the point screens and the menus offer to retry.
-            if (exploring && !welcome && loader.State == TourLoadState.Unavailable && serviceNotice.Point == null)
+            if (exploring && !welcome && loader.State == TourLoadState.Unavailable && NoticePoint == null)
                 prompt = string.IsNullOrEmpty(prompt) ? MuseumInterfaceText.Get("service_unavailable_hint")
                     : MuseumInterfaceText.Get("service_unavailable_hint") + "\n" + prompt;
             // The automatic tour says what it is doing and how to take control back.
