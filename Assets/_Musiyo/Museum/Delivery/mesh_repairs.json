@@ -24,6 +24,17 @@
       }
     }
   },
+  "grounded_posts": {
+    "reason": "In the master and in the delivery the posts of the welcome room are modelled from 0.60 m up, the top of its stone plinth (Bienvenida_Zocalo_Piedra). The plinth stops at both doorways, so the two posts that frame the south door (the entrance) and the two that frame the north passage toward the characters room (after the tree of life) hang 0.60 m above the threshold and the passage floor, like a floating door frame. Their bottom faces are lowered to the floor; the other posts stand on the plinth and stay as delivered. Plan positions (x, z) in metres, model space.",
+    "objects": {
+      "Bienvenida_Estructura_Madera.001": {
+        "delivered_bottom_m": 0.6,
+        "repaired_bottom_m": 0.0,
+        "posts_plan_m": [[0.84, -26.35], [-0.84, -26.35], [0.84, -13.65], [-0.84, -13.65]],
+        "where": "South doorway of the welcome room (entrance) and its north passage toward the characters room."
+      }
+    }
+  },
   "coplanar_overlaps": {
     "reason": "Faces of the delivered model that lie in the same plane as other faces and overlap them flicker in depth (z-fighting), worst at a distance on the headset. Found with the surface audit (plane tolerance 4 mm) and kept to the pieces a visitor can see: hidden undersides, faces above the eyes and faces inside solids are left as delivered. Where two faces overlap, the one listed in under (same side) or under_either_side (pieces drawn on both sides) is drawn and the overlapping part of the other is cut away at import; partly covered faces are split, and new corners keep the texture, lightmap and colour of the face they come from. Box colliders and the delivered bounds stay as they were. Floor bands that crossed at their corners get one mitre joint.",
     "trims": [

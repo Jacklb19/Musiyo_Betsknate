@@ -17,6 +17,22 @@ namespace MusiyoBetsknate.Editor
         [JsonProperty("two_sided_cards")] public CardRepair Cards;
         [JsonProperty("extended_rafters")] public RafterRepair Rafters = new RafterRepair();
         [JsonProperty("coplanar_overlaps")] public OverlapRepair Overlaps = new OverlapRepair();
+        [JsonProperty("grounded_posts")] public PostRepair Posts = new PostRepair();
+
+        public sealed class PostRepair
+        {
+            [JsonProperty("reason")] public string Reason;
+            [JsonProperty("objects")] public Dictionary<string, PostObject> Objects = new Dictionary<string, PostObject>();
+        }
+
+        /// <summary>Posts of one object that stop above the floor; heights in metres and plan positions (x, z), model space.</summary>
+        public sealed class PostObject
+        {
+            [JsonProperty("delivered_bottom_m")] public float DeliveredBottom;
+            [JsonProperty("repaired_bottom_m")] public float RepairedBottom;
+            [JsonProperty("posts_plan_m")] public List<float[]> Plan = new List<float[]>();
+            [JsonProperty("where")] public string Where;
+        }
 
         public sealed class OverlapRepair
         {
@@ -88,6 +104,11 @@ namespace MusiyoBetsknate.Editor
             foreach (var rafters in repairs.Rafters.Objects.Values)
                 if (rafters == null || !(rafters.DeliveredEnd > rafters.RepairedEnd) || !(rafters.RepairedEnd > 0) || rafters.Expected <= 0)
                     throw new InvalidOperationException("Invalid rafter repair in " + AssetPath);
+            repairs.Posts ??= new PostRepair();
+            foreach (var posts in repairs.Posts.Objects.Values)
+                if (posts == null || !(posts.DeliveredBottom > posts.RepairedBottom) || posts.Plan == null || posts.Plan.Count == 0
+                    || posts.Plan.Any(spot => spot == null || spot.Length != 2))
+                    throw new InvalidOperationException("Invalid post repair in " + AssetPath);
             repairs.Overlaps ??= new OverlapRepair();
             var trimmed = new HashSet<string>();
             foreach (var trim in repairs.Overlaps.Trims)
@@ -123,7 +144,7 @@ namespace MusiyoBetsknate.Editor
     public sealed class MuseumDeliveryMeshRepair : AssetPostprocessor
     {
         /// <summary>Raise when the repair changes, so every machine reimports the model.</summary>
-        public override uint GetVersion() => 4;
+        public override uint GetVersion() => 6;
 
         /// <summary>A change to the repairs reimports the model.</summary>
         private void OnPreprocessModel()
@@ -152,6 +173,18 @@ namespace MusiyoBetsknate.Editor
                     if (extended != rafters.Expected)
                         Debug.LogError(filter.name + ": the rafter repair expected " + rafters.Expected + " rafters ending at |z| "
                             + rafters.DeliveredEnd + " m, the model has " + extended + ".");
+                }
+                if (repairs.Posts.Objects.TryGetValue(filter.name, out var posts))
+                {
+                    int grounded = GroundPosts(filter.sharedMesh, filter.transform.localToWorldMatrix, posts);
+                    if (grounded != posts.Plan.Count)
+                    {
+                        var matrix = filter.transform.localToWorldMatrix;
+                        var low = filter.sharedMesh.vertices.Select(vertex => matrix.MultiplyPoint3x4(vertex))
+                            .Where(point => Mathf.Abs(Mathf.Abs(point.x) - .84f) < .3f && point.y < 1).Take(12).Select(point => point.ToString("F2"));
+                        Debug.LogError(filter.name + ": the post repair expected " + posts.Plan.Count + " posts ending " + posts.DeliveredBottom
+                            + " m above the floor, the model has " + grounded + ". Low corners near |x| 0.84: " + string.Join(" ", low));
+                    }
                 }
                 if (repairs.Overlaps.Bands.TryGetValue(filter.name, out var band))
                 {
@@ -594,6 +627,63 @@ namespace MusiyoBetsknate.Editor
             if (uvs.Count == vertices.Length) mesh.SetUVs(0, uvs);
             mesh.RecalculateBounds();
             return moved;
+        }
+
+        /// <summary>
+        /// Lowers the bottom face of each listed post from the delivered height to the repaired one, so a door post that was
+        /// modelled to stand on a stone plinth reaches the floor where the doorway has no plinth. The bottom face is every
+        /// corner at the delivered height within 0.12 m, in plan, of a listed position; plan coordinates are matched by their
+        /// size, since the importer may mirror an axis. Section, normals and top stay as delivered; the colour UVs of the
+        /// lowered corners continue the post's own mapping up the same side. Returns the number of posts lowered.
+        /// </summary>
+        public static int GroundPosts(Mesh mesh, Matrix4x4 toModel, MuseumMeshRepairs.PostObject posts)
+        {
+            const float Reach = .12f;
+            var vertices = mesh.vertices;
+            var normals = mesh.normals;
+            var uvs = new List<Vector2>();
+            mesh.GetUVs(0, uvs);
+            var fromModel = toModel.inverse;
+            var model = vertices.Select(vertex => toModel.MultiplyPoint3x4(vertex)).ToArray();
+            float distance = posts.DeliveredBottom - posts.RepairedBottom;
+            bool Near(Vector3 point, float[] spot) => Mathf.Abs(Mathf.Abs(point.x) - Mathf.Abs(spot[0])) < Reach
+                && Mathf.Abs(Mathf.Abs(point.z) - Mathf.Abs(spot[1])) < Reach;
+            int grounded = 0;
+            var claimed = new HashSet<int>();
+            foreach (var spot in posts.Plan)
+            {
+                // Mirrored or not, each listed post is the one on its own side of the centre line.
+                var bottom = Enumerable.Range(0, model.Length).Where(index => !claimed.Contains(index)
+                    && Mathf.Abs(model[index].y - posts.DeliveredBottom) < .01f && Near(model[index], spot)).ToList();
+                if (bottom.Count == 0) continue;
+                float side = Mathf.Sign(spot[0]);
+                var own = bottom.Where(index => Mathf.Sign(model[index].x) == side).ToList();
+                if (own.Count == 0) own = bottom.Where(index => Mathf.Sign(model[index].x) == -side).ToList();
+                if (own.Count == 0) continue;
+                var column = Enumerable.Range(0, model.Length).Where(index => Near(model[index], spot)
+                    && Mathf.Sign(model[index].x) == Mathf.Sign(model[own[0]].x)).ToList();
+                foreach (int index in own)
+                {
+                    claimed.Add(index);
+                    if (uvs.Count == vertices.Length && normals.Length == vertices.Length)
+                    {
+                        // The highest corner straight above on the same side face gives the way the texture runs.
+                        int partner = column.Where(candidate => candidate != index && Vector3.Dot(normals[candidate], normals[index]) > .99f
+                                && new Vector2(model[candidate].x - model[index].x, model[candidate].z - model[index].z).magnitude < .005f
+                                && model[candidate].y > model[index].y + .5f)
+                            .OrderByDescending(candidate => model[candidate].y).DefaultIfEmpty(-1).First();
+                        if (partner >= 0)
+                            uvs[index] += (uvs[index] - uvs[partner]) * (distance / (model[partner].y - model[index].y));
+                    }
+                    model[index] += Vector3.down * distance;
+                    vertices[index] = fromModel.MultiplyPoint3x4(model[index]);
+                }
+                grounded++;
+            }
+            mesh.vertices = vertices;
+            if (uvs.Count == vertices.Length) mesh.SetUVs(0, uvs);
+            mesh.RecalculateBounds();
+            return grounded;
         }
 
         /// <summary>Connected pieces of a mesh; corners closer than a millimetre belong together.</summary>
