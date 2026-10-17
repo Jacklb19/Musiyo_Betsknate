@@ -108,8 +108,8 @@ namespace MusiyoBetsknate.Museum
                 { Finish("invalid_model"); return; }
                 var holder = new GameObject("WornMask").transform;
                 holder.SetParent(companion.MaskMount, false);
-                // Published models face -Z after import; the figure faces +Z.
-                holder.localRotation = Quaternion.Euler(0, 180, 0);
+                // Published masks face +Z after import, like the figure; a half turn showed their back (Quest 3, 16/10/2026).
+                holder.localRotation = Quaternion.identity;
                 var model = new GameObject("Model").transform;
                 model.SetParent(holder, false);
                 var instantiator = new GameObjectInstantiator(import, model, settings: new InstantiationSettings { Mask = ComponentType.Mesh });
