@@ -79,6 +79,8 @@ namespace MusiyoBetsknate.Museum
         {
             if (interaction == null) return;
             MuseumAtmosphere.Current.Apply();
+            // The museum's own hearth burns with the same living fire as the entry.
+            MuseumFire.ReplaceMuseumPlaceholder();
             preferences = MuseumVisitorPreferences.Load(MuseumExperienceConfiguration.Current,
                 PlayerPrefs.GetString(MuseumVisitorPreferences.StorageKey, ""));
             visitFlow = interaction.GetComponent<MuseumVisitFlow>();

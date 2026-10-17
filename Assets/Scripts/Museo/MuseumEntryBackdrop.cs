@@ -23,8 +23,6 @@ namespace MusiyoBetsknate.Museum
     public sealed class MuseumEntryBackdrop : MonoBehaviour
     {
         public const string GlowMaterial = "EntryBackdropGlow";
-        /// <summary>Particle materials built by MuseumFireAssets from noise: flame flipbook, smoke puff and spark.</summary>
-        public const string FlameMaterial = "EntryFireFlame", SmokeMaterial = "EntryFireSmoke", SparkMaterial = "EntryFireSpark";
         /// <summary>Far below the museum terrain, out of every view of the visit.</summary>
         public static readonly Vector3 Origin = new Vector3(0, -400, 0);
         /// <summary>Where the subject stands in the set, to the right of the menu column.</summary>
@@ -33,7 +31,7 @@ namespace MusiyoBetsknate.Museum
         private Transform root;
         private Transform cameraAnchor;
         private Light fireLight;
-        private Light fireFill;
+        private MuseumFire fire;
         private Transform maskAnchor;
         private bool shown;
         private readonly List<(Light light, bool enabled)> daylight = new List<(Light, bool)>();
@@ -164,18 +162,12 @@ namespace MusiyoBetsknate.Museum
         {
             if (!shown) return;
             float time = Time.unscaledTime;
-            if (fireLight != null)
+            if (fire != null) FireLevel = fire.Level;
+            else if (fireLight != null)
             {
                 float flicker = .6f * Mathf.PerlinNoise(time * 3.1f, .3f) + .25f * Mathf.PerlinNoise(time * 11f, 4.1f);
                 fireLight.intensity = 1.3f + flicker;
                 FireLevel = Mathf.Clamp01(flicker / .85f);
-                if (fireFill != null)
-                {
-                    // A second, smaller light dances above the flames, so the light seems to move as fire does.
-                    fireFill.intensity = .5f + .7f * Mathf.PerlinNoise(time * 7.3f, 9.2f);
-                    fireFill.transform.localPosition = Focus + new Vector3((Mathf.PerlinNoise(time * 2.3f, 1) - .5f) * .25f,
-                        .55f + Mathf.PerlinNoise(time * 3.7f, 2) * .25f, (Mathf.PerlinNoise(time * 2.9f, 3) - .5f) * .25f);
-                }
             }
             if (maskAnchor != null) maskAnchor.localRotation = Quaternion.Euler(0, 180 + Mathf.Sin(time * .25f) * 14, 0);
         }
@@ -230,175 +222,43 @@ namespace MusiyoBetsknate.Museum
                 log.transform.localScale = new Vector3(.065f, (top - foot).magnitude * .5f, .065f);
                 Paint(log, "M_Corteza_Sauce", new Color(.25f, .17f, .11f));
             }
-            // A bed of glowing embers under the logs.
-            var embers = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            embers.name = "EmberBed";
-            Discard(embers.GetComponent<Collider>());
-            embers.transform.SetParent(root, false);
-            embers.transform.localPosition = Focus + Vector3.up * .03f;
-            embers.transform.localScale = new Vector3(.5f, .07f, .5f);
-            Paint(embers, "M_Fuego", new Color(1f, .35f, .08f));
-            fireLight = new GameObject("FireLight").AddComponent<Light>();
-            fireLight.transform.SetParent(root, false);
-            fireLight.transform.localPosition = Focus + Vector3.up * .75f;
-            fireLight.type = LightType.Point;
-            fireLight.color = new Color(1f, .58f, .28f);
-            fireLight.range = 6;
-            fireLight.intensity = 1.6f;
-            fireLight.shadows = LightShadows.None;
-            fireFill = new GameObject("FireFlicker").AddComponent<Light>();
-            fireFill.transform.SetParent(root, false);
-            fireFill.transform.localPosition = Focus + Vector3.up * .6f;
-            fireFill.type = LightType.Point;
-            fireFill.color = new Color(1f, .76f, .42f);
-            fireFill.range = 3;
-            fireFill.intensity = .8f;
-            fireFill.shadows = LightShadows.None;
-            if (Resources.Load<Material>(FlameMaterial) != null)
+            // The living fire: flames, embers, sparks, smoke and dancing light.
+            fire = MuseumFire.Create(root, Focus);
+            if (fire == null)
             {
-                // Layered fire: wide tongues, a brighter core, sparks rising on the heat and thin smoke above.
-                Tongues("Flames", FlameMaterial, .17f, new ParticleSystem.MinMaxCurve(.75f, 1.15f), 34, new Color(1f, .58f, .2f), .7f, 1.1f);
-                Tongues("FlameCore", FlameMaterial, .08f, new ParticleSystem.MinMaxCurve(.45f, .7f), 24, new Color(1f, .86f, .5f), .5f, .8f);
-                Sparks();
-                Smoke();
-            }
-            else
-            {
+                fireLight = new GameObject("FireLight").AddComponent<Light>();
+                fireLight.transform.SetParent(root, false);
+                fireLight.transform.localPosition = Focus + Vector3.up * .75f;
+                fireLight.type = LightType.Point;
+                fireLight.color = new Color(1f, .6f, .3f);
+                fireLight.range = 6;
+                fireLight.intensity = 1.6f;
+                fireLight.shadows = LightShadows.None;
                 Flames("Flames", .16f, new ParticleSystem.MinMaxCurve(.14f, .28f), 110, new Color(1f, .5f, .14f));
                 Flames("FlameCore", .08f, new ParticleSystem.MinMaxCurve(.08f, .16f), 70, new Color(1f, .85f, .45f));
                 Motes("Embers", Focus + Vector3.up * .9f, new Vector3(.5f, 1.2f, .5f), 40, new Color(1f, .55f, .2f, .9f), .012f, .03f, .45f);
             }
             Halo(Focus + new Vector3(0, .55f, .15f), 1.6f, new Color(1f, .45f, .15f, .22f));
+            // Low wooden stools around the fire, as the owner chose for the museum's hearth.
+            Stool("Props/Banco_Tripode", Focus + new Vector3(-1.05f, 0, .55f));
+            Stool("Props/Banco_Curvo", Focus + new Vector3(1.0f, 0, .7f));
+            Stool("Props/Banco_Tripode", Focus + new Vector3(.25f, 0, 1.25f));
         }
 
-        /// <summary>Animated flame tongues from the flipbook, rising, swelling and dying away.</summary>
-        private void Tongues(string name, string material, float radius, ParticleSystem.MinMaxCurve size, int rate, Color body,
-            float shortest, float longest)
+        /// <summary>A stool turned to face the fire; the set simply goes without it when the model is missing.</summary>
+        private void Stool(string resource, Vector3 spot)
         {
-            var system = Particles(name, Focus + Vector3.up * .12f, material);
-            var main = system.main;
-            main.loop = true;
-            main.prewarm = true;
-            main.useUnscaledTime = true;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(shortest, longest);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(.18f, .4f);
-            main.startSize = size;
-            main.startRotation = new ParticleSystem.MinMaxCurve(-.18f, .18f);
-            main.simulationSpace = ParticleSystemSimulationSpace.Local;
-            main.maxParticles = rate * 2;
-            var renderer = system.GetComponent<ParticleSystemRenderer>();
-            renderer.renderMode = ParticleSystemRenderMode.VerticalBillboard;
-            // The flame grows up from where it is born, instead of being centred on it and half sunk in the embers.
-            renderer.pivot = new Vector3(0, .45f, 0);
-            var emission = system.emission;
-            emission.rateOverTime = rate;
-            var shape = system.shape;
-            shape.shapeType = ParticleSystemShapeType.Cone;
-            shape.angle = 7;
-            shape.radius = radius;
-            shape.rotation = new Vector3(-90, 0, 0);
-            var color = system.colorOverLifetime;
-            color.enabled = true;
-            var gradient = new Gradient();
-            gradient.SetKeys(
-                new[] { new GradientColorKey(new Color(1f, .95f, .75f), 0), new GradientColorKey(body, .35f),
-                    new GradientColorKey(new Color(.7f, .16f, .05f), 1) },
-                new[] { new GradientAlphaKey(0, 0), new GradientAlphaKey(.95f, .15f), new GradientAlphaKey(.7f, .6f), new GradientAlphaKey(0, 1) });
-            color.color = gradient;
-            var growth = system.sizeOverLifetime;
-            growth.enabled = true;
-            growth.size = new ParticleSystem.MinMaxCurve(1, new AnimationCurve(new Keyframe(0, .55f), new Keyframe(.35f, 1), new Keyframe(1, .35f)));
-            var sheet = system.textureSheetAnimation;
-            sheet.enabled = true;
-            sheet.numTilesX = 4;
-            sheet.numTilesY = 4;
-            sheet.animation = ParticleSystemAnimationType.WholeSheet;
-            sheet.cycleCount = 1;
-            var noise = system.noise;
-            noise.enabled = true;
-            noise.strength = .12f;
-            noise.frequency = 1.2f;
-            noise.scrollSpeed = .6f;
-            system.Play();
-        }
-
-        /// <summary>Sparks carried up by the heat, wandering and fading as they cool.</summary>
-        private void Sparks()
-        {
-            var system = Particles("Sparks", Focus + Vector3.up * .2f, SparkMaterial);
-            var main = system.main;
-            main.loop = true;
-            main.prewarm = true;
-            main.useUnscaledTime = true;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(1.2f, 2.6f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(.5f, 1.2f);
-            main.startSize = new ParticleSystem.MinMaxCurve(.012f, .028f);
-            main.startColor = new Color(1f, .7f, .3f);
-            main.simulationSpace = ParticleSystemSimulationSpace.Local;
-            main.maxParticles = 40;
-            main.gravityModifier = -.05f;
-            var emission = system.emission;
-            emission.rateOverTime = 7;
-            emission.SetBursts(new[] { new ParticleSystem.Burst(0, 2, 5, 0, 1.7f) });
-            var shape = system.shape;
-            shape.shapeType = ParticleSystemShapeType.Cone;
-            shape.angle = 14;
-            shape.radius = .12f;
-            shape.rotation = new Vector3(-90, 0, 0);
-            var color = system.colorOverLifetime;
-            color.enabled = true;
-            var gradient = new Gradient();
-            gradient.SetKeys(new[] { new GradientColorKey(new Color(1f, .85f, .5f), 0), new GradientColorKey(new Color(1f, .35f, .08f), 1) },
-                new[] { new GradientAlphaKey(1, 0), new GradientAlphaKey(.9f, .6f), new GradientAlphaKey(0, 1) });
-            color.color = gradient;
-            var noise = system.noise;
-            noise.enabled = true;
-            noise.strength = .45f;
-            noise.frequency = 1.4f;
-            noise.scrollSpeed = .7f;
-            system.Play();
-        }
-
-        /// <summary>Thin smoke above the flames, spreading and thinning as it rises into the dark.</summary>
-        private void Smoke()
-        {
-            var system = Particles("Smoke", Focus + Vector3.up * .75f, SmokeMaterial);
-            var main = system.main;
-            main.loop = true;
-            main.prewarm = true;
-            main.useUnscaledTime = true;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(3.5f, 5.5f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(.25f, .45f);
-            main.startSize = new ParticleSystem.MinMaxCurve(.35f, .6f);
-            main.startRotation = new ParticleSystem.MinMaxCurve(0, Mathf.PI * 2);
-            main.startColor = new Color(.16f, .14f, .13f, .32f);
-            main.simulationSpace = ParticleSystemSimulationSpace.Local;
-            main.maxParticles = 30;
-            var emission = system.emission;
-            emission.rateOverTime = 5;
-            var shape = system.shape;
-            shape.shapeType = ParticleSystemShapeType.Cone;
-            shape.angle = 10;
-            shape.radius = .12f;
-            shape.rotation = new Vector3(-90, 0, 0);
-            var color = system.colorOverLifetime;
-            color.enabled = true;
-            var gradient = new Gradient();
-            gradient.SetKeys(new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(Color.white, 1) },
-                new[] { new GradientAlphaKey(0, 0), new GradientAlphaKey(1, .2f), new GradientAlphaKey(.5f, .6f), new GradientAlphaKey(0, 1) });
-            color.color = gradient;
-            var growth = system.sizeOverLifetime;
-            growth.enabled = true;
-            growth.size = new ParticleSystem.MinMaxCurve(1, new AnimationCurve(new Keyframe(0, .6f), new Keyframe(1, 2.6f)));
-            var spin = system.rotationOverLifetime;
-            spin.enabled = true;
-            spin.z = new ParticleSystem.MinMaxCurve(-.4f, .4f);
-            var noise = system.noise;
-            noise.enabled = true;
-            noise.strength = .2f;
-            noise.frequency = .5f;
-            noise.scrollSpeed = .3f;
-            system.Play();
+            var model = Resources.Load<GameObject>(resource);
+            if (model == null) return;
+            var stool = Instantiate(model, root, false);
+            stool.name = model.name;
+            var toFire = Focus - spot;
+            toFire.y = 0;
+            var turn = Quaternion.LookRotation(toFire.normalized, Vector3.up);
+            if (model.name == "Banco_Curvo") turn *= Quaternion.Euler(0, 90, 0);
+            stool.transform.localPosition = spot;
+            stool.transform.localRotation = turn;
+            foreach (var collider in stool.GetComponentsInChildren<Collider>()) Discard(collider);
         }
 
         private void BuildMask(Func<string> apiBase, string element)
@@ -659,7 +519,7 @@ namespace MusiyoBetsknate.Museum
             maskImport?.Dispose();
             maskImport = null;
             if (root != null) Discard(root.gameObject);
-            root = null; cameraAnchor = null; fireLight = null; fireFill = null; maskAnchor = null;
+            root = null; cameraAnchor = null; fireLight = null; fire = null; maskAnchor = null;
             Kind = EntryBackdropKind.Museum;
             MaskStatus = "";
         }
