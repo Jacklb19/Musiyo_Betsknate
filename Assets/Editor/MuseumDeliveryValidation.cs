@@ -367,6 +367,8 @@ namespace MusiyoBetsknate.Editor
                 foreach (var collider in root.GetComponentsInChildren<Collider>(false))
                 {
                     if (collider is CharacterController || collider.transform.IsChildOf(architectureObject.transform)) continue;
+                    // The stools the owner added are furnishing of the scene, not part of the delivered map; they collide once.
+                    if (collider.transform.root.name == MuseumStoolPlacement.RootName) continue;
                     if (collider.GetComponent<PointLectern>() == null) doubled.Add(collider.name);
                 }
             if (doubled.Count > 0) errors.Add("Colliders left over from the blockout: " + string.Join(", ", doubled.Distinct()));
