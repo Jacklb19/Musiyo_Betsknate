@@ -7,7 +7,9 @@
     "Unity.TextMeshPro",
     "Unity.ugui",
     "glTFast",
-    "Unity.XR.OpenXR"
+    "Unity.XR.OpenXR",
+    "MusiyoBetsknate.Hands",
+    "Unity.XR.Hands"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"

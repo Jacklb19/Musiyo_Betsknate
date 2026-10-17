@@ -1,0 +1,13 @@
+{
+  "name": "MusiyoBetsknate.Hands",
+  "references": [
+    "MusiyoBetsknate.Runtime",
+    "Unity.XR.Hands",
+    "Unity.XR.CoreUtils",
+    "Unity.InputSystem"
+  ],
+  "includePlatforms": [
+    "Android",
+    "Editor"
+  ]
+}
