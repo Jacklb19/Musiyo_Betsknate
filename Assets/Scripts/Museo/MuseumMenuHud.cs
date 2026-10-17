@@ -356,7 +356,8 @@ namespace MusiyoBetsknate.Museum
             if (!visible) page = MenuPage.Home;
             // Enter or Escape that closed the menu must not also activate a point or reopen the pause.
             if (wasVisible && !visible) flow.ConsumeInputThisFrame();
-            bool entry = flow.Phase == VisitPhase.Menu;
+            // While the way in dissolves the menu, the entry page stays the one dissolving; the pause page never flashes in.
+            bool entry = flow.Phase != VisitPhase.Exploring;
             home = entry ? view.Main.gameObject : view.Pause.gameObject;
             var homeView = entry ? view.Main : view.Pause;
             retry = homeView.Retry;
