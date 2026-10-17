@@ -29,6 +29,8 @@ namespace MusiyoBetsknate.Museum
             public Renderer[] Renderers = Array.Empty<Renderer>();
             public ModelLoadTimeline Timeline;
             public float ExaminationScale = 1;
+            /// <summary>Scale that brings the normalized model back to the size it was built at.</summary>
+            public float NaturalScale = 1;
             /// <summary>Size of the normalized model before any display scale.</summary>
             public Vector3 Size;
             public float ReadyAt;
@@ -270,7 +272,7 @@ namespace MusiyoBetsknate.Museum
             if (session?.Pivot == null || !session.Ready) return false;
             var mount = session.Point.Anchor.GetComponentInChildren<PointExhibitMount>();
             var parent = mount != null ? mount.transform : session.Point.Anchor.LookTarget;
-            float fit = mount != null ? PointExhibitMount.Fit(session.Size, mount.MaxFootprint, mount.MaxHeight) : 1;
+            float fit = mount != null ? mount.FitFor(session.Size, session.NaturalScale) : 1;
             position = parent.TransformPoint(mount != null ? Vector3.up * (session.Size.y * fit * .5f) : Vector3.zero);
             rotation = parent.rotation;
             localScale = Vector3.one * fit;
@@ -292,7 +294,7 @@ namespace MusiyoBetsknate.Museum
             var parent = examining ? viewCamera.transform : mount != null ? mount.transform : session.Point.Anchor.LookTarget;
             if (pivot.parent != parent) pivot.SetParent(parent, false);
             float reveal = Mathf.SmoothStep(.85f, 1, Mathf.Clamp01((Time.realtimeSinceStartup - session.ReadyAt) / RevealSeconds));
-            float fit = mount != null ? PointExhibitMount.Fit(session.Size, mount.MaxFootprint, mount.MaxHeight) : 1;
+            float fit = mount != null ? mount.FitFor(session.Size, session.NaturalScale) : 1;
             pivot.localPosition = examining ? Vector3.forward * pose.Distance
                 : mount != null ? Vector3.up * (session.Size.y * fit * reveal * .5f) : Vector3.zero;
             pivot.localRotation = examining ? pose.Rotation : Quaternion.identity;
@@ -399,6 +401,7 @@ namespace MusiyoBetsknate.Museum
                 foreach (var renderer in pending.Renderers) bounds.Encapsulate(renderer.bounds);
                 pending.ExaminationScale = ModelExaminationPose.FrameScale(bounds.size, viewCamera != null ? viewCamera.fieldOfView : 70);
                 pending.Size = bounds.size;
+                pending.NaturalScale = 1 / content.transform.localScale.x;
                 pending.ReadyAt = Time.realtimeSinceStartup;
                 pending.Ready = retained = true;
                 Progress = 1;
