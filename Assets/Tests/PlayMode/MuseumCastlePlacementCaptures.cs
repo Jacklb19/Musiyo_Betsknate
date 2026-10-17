@@ -69,17 +69,27 @@ namespace MusiyoBetsknate.Tests
         private static string Vector(Vector3 value) => "(" + Number(value.x) + ", " + Number(value.y) + ", " + Number(value.z) + ")";
 
 #if UNITY_EDITOR
-        /// <summary>Built height of the Castle reconstruction, in metres; its measurements are approximate.</summary>
-        private const float BuiltHeight = 4.11f;
-        private const float BuiltWidth = 3.51f;
+        /// <summary>
+        /// Built size of the model under review, in metres, from MUSIYO_CASTLE_SIZE ("width x height"); the delivered
+        /// reconstruction is 3.51 x 4.11 and its measurements are approximate.
+        /// </summary>
+        private static Vector2 BuiltSize
+        {
+            get
+            {
+                var parts = (Environment.GetEnvironmentVariable("MUSIYO_CASTLE_SIZE") ?? "3.51x4.11").Split('x');
+                return new Vector2(float.Parse(parts[0], CultureInfo.InvariantCulture), float.Parse(parts[1], CultureInfo.InvariantCulture));
+            }
+        }
 
         /// <summary>
         /// Variants: courtyard depth, in metres north of the room centre, of the Castle's base, and times its built size.
         /// </summary>
         private static readonly TestCaseData[] Variants =
         {
-            // The owner (17/10): about 4 m high and much wider than high. Height as built, width stretched.
-            new TestCaseData(3.2f, 1f, 1.7f).Returns(null), new TestCaseData(3.4f, 1f, 2.15f).Returns(null),
+            // The owner (17/10): about 4 m high and much wider than high; a stretched model looked too stretched, so the
+            // model under review is rebuilt wider in Blender and shown as built.
+            new TestCaseData(3.4f, 1f, 1f).Returns(null),
         };
 
         [UnityTest, TestCaseSource(nameof(Variants))]
@@ -87,7 +97,7 @@ namespace MusiyoBetsknate.Tests
         {
             var path = Environment.GetEnvironmentVariable("MUSIYO_CASTLE_GLB");
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) Assert.Ignore("Set MUSIYO_CASTLE_GLB to the Castle GLB.");
-            string variant = "wide_" + (BuiltWidth * wide).ToString("0.0", CultureInfo.InvariantCulture).Replace('.', '_') + "m";
+            string variant = "built_" + (BuiltSize.x * wide).ToString("0.0", CultureInfo.InvariantCulture).Replace('.', '_') + "m";
             Directory.CreateDirectory(Folder);
             InputSystem.AddDevice<Keyboard>();
             InputSystem.AddDevice<Mouse>();
@@ -187,8 +197,8 @@ namespace MusiyoBetsknate.Tests
                 "anything_above_top: " + roofAbove,
                 "central_pedestal_triangles_removed (body and wooden top): " + removed,
             });
-            Assert.That(bounds.size.y, Is.EqualTo(BuiltHeight * factor).Within(.15f * factor), "The Castle stands at the chosen height.");
-            Assert.That(bounds.size.x, Is.EqualTo(BuiltWidth * wide).Within(.2f * wide), "The Castle spreads to the chosen width.");
+            Assert.That(bounds.size.y, Is.EqualTo(BuiltSize.y * factor).Within(.15f * factor), "The Castle stands at the chosen height.");
+            Assert.That(bounds.size.x, Is.EqualTo(BuiltSize.x * wide).Within(.2f * wide), "The Castle spreads to the chosen width.");
             Assert.That(bounds.min.y - floor.y, Is.EqualTo(0).Within(.03f), "It stands on the courtyard floor.");
 
             var camera = new GameObject("PlacementCamera").AddComponent<Camera>();
