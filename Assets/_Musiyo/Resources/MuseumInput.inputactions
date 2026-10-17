@@ -724,6 +724,15 @@
           "initialStateCheck": false
         },
         {
+          "name": "GrabLeft",
+          "type": "Button",
+          "id": "019efc6a-c0a5-4127-861a-db451a0e4f38",
+          "expectedControlType": "Button",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": false
+        },
+        {
           "name": "AutoTour",
           "type": "Button",
           "id": "36b03226-e298-4435-a0c8-1c275b929686",
@@ -984,6 +993,17 @@
           "processors": "",
           "groups": "XR",
           "action": "Grab",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "7f54f797-54c5-46cb-b7e0-acd058da2b96",
+          "path": "<OculusTouchController>{LeftHand}/gripPressed",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "GrabLeft",
           "isComposite": false,
           "isPartOfComposite": false
         },
@@ -1393,6 +1413,33 @@
           "processors": "",
           "interactions": "",
           "initialStateCheck": true
+        },
+        {
+          "name": "LeftPosition",
+          "type": "Value",
+          "id": "78baec24-e1ab-4716-982a-2fcad03225be",
+          "expectedControlType": "Vector3",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": true
+        },
+        {
+          "name": "LeftRotation",
+          "type": "Value",
+          "id": "78c8badd-6f35-4abf-abfd-f178526e10ea",
+          "expectedControlType": "Quaternion",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": true
+        },
+        {
+          "name": "LeftTracked",
+          "type": "Value",
+          "id": "3e11e021-c10b-44b4-bc03-787627eb3368",
+          "expectedControlType": "Button",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": true
         }
       ],
       "bindings": [
@@ -1459,6 +1506,39 @@
           "processors": "",
           "groups": "XR",
           "action": "RightTracked",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "163d69ce-1bad-4956-a308-1f0af34dd722",
+          "path": "<OculusTouchController>{LeftHand}/pointerPosition",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "LeftPosition",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "e2f9a840-fb1f-4e1b-a29d-ab728e67675d",
+          "path": "<OculusTouchController>{LeftHand}/pointerRotation",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "LeftRotation",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "c214573c-cc68-4cf7-a9e1-441f0562a2c4",
+          "path": "<OculusTouchController>{LeftHand}/isTracked",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "LeftTracked",
           "isComposite": false,
           "isPartOfComposite": false
         }

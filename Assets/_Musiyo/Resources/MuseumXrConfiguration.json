@@ -18,5 +18,8 @@
   "turn_deadzone": 0.2,
   "grab_reach": 0.12,
   "grab_max_distance": 1.5,
+  "grab_snap_distance": 0.25,
+  "grab_rest_return_distance": 3.0,
+  "grab_stick_turn_speed": 120,
   "device_height": 1.65
 }

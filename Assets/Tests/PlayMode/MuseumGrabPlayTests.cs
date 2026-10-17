@@ -39,6 +39,14 @@ namespace MusiyoBetsknate.Tests
             for (float waited = 0; !condition() && waited < seconds; waited += Time.unscaledDeltaTime) yield return null;
         }
 
+        /// <summary>Puts the visitor on the floor this far south of a point, so a floating piece is near or left behind.</summary>
+        private static void StandAt(DesktopVisitorController visitor, Vector3 point, float distance)
+        {
+            var body = visitor.transform;
+            body.position = new Vector3(point.x, body.position.y, point.z - distance);
+            Physics.SyncTransforms();
+        }
+
         private static void AssertAt(Transform piece, Vector3 position, Quaternion rotation, string message)
         {
             Assert.That(Vector3.Distance(piece.position, position), Is.LessThan(.001f), message);
@@ -118,9 +126,20 @@ namespace MusiyoBetsknate.Tests
             yield return null;
             Assert.That(grab.Held, Is.True, "Nothing lets go on its own while the visit carries on.");
 
-            // Letting go: it glides back, not to a pose derived from where it was dropped.
+            // Let go away from its pedestal by a hand, it stays where it was left while the visitor stays near.
+            StandAt(visitor, home, 1);
+            var dropped = piece.position;
             grab.Release();
-            Assert.That(grab.Returning, Is.True);
+            Assert.That(grab.Resting, Is.True);
+            Assert.That(grab.Returning, Is.False);
+            Assert.That(presenter.PoseHeld, Is.True);
+            for (int frame = 0; frame < 10; frame++) yield return null;
+            Assert.That(Vector3.Distance(piece.position, dropped), Is.LessThan(.001f), "A piece let go does not jump back.");
+            // Walking away, the visitor leaves it behind: it glides back, not to a pose derived from where it was dropped.
+            StandAt(visitor, home, MuseumXrConfiguration.Current.GrabRestReturnDistance + .4f);
+            yield return Until(() => grab.Returning, 1);
+            Assert.That(grab.Returning, Is.True, "Walking away sends a floating piece back.");
+            yield return null;
             var halfway = piece.position;
             yield return Until(() => !grab.Returning, 3);
             Assert.That(grab.Returning, Is.False);
@@ -130,6 +149,53 @@ namespace MusiyoBetsknate.Tests
             Assert.That(presenter.TryExhibitPose(out var homeAgain, out _, out _), Is.True);
             Assert.That(Vector3.Distance(homeAgain, home), Is.LessThan(.0001f), "Moving the piece never changed its saved pose.");
             Assert.That(Vector3.Distance(halfway, home), Is.GreaterThan(.2f), "It glided rather than jumped.");
+            StandAt(visitor, home, 1);
+
+            // Let go on its pedestal, it goes back onto it at once.
+            Assert.That(grab.Take(hand, Quaternion.identity, false, false), Is.True);
+            grab.Follow(hand + Vector3.up * (MuseumXrConfiguration.Current.GrabSnapDistance * .5f), Quaternion.Euler(0, 20, 0), 1);
+            grab.Release();
+            Assert.That(grab.Resting, Is.False);
+            Assert.That(grab.Returning, Is.True, "Let go on the pedestal, the piece is put back.");
+            yield return Until(() => !grab.Returning, 3);
+            AssertAt(piece, home, homeRotation, "Put back on its pedestal.");
+
+            // Either hand takes it; the other hand joins, and turning both hands around it turns the piece.
+            var rightHand = home + Vector3.right * .05f;
+            var leftHand = home + Vector3.left * .05f;
+            Assert.That(grab.Take(GrabHand.Right, rightHand, Quaternion.identity, false), Is.True);
+            Assert.That(grab.Take(GrabHand.Left, leftHand, Quaternion.identity, false), Is.True);
+            Assert.That(grab.HeldWithBothHands, Is.True);
+            var quarter = Quaternion.Euler(0, 90, 0);
+            grab.FollowHands(home + quarter * (rightHand - home), quarter, home + quarter * (leftHand - home), quarter, 1);
+            Assert.That(Quaternion.Angle(piece.rotation, quarter * homeRotation), Is.LessThan(1), "Both hands turn the piece between them.");
+            Assert.That(Vector3.Distance(piece.position, home), Is.LessThan(.01f), "Turning between the hands keeps it in place.");
+            // The right hand lets go: the left one carries on from where the piece is, so it passes from hand to hand.
+            var handedOver = piece.position;
+            grab.Release(GrabHand.Right);
+            Assert.That(grab.HeldBy(GrabHand.Left), Is.True);
+            Assert.That(grab.HeldBy(GrabHand.Right), Is.False);
+            Assert.That(Vector3.Distance(piece.position, handedOver), Is.LessThan(.001f), "Handing over does not move the piece.");
+            var lifted = home + quarter * (leftHand - home) + Vector3.up * .4f;
+            grab.Follow(GrabHand.Left, lifted, quarter, 1);
+            Assert.That(Vector3.Distance(piece.position, handedOver + Vector3.up * .4f), Is.LessThan(.001f), "The other hand carries it.");
+            // The stick turns the piece about its own centre.
+            var beforeStick = piece.rotation;
+            var centre = piece.position;
+            grab.TurnInHands(new Vector2(30, 0), Vector3.right);
+            Assert.That(Quaternion.Angle(piece.rotation, beforeStick), Is.EqualTo(30).Within(.5f));
+            Assert.That(Vector3.Distance(piece.position, centre), Is.LessThan(.001f));
+            grab.Follow(GrabHand.Left, lifted, quarter, 1);
+            Assert.That(Quaternion.Angle(piece.rotation, beforeStick), Is.EqualTo(30).Within(.5f), "The hand keeps the turn the stick gave.");
+            grab.Release(GrabHand.Left);
+            Assert.That(grab.Resting, Is.True, "Let go in the air, it floats there.");
+            // Taken again from the air, it is the same piece where it was left.
+            var floating = piece.position;
+            Assert.That(grab.Take(GrabHand.Right, floating + Vector3.back * .05f, Quaternion.identity, false), Is.True);
+            Assert.That(Vector3.Distance(piece.position, floating), Is.LessThan(.001f));
+            grab.ReturnHome();
+            yield return Until(() => !grab.Returning, 3);
+            AssertAt(piece, home, homeRotation, "Sent home, it is back on show.");
 
             // Pausing the visit sends a held piece back.
             Assert.That(grab.Take(hand, Quaternion.identity, false, false), Is.True);

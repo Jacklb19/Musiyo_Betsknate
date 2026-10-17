@@ -240,6 +240,8 @@ namespace MusiyoBetsknate.Museum
         {
             var scroll = MuseumInput.Current.ScrollPanel;
             if (!scroll.WasPressedThisFrame() || !panel.activeSelf || PanelScroll() == null) return;
+            // While a piece is in the hand the stick turns the piece.
+            if (grab != null && grab.Held && MuseumInput.Current.Spatial) return;
             int direction = System.Math.Sign(scroll.ReadValue<float>());
             if (direction == 0) return;
             // Scrolling by hand takes the panel away from the narration until the visitor asks to follow it again.

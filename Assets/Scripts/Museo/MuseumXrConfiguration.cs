@@ -41,6 +41,12 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("grab_reach")] public float GrabReach;
         /// <summary>A piece carried further than this from its pedestal goes back to it.</summary>
         [JsonProperty("grab_max_distance")] public float GrabMaxDistance;
+        /// <summary>A piece let go closer than this to its exhibition pose goes back onto its pedestal.</summary>
+        [JsonProperty("grab_snap_distance")] public float GrabSnapDistance;
+        /// <summary>A piece left floating goes back to its pedestal once the visitor's head is further than this from it.</summary>
+        [JsonProperty("grab_rest_return_distance")] public float GrabRestReturnDistance;
+        /// <summary>Degrees per second the right stick turns a held piece at full deflection.</summary>
+        [JsonProperty("grab_stick_turn_speed")] public float GrabStickTurnSpeed;
         [JsonProperty("device_height")] public float DeviceHeight;
         private static MuseumXrConfiguration current;
 
@@ -67,6 +73,8 @@ namespace MusiyoBetsknate.Museum
                 || !value.ContinuousTurnSpeeds.Contains(value.DefaultContinuousTurnSpeed)
                 || !Range(value.TurnDeadzone, .05f, .6f)
                 || !Range(value.GrabReach, 0, .5f) || !Range(value.GrabMaxDistance, .5f, 4)
+                || !Range(value.GrabSnapDistance, .05f, .5f) || !Range(value.GrabRestReturnDistance, 1, 6)
+                || !Range(value.GrabStickTurnSpeed, 30, 360)
                 || !Range(value.DeviceHeight, 1, 2)) throw new InvalidOperationException("Invalid museum XR configuration.");
             return value;
         }

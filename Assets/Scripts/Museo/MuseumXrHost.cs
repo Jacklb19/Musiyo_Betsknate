@@ -200,7 +200,9 @@ namespace MusiyoBetsknate.Museum
             Teleport();
             var stick = input.Turn.ReadValue<Vector2>();
             float degrees;
-            if (TurnMode == MuseumTurnMode.Snap) degrees = snapTurn.Step(stick.x, configuration.SnapTurnDegrees);
+            // While a piece is in the hand the right stick turns the piece, not the visitor.
+            if (interaction.GetComponent<MuseumModelGrab>()?.Held == true) { snapTurn.Disarm(); degrees = 0; }
+            else if (TurnMode == MuseumTurnMode.Snap) degrees = snapTurn.Step(stick.x, configuration.SnapTurnDegrees);
             else
             {
                 // Switching to steps while the stick is held must not fire a step at once.

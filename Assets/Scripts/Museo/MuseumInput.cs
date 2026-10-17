@@ -94,12 +94,20 @@ namespace MusiyoBetsknate.Museum
         public InputAction RightPosition { get; }
         public InputAction RightRotation { get; }
         public InputAction RightTracked { get; }
+        public InputAction LeftPosition { get; }
+        public InputAction LeftRotation { get; }
+        public InputAction LeftTracked { get; }
         /// <summary>Right stick of a headset: turns the visitor, continuously or in steps.</summary>
         public InputAction Turn { get; }
         /// <summary>Held on a headset: an arc shows where the visitor would stand; releasing it jumps there.</summary>
         public InputAction Teleport { get; }
-        /// <summary>Takes the published piece that the pointer or hand reaches; releasing it sends it back.</summary>
+        /// <summary>
+        /// Takes the published piece that the pointer or hand reaches: the right grip on a headset, the right mouse button on
+        /// a desktop.
+        /// </summary>
         public InputAction Grab { get; }
+        /// <summary>The left grip of a headset; either hand takes, hands over and turns the piece.</summary>
+        public InputAction GrabLeft { get; }
         public InputAction AutoTour { get; }
         public bool Spatial { get; private set; }
 
@@ -162,8 +170,10 @@ namespace MusiyoBetsknate.Museum
             HeadPosition = Find("Tracking/HeadPosition"); HeadRotation = Find("Tracking/HeadRotation");
             HeadState = Find("Tracking/HeadState"); RightPosition = Find("Tracking/RightPosition");
             RightRotation = Find("Tracking/RightRotation"); RightTracked = Find("Tracking/RightTracked");
+            LeftPosition = Find("Tracking/LeftPosition"); LeftRotation = Find("Tracking/LeftRotation");
+            LeftTracked = Find("Tracking/LeftTracked");
             Turn = Find("Locomotion/Turn"); Teleport = Find("Locomotion/Teleport");
-            Grab = Find("Visit/Grab"); AutoTour = Find("Visit/AutoTour");
+            Grab = Find("Visit/Grab"); GrabLeft = Find("Visit/GrabLeft"); AutoTour = Find("Visit/AutoTour");
             foreach (var maps in ContextMaps.Values)
                 foreach (var map in maps) Asset.FindActionMap(map, true);
             Bindings = new MuseumInputBindings(this);
