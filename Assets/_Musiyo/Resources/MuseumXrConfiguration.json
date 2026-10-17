@@ -19,7 +19,8 @@
   "grab_reach": 0.12,
   "grab_max_distance": 1.5,
   "grab_snap_distance": 0.25,
-  "grab_rest_return_distance": 3.0,
+  "grab_release_pause_seconds": 0.5,
+  "grab_release_return_seconds": 1.4,
   "grab_stick_turn_speed": 120,
   "device_height": 1.65
 }

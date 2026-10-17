@@ -38,6 +38,8 @@ namespace MusiyoBetsknate.Museum
         private Quaternion takenRotation;
         private float attach;
         private float returnElapsed;
+        private float returnSeconds = 1;
+        private float restElapsed;
         private Vector3 returnPosition;
         private Quaternion returnRotation;
 
@@ -56,7 +58,7 @@ namespace MusiyoBetsknate.Museum
         public bool HeldWithBothHands => grips[(int)GrabHand.Right].Holding && grips[(int)GrabHand.Left].Holding;
         public bool HeldBy(GrabHand hand) => grips[(int)hand].Holding;
         public bool Returning { get; private set; }
-        /// <summary>Let go away from its pedestal, the piece floats where it was left until the visitor walks away.</summary>
+        /// <summary>Let go away from its pedestal by a hand, the piece pauses a moment where it was left before gliding back.</summary>
         public bool Resting { get; private set; }
         /// <summary>The pointer or hand reaches a piece that the grab would take.</summary>
         public bool Hovered { get; private set; }
@@ -337,19 +339,21 @@ namespace MusiyoBetsknate.Museum
         private void Rest()
         {
             if (piece == null) return;
-            // Let go on its pedestal, it goes back onto it; anywhere else it stays where the visitor left it.
+            // Let go on its pedestal, it settles onto it at once; anywhere else it pauses a moment, then glides slowly home.
             if (presenter.TryExhibitPose(out var home, out _, out _)
                 && Vector3.Distance(piece.position, home) <= MuseumXrConfiguration.Current.GrabSnapDistance) { BeginReturn(); return; }
             Resting = true;
             Returning = false;
+            restElapsed = 0;
         }
 
-        private void BeginReturn()
+        private void BeginReturn(bool slow = false)
         {
             Resting = false;
             if (piece == null) return;
             Returning = true;
             returnElapsed = 0;
+            returnSeconds = slow ? MuseumXrConfiguration.Current.GrabReleaseReturnSeconds : MuseumExperienceConfiguration.Current.GrabReturnSeconds;
             returnPosition = piece.position;
             returnRotation = piece.rotation;
         }
@@ -373,7 +377,7 @@ namespace MusiyoBetsknate.Museum
             if (!Returning) return;
             if (piece == null || !presenter.TryExhibitPose(out var home, out var homeRotation, out _)) { Drop(); return; }
             returnElapsed += Mathf.Max(0, elapsed);
-            float progress = Mathf.Clamp01(returnElapsed / MuseumExperienceConfiguration.Current.GrabReturnSeconds);
+            float progress = Mathf.Clamp01(returnElapsed / returnSeconds);
             float eased = Mathf.SmoothStep(0, 1, progress);
             piece.SetPositionAndRotation(Vector3.Lerp(returnPosition, home, eased), Quaternion.Slerp(returnRotation, homeRotation, eased));
             if (progress < 1) return;
@@ -384,13 +388,14 @@ namespace MusiyoBetsknate.Museum
             Changed?.Invoke();
         }
 
-        /// <summary>A floating piece goes back once the visitor is further than the configured distance from its pedestal.</summary>
-        public void StepRest(Vector3 visitorHead)
+        /// <summary>Advances the short pause of a piece let go in the air; it then glides slowly home. Tests call it directly.</summary>
+        public void StepRest(float elapsed)
         {
-            if (!Resting || piece == null || !presenter.TryExhibitPose(out var home, out _, out _)) return;
-            var away = home - visitorHead;
-            away.y = 0;
-            if (away.magnitude > MuseumXrConfiguration.Current.GrabRestReturnDistance) ReturnHome();
+            if (!Resting || piece == null) return;
+            restElapsed += Mathf.Max(0, elapsed);
+            if (restElapsed < MuseumXrConfiguration.Current.GrabReleasePauseSeconds) return;
+            BeginReturn(true);
+            Changed?.Invoke();
         }
 
         private void Update()
@@ -401,7 +406,7 @@ namespace MusiyoBetsknate.Museum
             // Pausing, a menu, a screen panel or the automatic tour sends a held or floating piece back.
             if ((Held || Resting) && !CanTakeIgnoringHold()) ReturnHome();
             if (Returning) StepReturn(Time.unscaledDeltaTime);
-            if (Resting && viewCamera != null) StepRest(viewCamera.transform.position);
+            if (Resting) StepRest(Time.unscaledDeltaTime);
             var input = MuseumInput.Current;
             if (input.Spatial) UpdateHands(input);
             else UpdateDesktop(input);

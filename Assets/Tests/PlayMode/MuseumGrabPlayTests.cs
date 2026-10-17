@@ -126,23 +126,26 @@ namespace MusiyoBetsknate.Tests
             yield return null;
             Assert.That(grab.Held, Is.True, "Nothing lets go on its own while the visit carries on.");
 
-            // Let go away from its pedestal by a hand, it stays where it was left while the visitor stays near.
-            StandAt(visitor, home, 1);
+            // Let go away from its pedestal by a hand, it pauses only a moment where it was left, then glides slowly home.
             var dropped = piece.position;
             grab.Release();
             Assert.That(grab.Resting, Is.True);
             Assert.That(grab.Returning, Is.False);
             Assert.That(presenter.PoseHeld, Is.True);
-            for (int frame = 0; frame < 10; frame++) yield return null;
+            yield return null;
             Assert.That(Vector3.Distance(piece.position, dropped), Is.LessThan(.001f), "A piece let go does not jump back.");
-            // Walking away, the visitor leaves it behind: it glides back, not to a pose derived from where it was dropped.
-            StandAt(visitor, home, MuseumXrConfiguration.Current.GrabRestReturnDistance + .4f);
-            yield return Until(() => grab.Returning, 1);
-            Assert.That(grab.Returning, Is.True, "Walking away sends a floating piece back.");
+            float letGo = Time.unscaledTime;
+            yield return Until(() => grab.Returning, 2);
+            Assert.That(grab.Returning, Is.True, "After its short pause the piece goes back by itself.");
+            Assert.That(Time.unscaledTime - letGo, Is.LessThan(MuseumXrConfiguration.Current.GrabReleasePauseSeconds + .5f),
+                "It never stays floating for long.");
             yield return null;
             var halfway = piece.position;
-            yield return Until(() => !grab.Returning, 3);
+            float glideStart = Time.unscaledTime;
+            yield return Until(() => !grab.Returning, 4);
             Assert.That(grab.Returning, Is.False);
+            Assert.That(Time.unscaledTime - glideStart, Is.GreaterThan(MuseumXrConfiguration.Current.GrabReleaseReturnSeconds * .7f),
+                "It glides home slowly.");
             AssertAt(piece, home, homeRotation, "Released, the piece is back exactly in its exhibition pose.");
             Assert.That(piece.localScale.x, Is.EqualTo(homeScale.x).Within(.0001f));
             Assert.That(presenter.PoseHeld, Is.False);
@@ -188,8 +191,8 @@ namespace MusiyoBetsknate.Tests
             grab.Follow(GrabHand.Left, lifted, quarter, 1);
             Assert.That(Quaternion.Angle(piece.rotation, beforeStick), Is.EqualTo(30).Within(.5f), "The hand keeps the turn the stick gave.");
             grab.Release(GrabHand.Left);
-            Assert.That(grab.Resting, Is.True, "Let go in the air, it floats there.");
-            // Taken again from the air, it is the same piece where it was left.
+            Assert.That(grab.Resting, Is.True, "Let go in the air, it pauses there a moment.");
+            // Caught again before it goes home, it is the same piece where it was left.
             var floating = piece.position;
             Assert.That(grab.Take(GrabHand.Right, floating + Vector3.back * .05f, Quaternion.identity, false), Is.True);
             Assert.That(Vector3.Distance(piece.position, floating), Is.LessThan(.001f));
