@@ -26,9 +26,8 @@ namespace MusiyoBetsknate.Tests
         /// <summary>Palettes under review: backdrop, entry backdrop, panel, text, accent, selected, pointer, muted, secondary.</summary>
         private static readonly Dictionary<string, string[]> Palettes = new Dictionary<string, string[]>
         {
-            { "A_fogon", null },
-            { "B_ceniza", new[] { "#0F0E0DEB", "#0F0E0D00", "#1A1816F0", "#EFE7DA", "#D08A4A", "#2E2924", "#D08A4A40", "#B9AE9F", "#8E2F23" } },
-            { "C_monte", new[] { "#0B1310EB", "#0B131000", "#121D18F0", "#EEF0E6", "#D9A441", "#22332B", "#D9A44140", "#B8C2B4", "#6E8B5A" } },
+            // The shared tokens of 18/10/2026 are the shipped palette; others can be added here for comparison.
+            { "tokens", null },
         };
 
         public override void Setup() { base.Setup(); MuseumInput.Replace(MuseumInput.CreateDefault()); }

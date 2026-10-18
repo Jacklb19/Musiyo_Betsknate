@@ -146,6 +146,8 @@ namespace MusiyoBetsknate.Museum
             var controlBar = header != null && header.parent != null ? header.parent.Find("Controls") as RectTransform : null;
             gameObject.AddComponent<MuseumHudPresence>().Configure(visitFlow, interaction, loader, header, controlBar);
             CreateSideColumn();
+            // Menus, point screens and prompts share the typography of the Web.
+            MuseumTypography.Apply(transform);
             ApplyPreferences();
         }
 
