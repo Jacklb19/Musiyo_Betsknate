@@ -110,6 +110,73 @@
       "files": {
         "OpenGameArt/FirstLightParticles/first_light_particles.ogg": "8690569b315b91efd8b7fcc1a477b6925513b137d8cca3ff0ed50e0ee798342e"
       }
+    },
+    {
+      "name": "Tree Small 02",
+      "author": "Rico Cilliers",
+      "publisher": "Poly Haven",
+      "source": "https://polyhaven.com/a/tree_small_02",
+      "license": "CC0 1.0",
+      "license_url": "https://polyhaven.com/license",
+      "retrieved": "2026-10-18",
+      "source_files_sha256": {
+        "tree_small_02_1k.gltf": "3062a709614c05b80fdc1e56583998bc3cb1027b0d52f956c8ecfb882ff8ca6d",
+        "tree_small_02.bin": "8da6c3c389ad8748286d1b7488cd827f75ebdad9d8f59ef7dfb0916df5edc634"
+      },
+      "derivation": "Blender 5.2 (EEVEE, transparent film, one sun and a sky-coloured world): four orthographic renders of the 1k glTF from 0, 90, 180 and 270 degrees packed 2 x 2 (forest_tree_cards, cards of the forest around the museum), and four close renders of parts of its crown with a ragged round alpha edge added, packed 2 x 2 (crown_leaf_cards, the crown of the tree of life, shrubs and the crowns of trees near the museum). The model itself is not in the repository.",
+      "files": {
+        "PolyHaven/TreeSmall02/forest_tree_cards.png": "b34f254a1d0a16decd9c5ebe91a1dcfc20b08d1ee219c3f6f85d55012bdf2e21",
+        "PolyHaven/TreeSmall02/crown_leaf_cards.png": "18321d28a154411e605d0b476d52a42fd61f40beef7ac64a22196dbfe12efa1b"
+      }
+    },
+    {
+      "name": "Brown Mud Rocks 01",
+      "author": "Rob Tuytel",
+      "publisher": "Poly Haven",
+      "source": "https://polyhaven.com/a/brown_mud_rocks_01",
+      "license": "CC0 1.0",
+      "license_url": "https://polyhaven.com/license",
+      "retrieved": "2026-10-18",
+      "source_files_sha256": {
+        "brown_mud_rocks_01_diff_1k.jpg": "805675195f875f75b8f34410d8ead8b75c25643cdb2c0a8b0936d0f2698cce8c"
+      },
+      "derivation": "Colour texture copied unchanged. The bed of the welcome lagoon, seen through the water.",
+      "files": {
+        "PolyHaven/BrownMudRocks01/brown_mud_rocks_01_diff_1k.jpg": "805675195f875f75b8f34410d8ead8b75c25643cdb2c0a8b0936d0f2698cce8c"
+      }
+    },
+    {
+      "name": "Forrest Ground 01",
+      "author": "Rob Tuytel",
+      "publisher": "Poly Haven",
+      "source": "https://polyhaven.com/a/forrest_ground_01",
+      "license": "CC0 1.0",
+      "license_url": "https://polyhaven.com/license",
+      "retrieved": "2026-10-18",
+      "source_files_sha256": {
+        "forrest_ground_01_diff_1k.jpg": "3dd6875cb3908e022a3c45ebbffa5e84c670ff2691fbbb6dc9ea4bff88523800"
+      },
+      "derivation": "Colour texture copied unchanged. Leaf litter of the valley ground under the trees and at the foot of the walls.",
+      "files": {
+        "PolyHaven/ForrestGround01/forrest_ground_01_diff_1k.jpg": "3dd6875cb3908e022a3c45ebbffa5e84c670ff2691fbbb6dc9ea4bff88523800"
+      }
+    },
+    {
+      "name": "Planter Pot Clay",
+      "author": "Amal Kumar",
+      "publisher": "Poly Haven",
+      "source": "https://polyhaven.com/a/planter_pot_clay",
+      "license": "CC0 1.0",
+      "license_url": "https://polyhaven.com/license",
+      "retrieved": "2026-10-18",
+      "source_files_sha256": {
+        "planter_pot_clay_1k.gltf": "f2989068dcff9737c9f3d49d435b70e36d553822ac87134daac055ae9706af1e",
+        "planter_pot_clay.bin": "effd0a038a75a054e55e2f5f71a84c57c1c6efc4e453ae3e62d4ce5167a2913c"
+      },
+      "derivation": "Only the colour texture is used, copied unchanged, wrapped round a light turned pot made in code (MuseumWorldDressing, about 200 triangles instead of the model's 3 080). Pots with a fern by the walls, hanging from the courtyard beams and at the door.",
+      "files": {
+        "PolyHaven/PlanterPotClay/textures/planter_pot_clay_diff_1k.jpg": "4f2962fd238401e49fd400596fdccd1ee9e2cca9ed21e44bb924dca3076f524c"
+      }
     }
   ]
 }

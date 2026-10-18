@@ -230,6 +230,9 @@ namespace MusiyoBetsknate.Tests
         [TestCase("Musiyo/Sky Panorama")]
         [TestCase("Musiyo/Lagoon Water")]
         [TestCase("Musiyo/Foliage")]
+        [TestCase("Musiyo/World/Clear Water")]
+        [TestCase("Musiyo/World/Valley Ground")]
+        [TestCase("Musiyo/World/Leaf Card")]
         public void TheWorldShadersCompileForTheHeadsetInStereo(string name)
         {
             var shader = Shader.Find(name);

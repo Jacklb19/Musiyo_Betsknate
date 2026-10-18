@@ -9,7 +9,7 @@
   "walk_speed": 1.2,
   "run_speed": 2.4,
   "run_acceleration": 2.5,
-  "outdoor_ground_objects": ["Terreno_Valle_Provisional", "Sendero_Jajan"],
+  "outdoor_ground_objects": ["Terreno_Valle_Provisional", "Sendero_Jajan", "ValleyGround"],
   "outdoor_rooms": ["room.arrival"],
   "default_turn_mode": "continuous",
   "snap_turn_degrees": 30,
