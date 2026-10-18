@@ -10,12 +10,16 @@ namespace MusiyoBetsknate.Museum
     /// Turns the entry menu into a title screen when the visit opens on the hearth set: no card behind it, the museum's
     /// name large across the top of a column on the left, the choices as a floating list marked by a thin line of the
     /// accent colour, darkness gathering on the left, and the fire's warm light reaching the menu and breathing with the
-    /// flames. Every other menu keeps its own look. It only restyles at runtime; the menu prefab stays as authored.
+    /// flames. The pause and settings pages keep their card but share the same choices: text rows on the dark, the one in
+    /// focus marked by the accent line, with every option they had. It only restyles at runtime; the menu prefab stays as
+    /// authored.
     /// </summary>
     public sealed class MuseumTitleScreen : MonoBehaviour
     {
         public const float TitleSize = 62;
         public const float ChoiceSize = 27;
+        /// <summary>Height over which a scrolling list fades out at its edges.</summary>
+        public const int ListFade = 40;
         private MuseumMenuView view;
         private MuseumVisitFlow flow;
         private MuseumEntryBackdrop backdrop;
@@ -48,6 +52,19 @@ namespace MusiyoBetsknate.Museum
             Style(page.transform);
             foreach (var choice in new Selectable[] { page.Primary, page.Settings, page.Controls, page.Retry, page.Catalog })
                 if (choice != null) Choice(choice);
+            // The pause and the settings read as the same quiet list, on their card.
+            foreach (var listed in new Transform[] { view.Pause.transform, view.Settings.transform })
+                foreach (var choice in listed.GetComponentsInChildren<Button>(true))
+                    if (choice.GetComponentInParent<MuseumRebindRow>(true) == null)
+                    {
+                        foreach (var binding in choice.GetComponentsInChildren<MuseumMenuThemeBinding>(true))
+                            if (binding.BindSelectableColors) Destroy(binding);
+                        Choice(choice);
+                    }
+            // A list longer than its card fades out at its edge instead of cutting a line in half.
+            foreach (var scrolled in new MuseumMenuPageView[] { view.Pause, view.Settings, view.Controls })
+                if (scrolled.Scroll != null && scrolled.Scroll.viewport != null && scrolled.Scroll.viewport.TryGetComponent<RectMask2D>(out var mask))
+                    mask.softness = new Vector2Int(0, ListFade);
             var backdropColor = MuseumExperienceConfiguration.ColorValue(settings.BackdropColor);
             backdropColor.a = 1;
             shade = Layer("TitleShade", Gradient(new[] { (0f, .9f), (.34f, .78f), (.58f, .25f), (.78f, 0f) }), backdropColor, 0);
@@ -60,6 +77,7 @@ namespace MusiyoBetsknate.Museum
 
         private void Refresh()
         {
+            MarkFocus();
             bool show = flow != null && flow.Phase != VisitPhase.Exploring && backdrop.Shown && view.Main.gameObject.activeInHierarchy;
             if (shade.gameObject.activeSelf != show) { shade.gameObject.SetActive(show); glow.gameObject.SetActive(show); }
             if (!show) return;
@@ -72,12 +90,18 @@ namespace MusiyoBetsknate.Museum
             var tint = glowColor;
             tint.a = (.05f + .08f * backdrop.FireLevel) * presence;
             glow.color = tint;
+        }
+
+        /// <summary>The choice in focus, on any page, carries the accent line and colour.</summary>
+        private void MarkFocus()
+        {
             var selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
             foreach (var (choice, marker, label) in choices)
             {
+                if (choice == null || !choice.gameObject.activeInHierarchy) continue;
                 bool active = choice.gameObject == selected;
                 if (marker.enabled != active) marker.enabled = active;
-                label.color = active ? accentColor : choice.IsInteractable() ? textColor : mutedColor;
+                if (label != null) label.color = active ? accentColor : choice.IsInteractable() ? textColor : mutedColor;
             }
         }
 
@@ -145,6 +169,8 @@ namespace MusiyoBetsknate.Museum
                 label.fontSize = ChoiceSize;
                 label.alignment = TextAlignmentOptions.MidlineLeft;
                 label.characterSpacing = 2;
+                // Every choice reads with the same firm weight, whichever button it was made from.
+                label.fontStyle = (label.fontStyle | FontStyles.Bold) & ~FontStyles.UpperCase;
                 label.margin = new Vector4(26, 0, 0, 0);
             }
             var marker = new GameObject("TitleMarker", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
