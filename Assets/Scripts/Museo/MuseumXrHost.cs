@@ -310,10 +310,8 @@ namespace MusiyoBetsknate.Museum
             bool overInterface = pointerDevice != null && module.IsPointerOverGameObject(pointerDevice.deviceId);
             if (interfaceOpen || overInterface || flow.InputConsumedThisFrame)
             { display?.ClearAim(); return; }
-            if (display != null && display.Surface != null &&
-                new Plane(display.Surface.forward, display.Surface.position).Raycast(ray, out var screenDistance)
-                && screenDistance <= distance + .01f) display.Aim(ray);
-            else display?.ClearAim();
+            // The screen and the cues beside the pieces are chosen only where nothing solid stands in front of them.
+            display?.Aim(ray, distance);
             if (input.Click.WasPressedThisFrame()) display?.Press();
         }
 

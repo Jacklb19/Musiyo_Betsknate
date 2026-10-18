@@ -13,7 +13,10 @@ using UnityEngine.UI;
 
 namespace MusiyoBetsknate.Tests
 {
-    /// <summary>Several pieces of one point shown one at a time on its pedestal, with synthetic models and records.</summary>
+    /// <summary>
+    /// Several records of one point shown one at a time on its pedestal, with synthetic models: arrows beside the piece step
+    /// through them and the screen by the stand says which one is on show.
+    /// </summary>
     public sealed class MuseumCarouselPlayTests : InputTestFixture
     {
         private const string MuseumScene = "Assets/_Musiyo/Scenes/10_Museum_Blockout.unity";
@@ -93,16 +96,23 @@ namespace MusiyoBetsknate.Tests
             var point = runtime.FindPoint(PointKey);
             Assert.That(visitor.FocusPoint(point.Anchor), Is.True);
             yield return Until(() => interaction.ActivePoint == point, 5);
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.ElementSelected), "By a stand the point opens on its first record, with no list.");
+            Assert.That(interaction.SelectedElement.slug, Is.EqualTo("piece-common"));
             Assert.That(interaction.SelectElement(1), Is.True);
             yield return Until(() => presenter.State == ModelLoadState.Ready, 15);
             Assert.That(presenter.ModelSlug, Is.EqualTo("piece-a"));
             // The point panel floats in the museum, away from the screen interface.
             var carousel = UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
                 .First(item => item.name == "PieceCarousel").gameObject;
-            var label = carousel.transform.Find("CarouselPosition").GetComponent<TMP_Text>();
+            bool Says(string text) => UnityEngine.Object.FindObjectsByType<TMP_Text>(FindObjectsSortMode.None)
+                .Any(item => item.text.Contains(text));
             yield return null;
-            Assert.That(carousel.activeInHierarchy, Is.True, "A point with several pieces shows the carousel.");
-            Assert.That(label.text, Does.Contain("1 de 3").And.Contain("Pieza sintética A"));
+            Assert.That(carousel.activeInHierarchy, Is.True, "A point with several records shows the arrows beside its piece.");
+            Assert.That(Says("2 de 4") && Says("Pieza sintética A"), Is.True, "The screen says which record is on show.");
+            Assert.That(UnityEngine.Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
+                .Any(item => item.name == "ElementChoice" || item.name == "ModelAction" && item.gameObject.activeInHierarchy
+                    && item.GetComponentInChildren<TMP_Text>().text.StartsWith("Examinar")), Is.False,
+                "The screen by the stand has no list of records and no examination button.");
 
             // Quick changes settle on the last piece; the ones passed over are never downloaded.
             int requests = presenter.RequestCount;
@@ -115,20 +125,30 @@ namespace MusiyoBetsknate.Tests
             Assert.That(presenter.RequestCount - requests, Is.EqualTo(1), "Only the piece the visitor stopped on is requested.");
             Assert.That(service.Downloads("piece-b"), Is.EqualTo(0));
             yield return null;
-            Assert.That(label.text, Does.Contain("3 de 3"));
+            Assert.That(Says("4 de 4"), Is.True);
             Assert.That(UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsSortMode.None)
                 .Count(item => item.name == "RemoteModelPivot" && item.gameObject.activeInHierarchy), Is.EqualTo(1), "One piece is on show.");
 
-            // Aim and press on the floating screen, as on a headset or with the view centre.
-            yield return Until(() => display.Openness >= 1, 3);
+            // Aim and press on the arrow beside the piece, as on a headset or with the view centre.
+            yield return null;
             var next = carousel.transform.Find("CarouselNext").GetComponent<Selectable>();
-            var rect = (RectTransform)next.transform;
-            var spot = rect.TransformPoint(rect.rect.center);
-            display.Aim(new Ray(spot - display.Surface.forward, display.Surface.forward));
-            Assert.That(display.Aimed, Is.SameAs(next));
-            Assert.That(display.Press(), Is.True);
+            var cue = (RectTransform)carousel.transform;
+            void PressNext()
+            {
+                var rect = (RectTransform)next.transform;
+                var spot = rect.TransformPoint(rect.rect.center);
+                display.Aim(new Ray(spot - cue.forward, cue.forward));
+                Assert.That(display.Aimed, Is.SameAs(next), "The pointer reaches the arrow in the museum.");
+                Assert.That(display.Press(), Is.True);
+            }
+            PressNext();
+            yield return null;
+            Assert.That(interaction.SelectedElement.slug, Is.EqualTo("piece-common"), "Next wraps around to the point's own record.");
+            Assert.That(presenter.ModelSlug, Is.EqualTo("piece-c"), "The record keeps the piece of its point on the pedestal.");
+            yield return null;
+            PressNext();
             yield return Until(() => presenter.State == ModelLoadState.Ready && presenter.ModelSlug == "piece-a", 15);
-            Assert.That(interaction.SelectedElement.slug, Is.EqualTo("piece-a"), "Next wraps around to the first piece.");
+            Assert.That(interaction.SelectedElement.slug, Is.EqualTo("piece-a"));
 
             // A failing piece says so and can be retried by hand.
             service.Failing["piece-b"] = true;

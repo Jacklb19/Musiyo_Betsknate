@@ -10,6 +10,7 @@
     "carousel_previous": "Anterior",
     "carousel_next": "Siguiente",
     "carousel_position": "{0} de {1} · {2}",
+    "piece_position": "{0} de {1}",
     "carousel_overview": "{0} piezas · Anterior o Siguiente para verlas",
     "guide_ready": "Escribe tu pregunta sobre el museo y pulsa {input:confirm}. Cada respuesta cita las fichas en que se basa.",
     "guide_sending": "Buscando en las fichas del museo…",

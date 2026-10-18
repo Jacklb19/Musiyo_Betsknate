@@ -37,6 +37,8 @@ namespace MusiyoBetsknate.Museum
         private GraphicRaycaster raycaster;
         private RectTransform aimMark;
         private readonly List<Selectable> controls = new List<Selectable>();
+        /// <summary>Small surfaces in the museum, such as the arrows beside a piece, that the same pointer chooses on.</summary>
+        private readonly List<RectTransform> cues = new List<RectTransform>();
         private PointLectern[] stands;
         private Transform viewer;
         private float heading;
@@ -179,12 +181,19 @@ namespace MusiyoBetsknate.Museum
             return direction.sqrMagnitude < .01f ? heading : Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
         }
 
-        /// <summary>
-        /// Points at the floating screen along a ray: the centre of the view on a desktop, a hand controller on a headset.
-        /// </summary>
-        public void Aim(Ray ray)
+        /// <summary>Lets the pointer choose on a further surface in the museum; it is aimed only while active.</summary>
+        public void AddCue(RectTransform cue)
         {
-            Aimed = ControlAt(ray);
+            if (cue != null && !cues.Contains(cue)) cues.Add(cue);
+        }
+
+        /// <summary>
+        /// Points at the floating screen, or at a cue in the museum, along a ray: the centre of the view on a desktop, a hand
+        /// controller on a headset. Something solid nearer than <paramref name="reach"/> along the ray hides what is behind it.
+        /// </summary>
+        public void Aim(Ray ray, float reach = float.PositiveInfinity)
+        {
+            Aimed = ControlAt(ray, reach);
             MarkAim();
         }
 
@@ -202,20 +211,34 @@ namespace MusiyoBetsknate.Museum
             return true;
         }
 
-        /// <summary>Usable control where the ray meets the reading side of the unfolded screen, or null.</summary>
-        public Selectable ControlAt(Ray ray)
+        /// <summary>Usable control where the ray meets the reading side of the unfolded screen or of a cue, or null.</summary>
+        public Selectable ControlAt(Ray ray, float reach = float.PositiveInfinity)
         {
-            if (!InWorld || !open || Openness < 1) return null;
-            // The screen's forward axis points away from its reader, so a ray against it comes from behind.
-            if (Vector3.Dot(ray.direction, surface.forward) <= 0) return null;
-            if (!new Plane(surface.forward, surface.position).Raycast(ray, out float distance)) return null;
+            Selectable found = null;
+            float nearest = reach + .01f;
+            if (InWorld && open && Openness >= 1) found = ControlOn(surface, ray, ref nearest);
+            foreach (var cue in cues)
+                if (cue != null && cue.gameObject.activeInHierarchy)
+                {
+                    var control = ControlOn(cue, ray, ref nearest);
+                    if (control != null) found = control;
+                }
+            return found;
+        }
+
+        private Selectable ControlOn(RectTransform side, Ray ray, ref float nearest)
+        {
+            // A surface's forward axis points away from its reader, so a ray against it comes from behind.
+            if (Vector3.Dot(ray.direction, side.forward) <= 0) return null;
+            if (!new Plane(side.forward, side.position).Raycast(ray, out float distance) || distance > nearest) return null;
             var spot = ray.GetPoint(distance);
-            surface.GetComponentsInChildren(false, controls);
+            side.GetComponentsInChildren(false, controls);
             Selectable found = null;
             // Later controls are drawn on top, so the last one under the pointer is the one in sight.
             foreach (var control in controls)
-                if (control.IsInteractable() && Covers(control.transform, spot) && !Clipped(control.transform, spot)) found = control;
+                if (control.IsInteractable() && Covers(control.transform, spot) && !Clipped(control.transform, spot, side)) found = control;
             controls.Clear();
+            if (found != null) nearest = distance;
             return found;
         }
 
@@ -223,9 +246,9 @@ namespace MusiyoBetsknate.Museum
             => item is RectTransform rect && rect.rect.Contains((Vector2)rect.InverseTransformPoint(spot));
 
         /// <summary>Whether a scrolling viewport above the control hides the spot.</summary>
-        private bool Clipped(Transform item, Vector3 spot)
+        private static bool Clipped(Transform item, Vector3 spot, Transform side)
         {
-            for (var parent = item.parent; parent != null && parent != surface; parent = parent.parent)
+            for (var parent = item.parent; parent != null && parent != side; parent = parent.parent)
                 if ((parent.TryGetComponent<RectMask2D>(out _) || parent.TryGetComponent<Mask>(out _)) && !Covers(parent, spot))
                     return true;
             return false;
@@ -235,9 +258,12 @@ namespace MusiyoBetsknate.Museum
         private void MarkAim()
         {
             if (aimMark == null) return;
-            bool shown = Aimed != null && Aimed.isActiveAndEnabled && open && InWorld;
+            bool onScreen = Aimed != null && Aimed.transform.IsChildOf(surface);
+            if (Aimed != null && (!Aimed.isActiveAndEnabled || onScreen && !(open && InWorld))) Aimed = null;
+            // A cue shows that it is aimed by itself; the mark belongs to the screen.
+            bool shown = Aimed != null && onScreen;
             if (aimMark.gameObject.activeSelf != shown) aimMark.gameObject.SetActive(shown);
-            if (!shown) { Aimed = null; return; }
+            if (!shown) return;
             var rect = (RectTransform)Aimed.transform;
             Vector2 low = surface.InverseTransformPoint(rect.TransformPoint(rect.rect.min));
             Vector2 high = surface.InverseTransformPoint(rect.TransformPoint(rect.rect.max));

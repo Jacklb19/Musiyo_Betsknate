@@ -151,7 +151,12 @@ namespace MusiyoBetsknate.Museum
             var selected = interaction.SelectedElement;
             if (selected != null && interaction.State != InteractionState.Paused)
             {
-                if (!selected.has_3d_model) { switchSlug = null; Release(); attemptedKey = null; }
+                if (!selected.has_3d_model)
+                {
+                    // A point's own record, without a model, leaves the piece of that point on its pedestal; the arrows
+                    // beside it step on to the next one.
+                    if (session == null || session.Point != interaction.ActivePoint) { switchSlug = null; Release(); attemptedKey = null; }
+                }
                 else if (session != null && session.Point == interaction.ActivePoint && session.Slug != selected.slug
                     || switchSlug != null && switchSlug != selected.slug)
                 {

@@ -107,13 +107,17 @@ namespace MusiyoBetsknate.Tests
                     Assert.That(display.Anchor, Is.SameAs(point.Anchor));
                     Assert.That(interaction.BlocksMovement, Is.False, "Reading " + key + " never stops the visitor.");
 
-                    // Pointing at an option from the reader's side and pressing chooses it.
-                    var control = display.Surface.GetComponentsInChildren<Selectable>(false).First(candidate => candidate.IsInteractable());
-                    var rect = (RectTransform)control.transform;
-                    var spot = rect.TransformPoint(rect.rect.center);
-                    display.Aim(new Ray(spot - display.Surface.forward, display.Surface.forward));
-                    Assert.That(display.Aimed, Is.Not.Null, "An option of " + key + " can be aimed at.");
-                    Assert.That(display.Press(), Is.True);
+                    // The screen by a stand is a label to read; an option it still shows, such as the narration, is chosen by
+                    // pointing at it from the reader's side and pressing.
+                    var control = display.Surface.GetComponentsInChildren<Selectable>(false).FirstOrDefault(candidate => candidate.IsInteractable());
+                    if (control != null)
+                    {
+                        var rect = (RectTransform)control.transform;
+                        var spot = rect.TransformPoint(rect.rect.center);
+                        display.Aim(new Ray(spot - display.Surface.forward, display.Surface.forward));
+                        Assert.That(display.Aimed, Is.Not.Null, "An option of " + key + " can be aimed at.");
+                        Assert.That(display.Press(), Is.True);
+                    }
                     yield return null;
 
                     var reading = Floor(visitor.transform);

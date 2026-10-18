@@ -11,6 +11,13 @@ namespace MusiyoBetsknate.Museum
 
         /// <summary>Formats the complete detail and also returns the short description that introduces it.</summary>
         public static bool TryFormat(string selectedSlug, string json, out string text, out string description)
+            => TryFormat(selectedSlug, json, true, out text, out description);
+
+        /// <summary>
+        /// Formats the detail; without <paramref name="withNarration"/> it leaves out the narration's transcription, which a
+        /// screen that follows the narration shows on its own.
+        /// </summary>
+        public static bool TryFormat(string selectedSlug, string json, bool withNarration, out string text, out string description)
         {
             text = description = null;
             if (!ElementContractV1.TryParse(json, out var element) || element.slug != selectedSlug) return false;
@@ -29,7 +36,7 @@ namespace MusiyoBetsknate.Museum
             foreach (var credit in element.credits ?? Array.Empty<CreditContractV1>())
                 output.AppendLine().Append("Crédito: ").AppendLine(credit.name);
             foreach (var resource in element.resources ?? Array.Empty<ResourceContractV1>())
-                if (resource.kind == "narration" && !string.IsNullOrEmpty(resource.transcription))
+                if (withNarration && resource.kind == "narration" && !string.IsNullOrEmpty(resource.transcription))
                 {
                     output.AppendLine().AppendLine("Narración · transcripción").AppendLine(resource.transcription);
                     if (!string.IsNullOrEmpty(resource.credit)) output.Append("Crédito: ").AppendLine(resource.credit);
