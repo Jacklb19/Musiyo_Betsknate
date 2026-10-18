@@ -14,7 +14,7 @@ namespace MusiyoBetsknate.Tests
     public sealed class MuseumGrabPlayTests : InputTestFixture
     {
         private const string MuseumScene = "Assets/_Musiyo/Scenes/10_Museum_Blockout.unity";
-        private const string PointKey = "punto.personajes.pedestal_3";
+        private const string PointKey = "punto.personajes.pedestal_1";
         private SyntheticMuseumService service;
 
         public override void Setup() { base.Setup(); MuseumInput.Replace(MuseumInput.CreateDefault()); }

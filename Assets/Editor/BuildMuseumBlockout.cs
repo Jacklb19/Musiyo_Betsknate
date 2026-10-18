@@ -64,7 +64,7 @@ namespace MusiyoBetsknate.Editor
                 AddPoint(welcome, "punto.bienvenida.significados", -4.2f, -20, 1.8f);
                 AddPoint(characters, "punto.personajes.pedestal_1", -7, -6, 1.8f);
                 AddPoint(characters, "punto.personajes.pedestal_2", -4.95f, -1.05f, 1.8f);
-                AddPoint(characters, "punto.personajes.pedestal_3", 0, 1, 1.8f);
+                AddPoint(characters, "punto.personajes.castillo", 0, 1, 1.8f);
                 AddPoint(characters, "punto.personajes.pedestal_4", 4.95f, -1.05f, 1.8f);
                 AddPoint(characters, "punto.personajes.pedestal_5", 7, -6, 1.8f);
                 AddPoint(instruments, "punto.instrumentos.pedestal_1", 18, -0.8f, 1.5f);

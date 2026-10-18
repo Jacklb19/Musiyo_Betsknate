@@ -24,6 +24,14 @@
       }
     }
   },
+  "removed_pieces": {
+    "reason": "The owner approved on 18/10/2026 standing the Castle at real size in the characters courtyard, behind the arc of pedestals, instead of on the central pedestal. The central pedestal (earthen body, wooden top and band) is taken out of the delivered row of pedestals at import; the master and the delivery stay unchanged. Box in metres, model space.",
+    "pieces": [
+      { "object": "Personajes_Mobiliario_Tapia", "box_centre_m": [0.0, 0.75, 1.0], "box_size_m": [1.1, 1.6, 1.1], "triangles_removed": 92, "where": "Earthen body of the central pedestal (point punto.personajes.castillo, formerly pedestal_3)." },
+      { "object": "Personajes_Mobiliario_Madera", "box_centre_m": [0.0, 0.75, 1.0], "box_size_m": [1.1, 1.6, 1.1], "triangles_removed": 120, "where": "Wooden top of the central pedestal." },
+      { "object": "Faja_Pedestal_03_Bandereros", "box_centre_m": [0.0, 0.75, 1.0], "box_size_m": [1.1, 1.6, 1.1], "triangles_removed": 64, "where": "Woven band around the central pedestal, whole object." }
+    ]
+  },
   "grounded_posts": {
     "reason": "In the master and in the delivery the posts of the welcome room are modelled from 0.60 m up, the top of its stone plinth (Bienvenida_Zocalo_Piedra). The plinth stops at both doorways, so the two posts that frame the south door (the entrance) and the two that frame the north passage toward the characters room (after the tree of life) hang 0.60 m above the threshold and the passage floor, like a floating door frame. Their bottom faces are lowered to the floor; the other posts stand on the plinth and stay as delivered. Plan positions (x, z) in metres, model space.",
     "objects": {

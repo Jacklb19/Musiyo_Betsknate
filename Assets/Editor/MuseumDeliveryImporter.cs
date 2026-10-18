@@ -29,7 +29,7 @@ namespace MusiyoBetsknate.Editor
             { "PI_Bienvenida_02_Nombres_y_Significados", "punto.bienvenida.significados" },
             { "PI_Personajes_01_Matachin", "punto.personajes.pedestal_1" },
             { "PI_Personajes_02_Gobernador_Cabildo", "punto.personajes.pedestal_2" },
-            { "PI_Personajes_03_Bandereros", "punto.personajes.pedestal_3" },
+            { "PI_Personajes_03_Bandereros", "punto.personajes.castillo" },
             { "PI_Personajes_04_Sanjuanes", "punto.personajes.pedestal_4" },
             { "PI_Personajes_05_Saraguayes", "punto.personajes.pedestal_5" },
             { "PI_Instrumentos_01_Bombo", "punto.instrumentos.pedestal_1" },

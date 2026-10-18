@@ -15,7 +15,7 @@ namespace MusiyoBetsknate.Editor
             "zona.llegada.tutorial",
             "punto.bienvenida.mito", "punto.bienvenida.significados",
             "punto.personajes.pedestal_1", "punto.personajes.pedestal_2",
-            "punto.personajes.pedestal_3", "punto.personajes.pedestal_4",
+            "punto.personajes.castillo", "punto.personajes.pedestal_4",
             "punto.personajes.pedestal_5", "punto.instrumentos.pedestal_1",
             "punto.instrumentos.pedestal_2", "punto.instrumentos.pedestal_3",
             "punto.instrumentos.pedestal_4", "punto.instrumentos.pedestal_5",

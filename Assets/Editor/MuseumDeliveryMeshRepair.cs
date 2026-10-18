@@ -18,6 +18,24 @@ namespace MusiyoBetsknate.Editor
         [JsonProperty("extended_rafters")] public RafterRepair Rafters = new RafterRepair();
         [JsonProperty("coplanar_overlaps")] public OverlapRepair Overlaps = new OverlapRepair();
         [JsonProperty("grounded_posts")] public PostRepair Posts = new PostRepair();
+        [JsonProperty("removed_pieces")] public PieceRepair Pieces = new PieceRepair();
+
+        public sealed class PieceRepair
+        {
+            [JsonProperty("reason")] public string Reason;
+            [JsonProperty("pieces")] public List<Piece> Pieces = new List<Piece>();
+        }
+
+        /// <summary>A closed piece taken out of a delivered object: every triangle wholly inside a box, model space.</summary>
+        public sealed class Piece
+        {
+            [JsonProperty("object")] public string Object;
+            [JsonProperty("box_centre_m")] public float[] Centre;
+            [JsonProperty("box_size_m")] public float[] Size;
+            [JsonProperty("triangles_removed")] public int Removed;
+            [JsonProperty("where")] public string Where;
+            public Bounds Box => new Bounds(new Vector3(Centre[0], Centre[1], Centre[2]), new Vector3(Size[0], Size[1], Size[2]));
+        }
 
         public sealed class PostRepair
         {
@@ -104,6 +122,11 @@ namespace MusiyoBetsknate.Editor
             foreach (var rafters in repairs.Rafters.Objects.Values)
                 if (rafters == null || !(rafters.DeliveredEnd > rafters.RepairedEnd) || !(rafters.RepairedEnd > 0) || rafters.Expected <= 0)
                     throw new InvalidOperationException("Invalid rafter repair in " + AssetPath);
+            repairs.Pieces ??= new PieceRepair();
+            foreach (var piece in repairs.Pieces.Pieces)
+                if (piece == null || string.IsNullOrEmpty(piece.Object) || piece.Centre == null || piece.Centre.Length != 3
+                    || piece.Size == null || piece.Size.Length != 3 || piece.Removed <= 0)
+                    throw new InvalidOperationException("Invalid piece removal in " + AssetPath);
             repairs.Posts ??= new PostRepair();
             foreach (var posts in repairs.Posts.Objects.Values)
                 if (posts == null || !(posts.DeliveredBottom > posts.RepairedBottom) || posts.Plan == null || posts.Plan.Count == 0
@@ -126,8 +149,9 @@ namespace MusiyoBetsknate.Editor
 
         /// <summary>Triangles an object carries after import.</summary>
         public int ExpectedTriangles(string name, int delivered)
-            => Overlaps.Trims.FirstOrDefault(trim => trim.Object == name)?.After
-                ?? (Cards.Objects.TryGetValue(name, out var card) ? card.Repaired : delivered);
+            => (Overlaps.Trims.FirstOrDefault(trim => trim.Object == name)?.After
+                ?? (Cards.Objects.TryGetValue(name, out var card) ? card.Repaired : delivered))
+                - Pieces.Pieces.Where(piece => piece.Object == name).Sum(piece => piece.Removed);
 
         /// <summary>Whether import trims faces off this object, so a delivered box no longer closes on every side.</summary>
         public bool Trimmed(string name) => Overlaps.Trims.Any(trim => trim.Object == name);
@@ -144,7 +168,7 @@ namespace MusiyoBetsknate.Editor
     public sealed class MuseumDeliveryMeshRepair : AssetPostprocessor
     {
         /// <summary>Raise when the repair changes, so every machine reimports the model.</summary>
-        public override uint GetVersion() => 6;
+        public override uint GetVersion() => 8;
 
         /// <summary>A change to the repairs reimports the model.</summary>
         private void OnPreprocessModel()
@@ -173,6 +197,21 @@ namespace MusiyoBetsknate.Editor
                     if (extended != rafters.Expected)
                         Debug.LogError(filter.name + ": the rafter repair expected " + rafters.Expected + " rafters ending at |z| "
                             + rafters.DeliveredEnd + " m, the model has " + extended + ".");
+                }
+                foreach (var piece in repairs.Pieces.Pieces.Where(item => item.Object == filter.name))
+                {
+                    // Boxes are given in the plan of the museum scene; the importer may mirror that plan, so the mirrored box
+                    // is tried when the given one holds nothing.
+                    var toModel = filter.transform.localToWorldMatrix;
+                    int removed = MusiyoBetsknate.Museum.MuseumMeshCut.RemoveInside(filter.sharedMesh, toModel, piece.Box);
+                    if (removed == 0)
+                    {
+                        var mirrored = piece.Box;
+                        mirrored.center = new Vector3(-mirrored.center.x, mirrored.center.y, -mirrored.center.z);
+                        removed = MusiyoBetsknate.Museum.MuseumMeshCut.RemoveInside(filter.sharedMesh, toModel, mirrored);
+                    }
+                    if (removed != piece.Removed)
+                        Debug.LogError(filter.name + ": the piece removal expected " + piece.Removed + " triangles inside its box, the model has " + removed + ".");
                 }
                 if (repairs.Posts.Objects.TryGetValue(filter.name, out var posts))
                 {
