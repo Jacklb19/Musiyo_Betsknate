@@ -258,9 +258,14 @@ namespace MusiyoBetsknate.Tests
             var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
             var body = visitor.GetComponent<CharacterController>();
             Assert.That(quiz, Is.Not.Null);
+            // A visitor arrives from an exhibit whose screen is still waiting for their return.
+            Assert.That(interaction.Activate(runtime.FindPoint("punto.mirador.creditos"), ActivationSource.Keyboard), Is.True);
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.ElementSelected));
             var anchor = runtime.GuidePoint.Anchor;
             Assert.That(visitor.FocusPoint(anchor), Is.True);
             yield return null;
+            yield return null;
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.Exploration), "Reaching the guide leaves the exhibit behind.");
             Assert.That(guide.Ask(), Is.True);
             yield return Until(() => quiz.Available, 10);
             Assert.That(quiz.Available, Is.True, "Opening the guide reads the hearth questions.");

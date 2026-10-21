@@ -160,10 +160,18 @@ namespace MusiyoBetsknate.Museum
             }
             if (inRange == InRange) return;
             InRange = inRange;
+            // Reaching the guide after walking away from an exhibit's screen leaves that point, as approaching another
+            // point would; otherwise the guide could only be reached from a visit that had opened no point at all.
+            if (inRange && LeftActivePoint) interaction.Close();
             // Walking away from the guide ends the conversation, the way a reading stand folds its screen.
             if (!inRange && Open && visitor != null) Close();
             Changed?.Invoke();
         }
+
+        /// <summary>The visitor stepped out of the point whose screen is still unfolded for their return.</summary>
+        private bool LeftActivePoint => visitor != null && interaction.ActivePoint != null
+            && (interaction.State == InteractionState.PointFocus || interaction.State == InteractionState.ElementSelected)
+            && !interaction.BlocksMovement && !interaction.HoldsVisitor && !PointActivation.IsInRange(interaction.ActivePoint, visitor.position);
 
         /// <summary>Opens the conversation from free exploration within reach of the guide.</summary>
         public bool Ask()
