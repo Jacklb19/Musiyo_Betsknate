@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Text;
 using MusiyoBetsknate.Museo;
+using Newtonsoft.Json;
 using UnityEngine.Networking;
 
 namespace MusiyoBetsknate.Museum
@@ -34,9 +35,11 @@ namespace MusiyoBetsknate.Museum
     }
 
     /// <summary>
-    /// Sends one anonymous question at a time to POST {api base}/guide/questions. A new question, a cancellation or a
-    /// change of context abandons the request in flight, and nothing it returns afterwards reaches the visitor.
-    /// Its owner calls <see cref="Poll"/> every frame.
+    /// Sends one anonymous question at a time to POST {api base}/guide/questions, or, when the visitor accepted voice and
+    /// the service speaks, to POST {api base}/guide/voice-answers, which returns the same answer with its speech. A spoken
+    /// question the voice service cannot take (busy, disabled, too slow: HTTP 503) is sent again as a written one, so the
+    /// text and its citations always come. A new question, a cancellation or a change of context abandons the request in
+    /// flight, and nothing it returns afterwards reaches the visitor. Its owner calls <see cref="Poll"/> every frame.
     /// </summary>
     public sealed class GuideQuestionClient : IDisposable
     {
@@ -49,6 +52,7 @@ namespace MusiyoBetsknate.Museum
         private UnityWebRequestAsyncOperation operation;
         private double deadline;
         private double retryAt;
+        private bool spoken;
 
         public GuideQuestionState State { get; private set; }
         /// <summary>The last question the visitor wrote, kept after any outcome so it can be sent again by hand.</summary>
@@ -58,6 +62,17 @@ namespace MusiyoBetsknate.Museum
         public string Endpoint { get; private set; }
         /// <summary>The validated response of the last completed question; null unless it ended in one of the three answers.</summary>
         public GuideResponseContractV1 Response { get; private set; }
+        /// <summary>
+        /// Spoken answers: when set, questions go to the voice service with the visitor's consent and its time limit in
+        /// seconds; null sends written questions only.
+        /// </summary>
+        public Func<float?> SpeechTimeout { get; set; }
+        /// <summary>Speech status of the last answer: ready, disabled, unavailable or not_applicable; empty for a written one.</summary>
+        public string SpeechStatus { get; private set; } = "";
+        /// <summary>The spoken answer as a WAV file, when the service sent one; held in memory only.</summary>
+        public byte[] Speech { get; private set; }
+        /// <summary>The last question was meant to be spoken but went as a written one.</summary>
+        public bool SpokeInText { get; private set; }
         /// <summary>Seconds the service asked to wait after HTTP 429.</summary>
         public int RetryAfterSeconds { get; private set; }
         /// <summary>Seconds left before a rate-limited question may be sent again; zero otherwise.</summary>
@@ -85,26 +100,38 @@ namespace MusiyoBetsknate.Museum
         /// </summary>
         public bool Ask(string question, string elementSlug = null)
         {
+            float? speech = SpeechTimeout?.Invoke();
+            return Send(question, elementSlug, speech);
+        }
+
+        private bool Send(string question, string elementSlug, float? speechTimeout)
+        {
             Abandon();
             Question = question ?? "";
             ElementSlug = string.IsNullOrEmpty(elementSlug) ? null : elementSlug;
             Response = null;
             RetryAfterSeconds = 0;
+            SpeechStatus = "";
+            Speech = null;
+            SpokeInText = false;
+            spoken = speechTimeout.HasValue;
             if (!GuideQuestionContractV1.TryCreate(Question, ElementSlug, out var body))
             { Set(GuideQuestionState.Invalid); return false; }
             string url;
-            try { url = apiBase() + "/guide/questions"; }
+            try { url = apiBase() + (spoken ? "/guide/voice-answers" : "/guide/questions"); }
             catch (ArgumentException) { Set(GuideQuestionState.Unreachable); return true; }
             Endpoint = url;
+            float limit = spoken ? Math.Max(timeoutSeconds, speechTimeout.Value) : timeoutSeconds;
             active = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST)
             {
                 uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body)) { contentType = "application/json" },
                 downloadHandler = new DownloadHandlerBuffer(),
                 // The client deadline decides; the transport limit only guards against a request that never ends.
-                timeout = (int)Math.Ceiling(timeoutSeconds) + 5
+                timeout = (int)Math.Ceiling(limit) + 5
             };
             active.SetRequestHeader("Accept", "application/json");
-            deadline = clock() + timeoutSeconds;
+            if (spoken) active.SetRequestHeader(GuideVoiceClient.ConsentHeader, GuideVoiceClient.ConsentValue);
+            deadline = clock() + limit;
             try { operation = active.SendWebRequest(); }
             catch (InvalidOperationException) { operation = null; }
             if (operation == null) { Abandon(); Set(GuideQuestionState.Unreachable); return true; }
@@ -131,6 +158,9 @@ namespace MusiyoBetsknate.Museum
             ElementSlug = null;
             Response = null;
             RetryAfterSeconds = 0;
+            SpeechStatus = "";
+            Speech = null;
+            SpokeInText = false;
             Set(GuideQuestionState.Idle);
         }
 
@@ -150,8 +180,25 @@ namespace MusiyoBetsknate.Museum
             var error = active.error;
             var text = active.downloadHandler?.text;
             var retryHeader = active.GetResponseHeader("Retry-After");
+            bool wasSpoken = spoken;
             Abandon();
-            var state = Classify(result, code, error, text, out var response);
+            if (wasSpoken && code == 503)
+            {
+                // The voice could not take it; the same question goes in writing so the answer still comes.
+                Send(Question, ElementSlug, null);
+                SpokeInText = true;
+                SpeechStatus = "unavailable";
+                return;
+            }
+            GuideQuestionState state;
+            GuideResponseContractV1 response;
+            if (wasSpoken)
+            {
+                state = ClassifySpoken(result, code, error, text, out response, out var speechStatus, out var speech);
+                SpeechStatus = speechStatus ?? "";
+                Speech = speech;
+            }
+            else state = Classify(result, code, error, text, out response);
             Response = response;
             if (state == GuideQuestionState.RateLimited)
             {
@@ -181,6 +228,29 @@ namespace MusiyoBetsknate.Museum
                 case "provider_unavailable": return GuideQuestionState.ProviderUnavailable;
                 default: response = null; return GuideQuestionState.Incompatible;
             }
+        }
+
+        /// <summary>
+        /// Maps a finished spoken answer: the inner response decides the outcome exactly as for a written question; the
+        /// speech comes only with "ready" and only if it decodes from base64.
+        /// </summary>
+        public static GuideQuestionState ClassifySpoken(UnityWebRequest.Result result, long code, string error, string body,
+            out GuideResponseContractV1 response, out string speechStatus, out byte[] speech)
+        {
+            response = null;
+            speechStatus = null;
+            speech = null;
+            if (code != 200 || result != UnityWebRequest.Result.Success) return Classify(result, code, error, body, out response);
+            if (!GuideVoiceAnswerContractV1.TryParse(body, out var spoken)) return GuideQuestionState.Incompatible;
+            var state = Classify(result, code, error, JsonConvert.SerializeObject(spoken.response), out response);
+            if (state == GuideQuestionState.Incompatible) return state;
+            speechStatus = spoken.speech_status;
+            if (spoken.speech_status == "ready" && spoken.audio != null)
+            {
+                try { speech = Convert.FromBase64String(spoken.audio.data_base64); }
+                catch (FormatException) { speech = null; speechStatus = "unavailable"; }
+            }
+            return state;
         }
 
         /// <summary>Delay in seconds or an HTTP date; anything missing or unreadable means the default minute.</summary>

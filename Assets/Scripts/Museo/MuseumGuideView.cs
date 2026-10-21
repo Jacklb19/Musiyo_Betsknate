@@ -13,8 +13,9 @@ namespace MusiyoBetsknate.Museum
     /// <summary>
     /// The conversation with the guide inside the point panel: a question field, the answer and its sources, and by the
     /// hearth the conversation about the visit (<see cref="MuseumHearthQuiz"/>) with its options as choices on the same
-    /// screen. Text from the service is shown as plain text. Cited records in the loaded tour offer orientation to their
-    /// room; others show their title only.
+    /// screen, and speaking with the guide (<see cref="MuseumGuideVoice"/>): its notice, recording, transcript to confirm
+    /// and spoken answer, all on this screen. Text from the service is shown as plain text. Cited records in the loaded
+    /// tour offer orientation to their room; others show their title only.
     /// </summary>
     public sealed class MuseumGuideView : MonoBehaviour
     {
@@ -42,6 +43,11 @@ namespace MusiyoBetsknate.Museum
         private Transform quizOptions;
         private readonly List<Button> shownOptions = new List<Button>();
         private QuizQuestionContractV1 optionsFor;
+        private MuseumGuideVoice voice;
+        private TMP_Text voiceText;
+        private Button voiceTalk, voiceStop, voiceDiscard, voiceAccept, voiceDecline, voiceConfirm, voiceStopSpeech;
+        private string reviewed;
+        private bool wasSpeaking;
         private int shownWait = -1;
         private bool wasOpen;
         private bool focusPending;
@@ -58,13 +64,23 @@ namespace MusiyoBetsknate.Museum
         public TMP_Text QuizText => quizText;
         /// <summary>The options of the question on show, in published order.</summary>
         public IReadOnlyList<Button> QuizOptions => shownOptions;
+        public TMP_Text VoiceText => voiceText;
+        public Button VoiceTalk => voiceTalk;
+        public Button VoiceStop => voiceStop;
+        public Button VoiceDiscard => voiceDiscard;
+        public Button VoiceAccept => voiceAccept;
+        public Button VoiceDecline => voiceDecline;
+        public Button VoiceConfirm => voiceConfirm;
+        public Button VoiceStopSpeech => voiceStopSpeech;
 
         /// <param name="bodyText">Panel body text whose style the conversation reuses.</param>
         /// <param name="content">Layout column of the point panel.</param>
         /// <param name="button">Creates a panel button from an interface text key.</param>
         public void Configure(MuseumGuide conversation, MuseumInteraction state, MuseumWayfinding orientation,
-            TMP_Text bodyText, Transform content, Func<string, Transform, UnityAction, Button> button, MuseumHearthQuiz hearthQuiz = null)
+            TMP_Text bodyText, Transform content, Func<string, Transform, UnityAction, Button> button, MuseumHearthQuiz hearthQuiz = null,
+            MuseumGuideVoice guideVoice = null)
         {
+            voice = guideVoice;
             guide = conversation;
             interaction = state;
             wayfinding = orientation;
@@ -100,6 +116,7 @@ namespace MusiyoBetsknate.Museum
             sourceButtonTemplate = button("guide_source_unplaced", sources, () => { });
             sourceButtonTemplate.name = "GuideSourceRoom";
             sourceButtonTemplate.gameObject.SetActive(false);
+            if (voice != null) CreateVoice(bodyText, content, button);
             if (quiz != null) CreateQuiz(bodyText, content, button);
             guide.Changed += Refresh;
             guide.TypingRequested += BeginTyping;
@@ -112,6 +129,60 @@ namespace MusiyoBetsknate.Museum
             if (guide != null) { guide.Changed -= Refresh; guide.TypingRequested -= BeginTyping; }
             if (interaction != null) interaction.Changed -= Refresh;
             if (quiz != null) quiz.Changed -= Refresh;
+            if (voice != null) voice.Changed -= RefreshVoice;
+        }
+
+        /// <summary>
+        /// Speaking with the guide: what the voice says reads in the screen's column (the notice, the recording, the
+        /// transcript, a problem); talking, stopping, discarding, accepting and confirming stand with the other controls.
+        /// </summary>
+        private void CreateVoice(TMP_Text bodyText, Transform content, Func<string, Transform, UnityAction, Button> button)
+        {
+            voiceText = Text(bodyText, content, "VoiceText");
+            Button Make(string key, string name, UnityAction action)
+            {
+                var made = button(key, content, action);
+                made.name = name;
+                return made;
+            }
+            voiceTalk = Make("voice_talk", "VoiceTalk", () => voice.Talk());
+            voiceAccept = Make("voice_accept", "VoiceAccept", () => voice.Accept());
+            voiceDecline = Make("voice_decline", "VoiceDecline", () => voice.Decline());
+            voiceStop = Make("voice_stop", "VoiceStop", () => voice.StopTalking());
+            voiceConfirm = Make("voice_confirm", "VoiceConfirm", () => voice.Confirm());
+            voiceDiscard = Make("voice_discard", "VoiceDiscard", () => voice.Discard());
+            voiceStopSpeech = Make("voice_stop_speech", "VoiceStopSpeech", () => voice.StopSpeech());
+            voice.Changed += RefreshVoice;
+        }
+
+        /// <summary>Only the voice's own parts change while recording, so the rest of the screen is left alone.</summary>
+        private void RefreshVoice()
+        {
+            if (voice == null || voiceText == null || guide == null) return;
+            bool open = guide.Open;
+            bool quizzing = open && quiz != null && (quiz.Active || quiz.Done);
+            bool here = open && !quizzing;
+            var stage = voice.Stage;
+            voiceTalk.gameObject.SetActive(here && voice.Offered && (stage == GuideVoiceStage.Ready || stage == GuideVoiceStage.Problem)
+                && !guide.Client.Busy);
+            voiceTalk.interactable = voice.Client.RetryWaitRemaining == 0;
+            voiceAccept.gameObject.SetActive(here && stage == GuideVoiceStage.Notice);
+            voiceDecline.gameObject.SetActive(here && stage == GuideVoiceStage.Notice);
+            voiceStop.gameObject.SetActive(here && stage == GuideVoiceStage.Recording);
+            voiceConfirm.gameObject.SetActive(here && stage == GuideVoiceStage.Review);
+            voiceDiscard.gameObject.SetActive(here && (stage == GuideVoiceStage.Recording || stage == GuideVoiceStage.Transcribing
+                || stage == GuideVoiceStage.Review || stage == GuideVoiceStage.Permission));
+            voiceStopSpeech.gameObject.SetActive(open && voice.Speaking);
+            // Talking shows on the guide's own line at the top of the screen; below, only the note after an answer.
+            string status = here && (stage == GuideVoiceStage.Ready || stage == GuideVoiceStage.Off) ? voice.Status : "";
+            if (voiceText.text != status) voiceText.text = status;
+            voiceText.gameObject.SetActive(status.Length > 0);
+            // With a keyboard the transcript also goes to the question field, where it can be corrected before asking.
+            var transcript = stage == GuideVoiceStage.Review ? voice.Client.Transcript : null;
+            if (transcript != null && transcript != reviewed && !MuseumInput.Current.Spatial) field.SetTextWithoutNotify(transcript);
+            reviewed = transcript;
+            spatialNote.text = MuseumInterfaceText.Get(voice.Offered ? "guide_spatial_voice" : "guide_spatial_text_pending");
+            wasSpeaking = voice.Speaking;
         }
 
         /// <summary>
@@ -230,6 +301,7 @@ namespace MusiyoBetsknate.Museum
         {
             if (!guide.Open || !guide.Offered || guide.Client.Busy || guide.Client.RetryWaitRemaining > 0) return;
             guide.Send(MuseumInput.Current.Spatial ? guide.Client.Question : field.text);
+            voice?.Forget();
             field.DeactivateInputField();
             if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject == field.gameObject)
                 EventSystem.current.SetSelectedGameObject(null);
@@ -244,6 +316,8 @@ namespace MusiyoBetsknate.Museum
                 else focusPending = false;
             }
             guide.Typing = guide.Open && field.isFocused;
+            // A spoken answer ends without any event.
+            if (voice != null && voice.Speaking != wasSpeaking) RefreshVoice();
             // The rate-limit countdowns change every second without any event.
             int wait = guide.Client.RetryWaitRemaining + (quiz != null ? quiz.Client.RetryWaitRemaining * 1000 : 0);
             if (wait != shownWait) { shownWait = wait; Refresh(); }
@@ -259,6 +333,7 @@ namespace MusiyoBetsknate.Museum
             bool offered = open && guide.Offered && !quizzing;
             var client = guide.Client;
             RefreshQuiz(open);
+            RefreshVoice();
             fieldRoot.SetActive(offered && !spatial);
             spatialNote.gameObject.SetActive(offered && spatial);
             send.transform.parent.gameObject.SetActive(offered);

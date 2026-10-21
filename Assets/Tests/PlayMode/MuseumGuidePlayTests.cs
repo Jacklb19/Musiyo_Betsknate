@@ -25,8 +25,8 @@ namespace MusiyoBetsknate.Tests
         /// <summary>Query strings of the hearth question requests the service received.</summary>
         private readonly System.Collections.Concurrent.ConcurrentQueue<string> quizQueries = new System.Collections.Concurrent.ConcurrentQueue<string>();
 
-        /// <summary>A further route of the synthetic service: method, path and body in, status and JSON out, or null to pass.</summary>
-        private delegate (int status, string body)? Route(string method, string path, byte[] body);
+        /// <summary>A further route of the synthetic service: method, path, headers and body in, status and JSON out, or null to pass.</summary>
+        private delegate (int status, string body)? Route(string method, string path, System.Collections.Specialized.NameValueCollection headers, byte[] body);
 
         public override void Setup() { base.Setup(); MuseumInput.Replace(MuseumInput.CreateDefault()); }
         public override void TearDown()
@@ -48,6 +48,9 @@ namespace MusiyoBetsknate.Tests
         /// <summary>Answers questions with the canonical example, the hearth questions with theirs, and everything else with 404.</summary>
         private string StartService(Route extra = null)
         {
+            // The fixture is shared by its tests: each service counts its own requests.
+            requests = 0;
+            while (quizQueries.TryDequeue(out _)) { }
             var probe = new TcpListener(IPAddress.Loopback, 0);
             probe.Start();
             int port = ((IPEndPoint)probe.LocalEndpoint).Port;
@@ -75,7 +78,7 @@ namespace MusiyoBetsknate.Tests
                         using (var buffer = new MemoryStream()) { context.Request.InputStream.CopyTo(buffer); received = buffer.ToArray(); }
                         bool guide = method == "POST" && path == "/api/v1/guide/questions";
                         if (guide) Interlocked.Increment(ref requests);
-                        (int status, string body)? routed = extra?.Invoke(method, path, received);
+                        (int status, string body)? routed = extra?.Invoke(method, path, context.Request.Headers, received);
                         if (routed == null && method == "GET" && path == "/api/v1/guide/quiz")
                         {
                             quizQueries.Enqueue(context.Request.Url.Query);
@@ -239,6 +242,252 @@ namespace MusiyoBetsknate.Tests
         private static IEnumerator Until(Func<bool> condition, float seconds)
         {
             for (float waited = 0; !condition() && waited < seconds; waited += Time.unscaledDeltaTime) yield return null;
+        }
+
+        /// <summary>A microphone that records a second of a tone, so no device or person is needed.</summary>
+        private sealed class ToneRecorder : IGuideVoiceRecorder
+        {
+            private bool recording;
+            public int Takes;
+            public bool Available => true;
+            public bool Recording => recording;
+            public float Elapsed => recording ? 1 : 0;
+            public bool AwaitingPermission => false;
+            public GuideRecorderStart Begin(int maxSeconds) { recording = true; Takes++; return GuideRecorderStart.Started; }
+            public byte[] End()
+            {
+                recording = false;
+                var samples = new float[48000];
+                for (int index = 0; index < samples.Length; index++) samples[index] = .3f * Mathf.Sin(2 * Mathf.PI * 300 * index / 48000f);
+                return WavAudio.EncodePcm16Mono(samples, 48000);
+            }
+            public void Discard() => recording = false;
+            public void Dispose() { }
+        }
+
+        private static string SpokenAnswer(int rate)
+        {
+            string Example(string name) => File.ReadAllText(Path.Combine(Application.dataPath, "Contracts", "examples", name));
+            var samples = new float[rate / 2];
+            for (int index = 0; index < samples.Length; index++) samples[index] = .2f * Mathf.Sin(2 * Mathf.PI * 220 * index / rate);
+            var wav = Convert.ToBase64String(WavAudio.EncodePcm16Mono(samples, rate, rate));
+            return "{\"schema_version\": 1, \"response\": " + Example("guide_answered.json") + ", \"speech_status\": \"ready\", "
+                + "\"audio\": {\"mime\": \"audio/wav\", \"data_base64\": \"" + wav + "\"}}";
+        }
+
+        [UnityTest]
+        public IEnumerator TheGuideListensOnlyAfterConsentAndAnswersAloudWithItsCitations()
+        {
+            InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Mouse>();
+            string capabilities = File.ReadAllText(Path.Combine(Application.dataPath, "Contracts", "examples", "voice_capabilities_external.json"));
+            string transcription = File.ReadAllText(Path.Combine(Application.dataPath, "Contracts", "examples", "guide_transcription.json"));
+            int transcriptions = 0, spoken = 0, wavRate = 0, wavFrames = 0;
+            string consent = null, mime = null, answerConsent = null;
+            var api = StartService((method, path, headers, body) =>
+            {
+                if (method == "GET" && path == "/api/v1/guide/voice-capabilities") return (200, capabilities);
+                if (method == "POST" && path == "/api/v1/guide/transcriptions")
+                {
+                    Interlocked.Increment(ref transcriptions);
+                    consent = headers["X-Musiyo-Voice-Consent"];
+                    mime = headers["Content-Type"];
+                    if (WavAudio.TryDecodePcm16(body, out var samples, out var rate)) { wavRate = rate; wavFrames = samples.Length; }
+                    return (200, transcription);
+                }
+                if (method == "POST" && path == "/api/v1/guide/voice-answers")
+                {
+                    Interlocked.Increment(ref spoken);
+                    answerConsent = headers["X-Musiyo-Voice-Consent"];
+                    return (200, SpokenAnswer(22050));
+                }
+                return null;
+            });
+            yield return OpenMuseumAtTheGuide(api);
+            var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var runtime = flow.GetComponent<TourRuntime>();
+            var interaction = flow.GetComponent<MuseumInteraction>();
+            var guide = flow.GetComponent<MuseumGuide>();
+            var voice = flow.GetComponent<MuseumGuideVoice>();
+            var display = flow.GetComponent<MuseumLecternDisplay>();
+            var view = UnityEngine.Object.FindAnyObjectByType<MuseumGuideView>();
+            var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
+            var body = visitor.GetComponent<CharacterController>();
+            var recorder = new ToneRecorder();
+            voice.Recorder = recorder;
+            var anchor = runtime.GuidePoint.Anchor;
+            Assert.That(visitor.FocusPoint(anchor), Is.True);
+            yield return null;
+            Assert.That(guide.Ask(), Is.True);
+            yield return Until(() => voice.Offered, 10);
+            Assert.That(voice.Offered, Is.True, "The API says the voice is configured and the device records.");
+            yield return Until(() => display.Openness >= 1, 3);
+            yield return null;
+            Assert.That(view.VoiceTalk.gameObject.activeInHierarchy, Is.True);
+
+            // The notice comes first, on the guide's own screen, naming the providers the API reported; nothing is sent.
+            var rect = (RectTransform)view.VoiceTalk.transform;
+            var spot = rect.TransformPoint(rect.rect.center);
+            display.Aim(new Ray(spot - display.Surface.forward, display.Surface.forward));
+            Assert.That(display.Aimed, Is.SameAs(view.VoiceTalk), "The headset pointer reaches the voice control.");
+            Assert.That(display.Press(), Is.True);
+            yield return null;
+            Assert.That(voice.Stage, Is.EqualTo(GuideVoiceStage.Notice));
+            StringAssert.Contains("ElevenLabs y Groq", guide.Message);
+            StringAssert.Contains("No se guardan ni la grabación ni el texto", guide.Message);
+            Assert.That(view.VoiceAccept.gameObject.activeInHierarchy && view.VoiceDecline.gameObject.activeInHierarchy, Is.True);
+            Assert.That(recorder.Takes, Is.EqualTo(0), "Nothing is recorded before the visitor accepts.");
+            Assert.That(transcriptions + spoken, Is.EqualTo(0));
+            view.VoiceDecline.onClick.Invoke();
+            yield return null;
+            Assert.That(voice.Stage, Is.EqualTo(GuideVoiceStage.Ready));
+            Assert.That(voice.Consented, Is.False);
+
+            view.VoiceTalk.onClick.Invoke();
+            view.VoiceAccept.onClick.Invoke();
+            yield return null;
+            Assert.That(voice.Stage, Is.EqualTo(GuideVoiceStage.Recording));
+            Assert.That(view.VoiceStop.gameObject.activeInHierarchy && view.VoiceDiscard.gameObject.activeInHierarchy, Is.True);
+            StringAssert.StartsWith("Te escucho", guide.Message);
+            view.VoiceStop.onClick.Invoke();
+            yield return Until(() => voice.Stage == GuideVoiceStage.Review, 10);
+            Assert.That(voice.Stage, Is.EqualTo(GuideVoiceStage.Review));
+            Assert.That(consent, Is.EqualTo("request-only-v1"), "The recording goes with the visitor's consent.");
+            Assert.That(mime, Is.EqualTo("audio/wav"));
+            Assert.That(wavRate, Is.EqualTo(16000), "PCM16 mono at 16 kHz, as the contract asks.");
+            Assert.That(wavFrames, Is.EqualTo(16000));
+            yield return null;
+            StringAssert.Contains("«Pregunta sintética de prueba»", guide.Message);
+            Assert.That(view.Field.text, Is.EqualTo("Pregunta sintética de prueba"), "With a keyboard it can be corrected in the field.");
+            Assert.That(spoken, Is.EqualTo(0), "Nothing is asked before the visitor confirms the transcript.");
+
+            view.VoiceConfirm.onClick.Invoke();
+            yield return Until(() => guide.Client.State == GuideQuestionState.Answered, 10);
+            Assert.That(guide.Client.State, Is.EqualTo(GuideQuestionState.Answered));
+            Assert.That(spoken, Is.EqualTo(1));
+            Assert.That(answerConsent, Is.EqualTo("request-only-v1"));
+            yield return null;
+            Assert.That(view.Answer.gameObject.activeInHierarchy, Is.True);
+            Assert.That(view.Answer.text, Is.EqualTo("Texto de una ficha sintética de prueba."));
+            Assert.That(view.Sources.Count, Is.EqualTo(1), "The citations stay visible with the voice.");
+            Assert.That(voice.Speaking, Is.True);
+            Assert.That(voice.Speaker.clip.frequency, Is.EqualTo(22050), "Played at the rate of its own header.");
+            Assert.That(view.VoiceStopSpeech.gameObject.activeInHierarchy, Is.True);
+
+            // A second question needs no second notice in the same visit.
+            view.VoiceTalk.onClick.Invoke();
+            yield return null;
+            Assert.That(voice.Stage, Is.EqualTo(GuideVoiceStage.Recording));
+            Assert.That(voice.Speaking, Is.False, "Talking again silences the guide.");
+            view.VoiceDiscard.onClick.Invoke();
+            yield return null;
+            Assert.That(voice.Stage, Is.EqualTo(GuideVoiceStage.Ready));
+            Assert.That(recorder.Recording, Is.False);
+
+            // Walking away stops the microphone and the voice and forgets the transcript.
+            view.VoiceTalk.onClick.Invoke();
+            yield return null;
+            body.enabled = false;
+            visitor.transform.position = anchor.transform.position + new Vector3(0, 0, -anchor.ActivationRadius - 4);
+            body.enabled = true;
+            yield return Until(() => interaction.State != InteractionState.GuideQuestion, 2);
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.Exploration));
+            Assert.That(recorder.Recording, Is.False, "The microphone stops when the visitor leaves.");
+            Assert.That(voice.Stage, Is.EqualTo(GuideVoiceStage.Off));
+            Assert.That(voice.Client.Transcript, Is.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator ALateTranscriptIsDiscardedAndAVoiceThatCannotSpeakLeavesTheText()
+        {
+            InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Mouse>();
+            string capabilities = File.ReadAllText(Path.Combine(Application.dataPath, "Contracts", "examples", "voice_capabilities_external.json"));
+            string transcription = File.ReadAllText(Path.Combine(Application.dataPath, "Contracts", "examples", "guide_transcription.json"));
+            int delay = 2500, written = 0;
+            var api = StartService((method, path, headers, body) =>
+            {
+                if (method == "GET" && path == "/api/v1/guide/voice-capabilities") return (200, capabilities);
+                if (method == "POST" && path == "/api/v1/guide/transcriptions") { Thread.Sleep(delay); return (200, transcription); }
+                // The voice is busy: the same question must go as a written one.
+                if (method == "POST" && path == "/api/v1/guide/voice-answers") return (503, "{\"detail\": \"La voz está ocupada\"}");
+                if (method == "POST" && path == "/api/v1/guide/questions") Interlocked.Increment(ref written);
+                return null;
+            });
+            yield return OpenMuseumAtTheGuide(api);
+            var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var runtime = flow.GetComponent<TourRuntime>();
+            var interaction = flow.GetComponent<MuseumInteraction>();
+            var guide = flow.GetComponent<MuseumGuide>();
+            var voice = flow.GetComponent<MuseumGuideVoice>();
+            var view = UnityEngine.Object.FindAnyObjectByType<MuseumGuideView>();
+            var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
+            var body = visitor.GetComponent<CharacterController>();
+            voice.Recorder = new ToneRecorder();
+            var anchor = runtime.GuidePoint.Anchor;
+            Assert.That(visitor.FocusPoint(anchor), Is.True);
+            yield return null;
+            Assert.That(guide.Ask(), Is.True);
+            yield return Until(() => voice.Offered, 10);
+            Assert.That(voice.Talk() && voice.Accept() && voice.StopTalking(), Is.True);
+            Assert.That(voice.Stage, Is.EqualTo(GuideVoiceStage.Transcribing));
+            // Leaving while the transcription is on its way: its late answer never reaches the visitor.
+            body.enabled = false;
+            visitor.transform.position = anchor.transform.position + new Vector3(0, 0, -anchor.ActivationRadius - 4);
+            body.enabled = true;
+            yield return Until(() => interaction.State != InteractionState.GuideQuestion, 2);
+            yield return new WaitForSecondsRealtime(delay / 1000f + 1);
+            Assert.That(voice.Stage, Is.EqualTo(GuideVoiceStage.Off));
+            Assert.That(voice.Client.Transcript, Is.Null);
+            Assert.That(voice.Client.TranscriptionState, Is.EqualTo(GuideTranscriptionState.Idle));
+
+            delay = 0;
+            Assert.That(visitor.FocusPoint(anchor), Is.True);
+            yield return null;
+            Assert.That(guide.Ask(), Is.True);
+            yield return null;
+            Assert.That(voice.Consented, Is.True, "The consent lasts for the visit.");
+            Assert.That(voice.Talk(), Is.True);
+            Assert.That(voice.Stage, Is.EqualTo(GuideVoiceStage.Recording), "No second notice.");
+            Assert.That(voice.StopTalking(), Is.True);
+            yield return Until(() => voice.Stage == GuideVoiceStage.Review, 10);
+            Assert.That(voice.Confirm(), Is.True);
+            yield return Until(() => guide.Client.State == GuideQuestionState.Answered, 10);
+            Assert.That(guide.Client.State, Is.EqualTo(GuideQuestionState.Answered), "The text answer still comes.");
+            Assert.That(written, Is.EqualTo(1));
+            Assert.That(guide.Client.SpokeInText, Is.True);
+            yield return null;
+            Assert.That(view.Answer.text, Is.EqualTo("Texto de una ficha sintética de prueba."));
+            Assert.That(view.Sources.Count, Is.EqualTo(1));
+            Assert.That(voice.Speaking, Is.False);
+            StringAssert.Contains("aquí tienes la respuesta escrita", view.VoiceText.text);
+        }
+
+        [UnityTest]
+        public IEnumerator WithoutAConfiguredVoiceNothingAboutItIsShown()
+        {
+            InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Mouse>();
+            string capabilities = File.ReadAllText(Path.Combine(Application.dataPath, "Contracts", "examples", "voice_capabilities_disabled.json"));
+            var api = StartService((method, path, headers, body) =>
+                method == "GET" && path == "/api/v1/guide/voice-capabilities" ? (200, capabilities) : ((int, string)?)null);
+            yield return OpenMuseumAtTheGuide(api);
+            var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var runtime = flow.GetComponent<TourRuntime>();
+            var guide = flow.GetComponent<MuseumGuide>();
+            var voice = flow.GetComponent<MuseumGuideVoice>();
+            var view = UnityEngine.Object.FindAnyObjectByType<MuseumGuideView>();
+            var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
+            voice.Recorder = new ToneRecorder();
+            Assert.That(visitor.FocusPoint(runtime.GuidePoint.Anchor), Is.True);
+            yield return null;
+            Assert.That(guide.Ask(), Is.True);
+            yield return Until(() => voice.Client.CapabilityState == VoiceCapabilityState.Ready, 10);
+            yield return null;
+            Assert.That(voice.Offered, Is.False);
+            Assert.That(voice.Talk(), Is.False);
+            Assert.That(view.VoiceTalk.gameObject.activeInHierarchy || view.VoiceText.gameObject.activeInHierarchy, Is.False);
+            Assert.That(view.Field.gameObject.activeInHierarchy, Is.True, "The written question stays as it was.");
         }
 
         [UnityTest]

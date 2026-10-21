@@ -50,6 +50,8 @@ namespace MusiyoBetsknate.Museum
             {
                 if (Guide == null) return "";
                 if (quiz != null && (quiz.Active || quiz.Done)) return quiz.Message;
+                // While the visitor talks, the notice, the recording, the transcript or a problem is the guide's line.
+                if (voice != null && voice.Stage != GuideVoiceStage.Off && voice.Stage != GuideVoiceStage.Ready) return voice.Status;
                 if (!Offered) return MuseumInterfaceText.Get("guide_unavailable");
                 switch (Client.State)
                 {
@@ -87,6 +89,15 @@ namespace MusiyoBetsknate.Museum
             if (quiz != null) quiz.Changed += Notify;
         }
         private MuseumHearthQuiz quiz;
+        private MuseumGuideVoice voice;
+
+        /// <summary>Speaking with the guide shares this screen; its changes refresh it.</summary>
+        public void Attach(MuseumGuideVoice guideVoice)
+        {
+            if (voice != null) voice.Changed -= Notify;
+            voice = guideVoice;
+            if (voice != null) voice.Changed += Notify;
+        }
 
         private void OnEnable() => Connect();
         private void OnDisable()
