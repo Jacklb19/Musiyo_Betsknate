@@ -102,5 +102,15 @@ namespace MusiyoBetsknate.Tests
             }
             finally { UnityEngine.Object.DestroyImmediate(root); }
         }
+
+        [Test]
+        public void AccessIsRenewedAQuarterOfItsLifeBeforeItEndsAndNeverMoreThanAMinute()
+        {
+            var granted = new DateTimeOffset(2026, 10, 20, 12, 0, 0, TimeSpan.Zero);
+            Assert.That(ModelResourcePolicy.RenewAt(granted, granted.AddSeconds(300)), Is.EqualTo(granted.AddSeconds(240)),
+                "The service's five minutes are renewed one minute before they end.");
+            Assert.That(ModelResourcePolicy.RenewAt(granted, granted.AddSeconds(8)), Is.EqualTo(granted.AddSeconds(6)));
+            Assert.That(ModelResourcePolicy.RenewAt(granted, granted.AddSeconds(-1)), Is.EqualTo(granted), "An ended grant is renewed at once.");
+        }
     }
 }

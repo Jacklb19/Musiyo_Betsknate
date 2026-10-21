@@ -38,6 +38,11 @@ namespace MusiyoBetsknate.Museum
             public bool Ready;
             public float Deadline;
             public DateTimeOffset Expiration;
+            /// <summary>Resource variant and file hash the access was granted for; a renewal must grant the same file.</summary>
+            public string ResourceId, Sha256;
+            /// <summary>When to ask the service again for access, before it runs out while the piece is on show.</summary>
+            public DateTimeOffset RenewAt;
+            public bool Renewing;
             public void Cancel()
             {
                 Cancellation.Cancel();
@@ -224,6 +229,8 @@ namespace MusiyoBetsknate.Museum
                 { Fail(MuseumInterfaceText.Get("model_timeout")); return; }
                 if (session.Ready && DateTimeOffset.UtcNow >= session.Expiration)
                 { Fail(MuseumInterfaceText.Get("model_expired")); return; }
+                // Access is granted for minutes; a piece the visitor stays with is granted again before it runs out.
+                if (session.Ready && !session.Renewing && DateTimeOffset.UtcNow >= session.RenewAt) Renew(session);
                 if (visitor != null && interaction.State != InteractionState.ModelExamination
                     && interaction.State != InteractionState.Paused
                     && (Vector3.Distance(visitor.position, session.Point.Anchor.transform.position) > 15
@@ -411,6 +418,9 @@ namespace MusiyoBetsknate.Museum
                 pending.Cancellation.Token.ThrowIfCancellationRequested();
                 if (session != pending || this == null || !isActiveAndEnabled) return;
                 pending.Expiration = DateTimeOffset.Parse(access.expires_at, System.Globalization.CultureInfo.InvariantCulture);
+                pending.ResourceId = id;
+                pending.Sha256 = access.sha256;
+                pending.RenewAt = ModelResourcePolicy.RenewAt(DateTimeOffset.UtcNow, pending.Expiration);
                 pending.Nodes = pending.Pivot.GetComponentsInChildren<Transform>();
                 pending.Renderers = content.GetComponentsInChildren<Renderer>();
                 var bounds = pending.Renderers[0].bounds;
@@ -450,6 +460,46 @@ namespace MusiyoBetsknate.Museum
                     if (session == pending) session = null;
                 }
             }
+        }
+
+        /// <summary>
+        /// Asks the service again for access to the piece on show. The same file granted again keeps it in place; a service
+        /// that answers but no longer grants it takes it away now, as revocation must; an unreachable service is asked again
+        /// shortly while the current access lasts.
+        /// </summary>
+        private async void Renew(LoadSession current)
+        {
+            current.Renewing = true;
+            try
+            {
+                string api = loader.ApiBase;
+                using (var request = new UnityWebRequest(api + "/resources/" + Uri.EscapeDataString(current.ResourceId) + "/access?schema_version=1", "POST"))
+                {
+                    request.downloadHandler = new DownloadHandlerBuffer();
+                    request.timeout = 15;
+                    var operation = request.SendWebRequest();
+                    while (!operation.isDone)
+                    {
+                        if (session != current || this == null) { request.Abort(); return; }
+                        await Task.Yield();
+                    }
+                    if (session != current || this == null) return;
+                    var now = DateTimeOffset.UtcNow;
+                    if (request.result == UnityWebRequest.Result.Success
+                        && ModelResourcePolicy.TryAccess(api, request.downloadHandler.text, Profile, now, out var access, out _)
+                        && string.Equals(access.sha256 ?? "", current.Sha256 ?? "", StringComparison.OrdinalIgnoreCase))
+                    {
+                        current.Expiration = DateTimeOffset.Parse(access.expires_at, System.Globalization.CultureInfo.InvariantCulture);
+                        current.RenewAt = ModelResourcePolicy.RenewAt(now, current.Expiration);
+                        return;
+                    }
+                    if (request.result == UnityWebRequest.Result.Success
+                        || request.result == UnityWebRequest.Result.ProtocolError && request.responseCode < 500)
+                    { Fail(MuseumInterfaceText.Get("model_expired")); return; }
+                    current.RenewAt = now.AddSeconds(ModelResourcePolicy.RenewRetrySeconds);
+                }
+            }
+            finally { current.Renewing = false; }
         }
 
         /// <summary>

@@ -177,6 +177,62 @@ namespace MusiyoBetsknate.Tests
             yield return null;
             Assert.That(carousel.activeInHierarchy, Is.True);
         }
+
+        [UnityTest]
+        public IEnumerator APieceTheVisitorStaysWithIsGrantedAgainAndLeavesWhenRevoked()
+        {
+            InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Mouse>();
+            // Eight-second grants stand in for the real five minutes: renewal comes a quarter of the life before the end.
+            service = new SyntheticMuseumService { AccessSeconds = 8 };
+            service.AddModel("piece-a", "Pieza sintética A", Convert.FromBase64String(RemoteModelPlayTests.Cube));
+            yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(MuseumScene,
+                new LoadSceneParameters(LoadSceneMode.Additive));
+            var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var loader = flow.GetComponent<TourLoader>();
+            var settings = new UnityEditor.SerializedObject(loader);
+            settings.FindProperty("apiBase").stringValue = service.Base;
+            settings.ApplyModifiedPropertiesWithoutUndo();
+            yield return null;
+            var runtime = flow.GetComponent<TourRuntime>();
+            var interaction = flow.GetComponent<MuseumInteraction>();
+            var presenter = flow.GetComponent<MuseumModelPresenter>();
+            var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
+            flow.GetComponent<MuseumEntryView>().HeadsetActive = () => false;
+            yield return Until(() => loader.State != TourLoadState.Loading, 20);
+            RoomContractV1 Room(string key, int order, params PointContractV1[] points)
+                => new RoomContractV1 { key = key, name = key, order = order, points = points };
+            Assert.That(runtime.Apply(new TourContractV1
+            {
+                schema_version = 1, tour = new TourMetadataContractV1 { key = runtime.TourKey, name = "Test" },
+                rooms = new[]
+                {
+                    Room("room.arrival", 0), Room("room.welcome", 1), Room("room.characters", 2, new PointContractV1
+                    {
+                        key = PointKey, name = "Punto", order = 0, activation = new[] { "proximity", "keyboard" },
+                        elements = new[] { new ElementSummaryContractV1 { slug = "piece-a", title = "Pieza sintética A", has_3d_model = true } }
+                    }),
+                    Room("room.instruments", 3), Room("room.hearth", 4), Room("room.overlook", 5),
+                },
+            }, out var error), Is.True, error);
+            flow.EnterImmediately();
+            yield return null;
+            Assert.That(visitor.FocusPoint(runtime.FindPoint(PointKey).Anchor), Is.True);
+            yield return Until(() => presenter.State == ModelLoadState.Ready, 15);
+            Assert.That(presenter.State, Is.EqualTo(ModelLoadState.Ready));
+            // Past its first grant the piece stays: the access was asked for again, the file was not downloaded again.
+            yield return new WaitForSecondsRealtime(14);
+            Assert.That(presenter.State, Is.EqualTo(ModelLoadState.Ready), presenter.Status);
+            Assert.That(presenter.ModelSlug, Is.EqualTo("piece-a"));
+            Assert.That(service.Grants("piece-a"), Is.GreaterThanOrEqualTo(3));
+            Assert.That(service.Downloads("piece-a"), Is.EqualTo(1));
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.ElementSelected));
+            // Once the service no longer grants it, the piece goes at the next renewal and says so.
+            service.Revoked["piece-a"] = true;
+            yield return Until(() => presenter.State != ModelLoadState.Ready, 12);
+            Assert.That(presenter.State, Is.EqualTo(ModelLoadState.Unavailable));
+            Assert.That(presenter.Model, Is.Null);
+        }
 #endif
     }
 }

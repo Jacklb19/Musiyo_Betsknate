@@ -26,6 +26,11 @@ namespace MusiyoBetsknate.Tests
         public ConcurrentDictionary<string, bool> Failing { get; } = new ConcurrentDictionary<string, bool>();
         /// <summary>Delay added to every model download, to let a test change its mind mid-flight.</summary>
         public int ModelDelayMilliseconds { get; set; }
+        /// <summary>Lifetime of each granted access, in seconds; the real service grants five minutes.</summary>
+        public int AccessSeconds { get; set; } = 600;
+        /// <summary>Slugs whose access is no longer granted (HTTP 404), as after a revocation.</summary>
+        public ConcurrentDictionary<string, bool> Revoked { get; } = new ConcurrentDictionary<string, bool>();
+        private readonly ConcurrentDictionary<string, int> grants = new ConcurrentDictionary<string, int>();
 
         public SyntheticMuseumService()
         {
@@ -55,6 +60,9 @@ namespace MusiyoBetsknate.Tests
 
         public int Downloads(string slug) => downloads.TryGetValue(slug, out var count) ? count : 0;
 
+        /// <summary>Accesses granted for a slug's model, first grants and renewals alike.</summary>
+        public int Grants(string slug) => grants.TryGetValue(slug, out var count) ? count : 0;
+
         private static string Example(string name)
             => File.ReadAllText(Path.Combine(Application.dataPath, "Contracts", "examples", name));
 
@@ -69,7 +77,7 @@ namespace MusiyoBetsknate.Tests
         }
 
         private string Access(string slug) => "{\"schema_version\": 1, \"url\": \"/files/" + slug + ".glb\", \"expires_at\": \""
-            + DateTimeOffset.UtcNow.AddMinutes(10).ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture)
+            + DateTimeOffset.UtcNow.AddSeconds(AccessSeconds).ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture)
             + "\", \"mime\": \"model/gltf-binary\", \"byte_count\": " + models[slug].Length + ", \"sha256\": null}";
 
         private void Receive(IAsyncResult pending)
@@ -92,8 +100,12 @@ namespace MusiyoBetsknate.Tests
                 foreach (var slug in models.Keys)
                 {
                     if (path == "/api/v1/elements/" + slug) body = Encoding.UTF8.GetBytes(Element(slug));
-                    else if (path == "/api/v1/resources/" + slug + "-web/access" || path == "/api/v1/resources/" + slug + "-quest/access")
+                    else if ((path == "/api/v1/resources/" + slug + "-web/access" || path == "/api/v1/resources/" + slug + "-quest/access")
+                        && !Revoked.ContainsKey(slug))
+                    {
+                        grants.AddOrUpdate(slug, 1, (_, count) => count + 1);
                         body = Encoding.UTF8.GetBytes(Access(slug));
+                    }
                     else if (path == "/files/" + slug + ".glb")
                     {
                         downloads.AddOrUpdate(slug, 1, (_, count) => count + 1);

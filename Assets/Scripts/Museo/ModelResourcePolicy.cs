@@ -35,6 +35,21 @@ namespace MusiyoBetsknate.Museum
             return false;
         }
 
+        /// <summary>Seconds before asking again after a renewal that could not reach the service.</summary>
+        public const int RenewRetrySeconds = 10;
+
+        /// <summary>
+        /// When to renew an access granted at <paramref name="granted"/>: a quarter of its life before it ends, at most a
+        /// minute before, so a piece the visitor stays with never disappears for an expired grant.
+        /// </summary>
+        public static DateTimeOffset RenewAt(DateTimeOffset granted, DateTimeOffset expiration)
+        {
+            var life = expiration - granted;
+            if (life <= TimeSpan.Zero) return granted;
+            var lead = TimeSpan.FromTicks(Math.Min(TimeSpan.FromMinutes(1).Ticks, life.Ticks / 4));
+            return expiration - lead;
+        }
+
         public static bool TryAccess(string apiBase, string json, string profile, DateTimeOffset now,
             out ResourceAccessContractV1 access, out Uri url)
         {
