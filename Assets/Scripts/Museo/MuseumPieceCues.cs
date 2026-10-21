@@ -110,7 +110,7 @@ namespace MusiyoBetsknate.Museum
             return disc;
         }
 
-        /// <summary>Where the arrows stand: beside the piece on show, or above the pedestal while its piece is not there.</summary>
+        /// <summary>Where the arrows stand: beside the piece on show, or above the pedestal while no piece is there.</summary>
         private bool TryPlace(out Vector3 centre, out float halfWidth)
         {
             centre = default;
@@ -131,7 +131,10 @@ namespace MusiyoBetsknate.Museum
                 centre = position + Vector3.up * .15f;
                 return true;
             }
-            return false;
+            // While the piece is still on its way, or could not come, the arrows stand above the pedestal all the same.
+            var mount = point.Anchor.GetComponentInChildren<PointExhibitMount>();
+            centre = mount != null ? mount.transform.position + Vector3.up * .15f : point.Anchor.LookTarget.position;
+            return true;
         }
 
         private void LateUpdate()

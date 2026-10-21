@@ -98,12 +98,18 @@ namespace MusiyoBetsknate.Tests
             yield return Until(() => interaction.ActivePoint == point, 5);
             Assert.That(interaction.State, Is.EqualTo(InteractionState.ElementSelected), "By a stand the point opens on its first record, with no list.");
             Assert.That(interaction.SelectedElement.slug, Is.EqualTo("piece-common"));
+            // The point's own record stands the point's first piece on the pedestal, and the arrows are there from the
+            // start, before any piece has arrived (they used to wait for a piece chosen some other way).
+            var carousel = UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .First(item => item.name == "PieceCarousel").gameObject;
+            yield return null;
+            yield return null;
+            Assert.That(carousel.activeInHierarchy, Is.True, "The arrows stand by the pedestal on the point's own record.");
+            yield return Until(() => presenter.State == ModelLoadState.Ready, 15);
+            Assert.That(presenter.ModelSlug, Is.EqualTo("piece-a"), "The point's own record brings its first piece.");
             Assert.That(interaction.SelectElement(1), Is.True);
             yield return Until(() => presenter.State == ModelLoadState.Ready, 15);
             Assert.That(presenter.ModelSlug, Is.EqualTo("piece-a"));
-            // The point panel floats in the museum, away from the screen interface.
-            var carousel = UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
-                .First(item => item.name == "PieceCarousel").gameObject;
             bool Says(string text) => UnityEngine.Object.FindObjectsByType<TMP_Text>(FindObjectsSortMode.None)
                 .Any(item => item.text.Contains(text));
             yield return null;

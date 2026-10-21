@@ -154,8 +154,13 @@ namespace MusiyoBetsknate.Museum
                 if (!selected.has_3d_model)
                 {
                     // A point's own record, without a model, leaves the piece of that point on its pedestal; the arrows
-                    // beside it step on to the next one.
-                    if (session == null || session.Point != interaction.ActivePoint) { switchSlug = null; Release(); attemptedKey = null; }
+                    // beside it step on to the next one. Arriving on that record, the point's first piece is brought.
+                    if (session == null || session.Point != interaction.ActivePoint)
+                    {
+                        switchSlug = null; Release(); attemptedKey = null;
+                        var piece = FirstPiece(interaction.ActivePoint);
+                        if (piece != null) RequestModel(interaction.ActivePoint, piece.slug);
+                    }
                 }
                 else if (session != null && session.Point == interaction.ActivePoint && session.Slug != selected.slug
                     || switchSlug != null && switchSlug != selected.slug)
@@ -226,11 +231,13 @@ namespace MusiyoBetsknate.Museum
                 { Release(); attemptedKey = null; SetState(ModelLoadState.Idle, MuseumInterfaceText.Get("model_released")); }
                 else if (session.VisitorRoom == null && currentRoom != null) session.VisitorRoom = currentRoom;
             }
-            if (interaction.State == InteractionState.ElementSelected && interaction.SelectedElement?.has_3d_model == true
-                && session == null && attemptedKey == null && switchSlug == null && visitor != null
+            // The piece of the selected record, or on a point's own record the point's first piece, comes back on return.
+            var wanted = interaction.State != InteractionState.ElementSelected || interaction.SelectedElement == null ? null
+                : interaction.SelectedElement.has_3d_model ? interaction.SelectedElement : FirstPiece(interaction.ActivePoint);
+            if (wanted != null && session == null && attemptedKey == null && switchSlug == null && visitor != null
                 && Vector3.Distance(visitor.position, interaction.ActivePoint.Anchor.transform.position)
                     <= interaction.ActivePoint.Anchor.ActivationRadius + 4)
-                RequestModel(interaction.ActivePoint, interaction.SelectedElement.slug);
+                RequestModel(interaction.ActivePoint, wanted.slug);
             if (interaction.State == InteractionState.ModelExamination)
             {
                 var input = MuseumInput.Current;
@@ -263,6 +270,10 @@ namespace MusiyoBetsknate.Museum
                 break;
             }
         }
+
+        /// <summary>First record of a point that has a model, the piece its pedestal shows while the point's own record is read.</summary>
+        private static ElementSummaryContractV1 FirstPiece(TourPoint point)
+            => point != null && point.HasContent ? point.Content.elements.FirstOrDefault(candidate => candidate.has_3d_model) : null;
 
         /// <summary>Applies the exhibition or examination pose again, for instance once a held piece is back in place.</summary>
         public void RefreshPose() => UpdatePose();
