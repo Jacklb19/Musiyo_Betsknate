@@ -67,6 +67,7 @@ namespace MusiyoBetsknate.Editor
             Configure();
             Directory.CreateDirectory("Build/MuseumQuest");
             var httpPolicy = PlayerSettings.insecureHttpOption;
+            using var service = MuseumServiceBuildSetting.Apply();
             try
             {
                 // A USB-reversed local API is available only in this development APK; release policy is preserved.

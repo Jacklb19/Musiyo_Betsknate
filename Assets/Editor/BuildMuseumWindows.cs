@@ -12,6 +12,7 @@ namespace MusiyoBetsknate.Editor
         [MenuItem("Musiyo/Build Museum Windows")]
         public static void Build()
         {
+            using var service = MuseumServiceBuildSetting.Apply();
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
                 scenes = new[] { BuildMuseumBlockout.ScenePath },

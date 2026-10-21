@@ -28,7 +28,17 @@ namespace MusiyoBetsknate.Museum
         public float RetryInSeconds => RetryScheduled ? Mathf.Max(0, retryAt - Time.realtimeSinceStartup) : 0;
         public event Action Changed;
 
-        private void Start() { if (loadOnStart) Reload(); }
+        private void Start()
+        {
+            // An address, never a key: written to the device log so a headset test can confirm which API it reached.
+            try
+            {
+                string from = string.IsNullOrWhiteSpace(apiBase) && MuseumServiceAddress.Origin != "" ? " (" + MuseumServiceAddress.Origin + ")" : "";
+                Debug.Log("Musiyo service: " + ApiBase + from);
+            }
+            catch (ArgumentException) { Debug.LogWarning("Musiyo service: the configured address is not valid."); }
+            if (loadOnStart) Reload();
+        }
         private void OnDisable() => Cancel();
         /// <summary>An unreachable service is tried again on its own, waiting longer each time; the visit goes on meanwhile.</summary>
         private void Update()
@@ -107,18 +117,9 @@ namespace MusiyoBetsknate.Museum
             Changed?.Invoke();
         }
 
+        /// <summary>The API address in force; see <see cref="MuseumServiceAddress"/> for where each build reads it.</summary>
         public static string ResolveApiBase(string configured, string pageUrl)
-        {
-            if (!string.IsNullOrWhiteSpace(configured))
-            {
-                if (!Uri.TryCreate(configured, UriKind.Absolute, out var configuredUri)
-                    || (configuredUri.Scheme != "http" && configuredUri.Scheme != "https"))
-                    throw new ArgumentException("API base must be an HTTP or HTTPS URL");
-                return configured.TrimEnd('/');
-            }
-            if (Uri.TryCreate(pageUrl, UriKind.Absolute, out var page) && (page.Scheme == "http" || page.Scheme == "https"))
-                return new Uri(page, "/api/v1").AbsoluteUri.TrimEnd('/');
-            return "http://127.0.0.1:8000/api/v1";
-        }
+            => MuseumServiceAddress.Resolve(configured, pageUrl, Application.platform == RuntimePlatform.WebGLPlayer,
+                MuseumServiceAddress.Configured);
     }
 }
