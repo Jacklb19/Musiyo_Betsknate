@@ -115,9 +115,8 @@ namespace MusiyoBetsknate.Museum
         }
 
         /// <summary>
-        /// The conversation about the visit: its text reads in the screen's column; starting, passing, going on and
-        /// ending stand with the other controls. The options are made per question in the reading column, wide enough
-        /// for their text.
+        /// The conversation about the visit: its text reads in the screen's column; the options, starting, passing, going
+        /// on and ending stand with the other controls. The options are made per question.
         /// </summary>
         private void CreateQuiz(TMP_Text bodyText, Transform content, Func<string, Transform, UnityAction, Button> button)
         {
@@ -305,7 +304,7 @@ namespace MusiyoBetsknate.Museum
             ShowOptions(open && quiz.Active ? quiz.Current : null);
         }
 
-        /// <summary>The options of the question on show, as choices in the reading column; the chosen one is marked.</summary>
+        /// <summary>The options of the question on show, as choices beside the reading column; the chosen one is marked.</summary>
         private void ShowOptions(QuizQuestionContractV1 question)
         {
             if (question != optionsFor)
@@ -317,16 +316,16 @@ namespace MusiyoBetsknate.Museum
                 {
                     if (quizOptions == null)
                     {
-                        // Made on first use, after the screen moved its controls aside, so the options stay wide.
+                        // The options stand first among the controls, where the screen grows to show them all.
                         var list = new GameObject("QuizOptions", typeof(RectTransform), typeof(VerticalLayoutGroup));
-                        list.transform.SetParent(readingColumn, false);
+                        list.transform.SetParent(quizSkip.transform.parent, false);
                         var column = list.GetComponent<VerticalLayoutGroup>();
                         column.spacing = 8;
                         column.childControlWidth = column.childControlHeight = true;
                         column.childForceExpandHeight = false;
                         quizOptions = list.transform;
                     }
-                    quizOptions.SetSiblingIndex(quizText.transform.GetSiblingIndex() + 1);
+                    quizOptions.SetSiblingIndex(quizSkip.transform.GetSiblingIndex());
                     for (int index = 0; index < question.options.Length; index++)
                     {
                         int chosenIndex = index;
@@ -340,7 +339,8 @@ namespace MusiyoBetsknate.Museum
                         caption.enableAutoSizing = true;
                         caption.fontSizeMin = 18;
                         caption.fontSizeMax = caption.fontSize;
-                        if (option.TryGetComponent<LayoutElement>(out var layout)) layout.preferredHeight = 64;
+                        caption.margin = new Vector4(8, 4, 8, 4);
+                        if (option.TryGetComponent<LayoutElement>(out var layout)) layout.preferredHeight = 84;
                         option.gameObject.SetActive(true);
                         shownOptions.Add(option);
                     }
