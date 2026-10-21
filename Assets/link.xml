@@ -1,0 +1,12 @@
+<linker>
+  <!--
+    The hearth set and the fire make their stones, logs and ember bed with GameObject.CreatePrimitive, which adds a
+    sphere or capsule collider before the code removes it. No scene uses those colliders, so engine code stripping
+    dropped both classes from the browser build and every primitive logged "Can't add component because class ...
+    doesn't exist!". Keeping the two classes silences that without changing what is built.
+  -->
+  <assembly fullname="UnityEngine.PhysicsModule">
+    <type fullname="UnityEngine.SphereCollider" preserve="all" />
+    <type fullname="UnityEngine.CapsuleCollider" preserve="all" />
+  </assembly>
+</linker>
