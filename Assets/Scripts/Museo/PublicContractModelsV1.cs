@@ -111,6 +111,34 @@ namespace MusiyoBetsknate.Museo
     }
 
     [Serializable, Preserve]
+    public sealed partial class GuideQuizContractV1
+    {
+        [Preserve] public int schema_version;
+        [Preserve] public string tour_key;
+        [Preserve] public string room_key;
+        [Preserve] public QuizQuestionContractV1[] questions;
+    }
+
+    [Serializable, Preserve]
+    public sealed partial class GuideQuizAnswerContractV1
+    {
+        [Preserve] public int schema_version;
+        [Preserve] public string id;
+        [Preserve] public string option_id;
+    }
+
+    [Serializable, Preserve]
+    public sealed partial class GuideQuizAnswerResultContractV1
+    {
+        [Preserve] public int schema_version;
+        [Preserve] public string id;
+        [Preserve] public bool correct;
+        [Preserve] public string explanation;
+        [Preserve] public QuizCitationContractV1 citation;
+        [Preserve] public SourceContractV1 source;
+    }
+
+    [Serializable, Preserve]
     public sealed partial class GuideResponseContractV1
     {
         [Preserve] public int schema_version;
@@ -118,6 +146,29 @@ namespace MusiyoBetsknate.Museo
         [Preserve] public string answer;
         [Preserve] public GuideCitationContractV1[] citations;
         [Preserve] public string reason;
+    }
+
+    [Serializable, Preserve]
+    public sealed partial class GuideSpeechContractV1
+    {
+        [Preserve] public string mime;
+        [Preserve] public string data_base64;
+    }
+
+    [Serializable, Preserve]
+    public sealed partial class GuideTranscriptionContractV1
+    {
+        [Preserve] public int schema_version;
+        [Preserve] public string text;
+    }
+
+    [Serializable, Preserve]
+    public sealed partial class GuideVoiceAnswerContractV1
+    {
+        [Preserve] public int schema_version;
+        [Preserve] public GuideResponseContractV1 response;
+        [Preserve] public string speech_status;
+        [Preserve] public GuideSpeechContractV1 audio;
     }
 
     [Serializable, Preserve]
@@ -160,6 +211,31 @@ namespace MusiyoBetsknate.Museo
         [Preserve] public string point_key;
         [Preserve] public string element_slug;
         [Preserve] public string presence;
+    }
+
+    [Serializable, Preserve]
+    public sealed partial class QuizCitationContractV1
+    {
+        [Preserve] public string element_slug;
+        [Preserve] public string source_id;
+        [Preserve] public string quote;
+    }
+
+    [Serializable, Preserve]
+    public sealed partial class QuizOptionContractV1
+    {
+        [Preserve] public string id;
+        [Preserve] public string text;
+    }
+
+    [Serializable, Preserve]
+    public sealed partial class QuizQuestionContractV1
+    {
+        [Preserve] public string id;
+        [Preserve] public string text;
+        [Preserve] public QuizOptionContractV1[] options;
+        [Preserve] public string element_slug;
+        [Preserve] public string source_id;
     }
 
     [Serializable, Preserve]
@@ -302,6 +378,21 @@ namespace MusiyoBetsknate.Museo
         [Preserve] public string csrf_token;
     }
 
+    [Serializable, Preserve]
+    public sealed partial class VoiceCapabilitiesContractV1
+    {
+        [Preserve] public int schema_version;
+        [Preserve] public string transcription;
+        [Preserve] public string synthesis;
+        [Preserve] public string processing;
+        [Preserve] public string[] providers;
+        [Preserve] public string retention;
+        [Preserve] public string input_mime;
+        [Preserve] public int max_input_bytes;
+        [Preserve] public int max_input_seconds;
+        [Preserve] public int request_timeout_seconds;
+    }
+
     internal static class ContractSchemasV1
     {
         public const string Tour = @"{""$defs"":{""ElementSummary"":{""additionalProperties"":false,""properties"":{""slug"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Slug"",""type"":""string""},""title"":{""title"":""Title"",""type"":""string""},""community"":{""anyOf"":[{""type"":""string""},{""type"":""null""}],""default"":null,""title"":""Community""},""thumbnail_resource_id"":{""anyOf"":[{""minLength"":1,""pattern"":""^\\S+$"",""type"":""string""},{""type"":""null""}],""default"":null,""title"":""Thumbnail Resource Id""},""has_3d_model"":{""default"":false,""title"":""Has 3D Model"",""type"":""boolean""},""has_narration"":{""default"":false,""title"":""Has Narration"",""type"":""boolean""}},""required"":[""slug"",""title""],""title"":""ElementSummary"",""type"":""object""},""Guide"":{""additionalProperties"":false,""properties"":{""key"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Key"",""type"":""string""},""name"":{""title"":""Name"",""type"":""string""},""room_key"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Room Key"",""type"":""string""},""available"":{""title"":""Available"",""type"":""boolean""}},""required"":[""key"",""name"",""room_key"",""available""],""title"":""Guide"",""type"":""object""},""Point"":{""additionalProperties"":false,""properties"":{""key"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Key"",""type"":""string""},""name"":{""title"":""Name"",""type"":""string""},""order"":{""minimum"":0,""title"":""Order"",""type"":""integer""},""activation"":{""items"":{""enum"":[""proximity"",""gaze"",""keyboard""],""type"":""string""},""minItems"":1,""title"":""Activation"",""type"":""array"",""uniqueItems"":true},""elements"":{""items"":{""$ref"":""#/$defs/ElementSummary""},""title"":""Elements"",""type"":""array""}},""required"":[""key"",""name"",""order"",""activation"",""elements""],""title"":""Point"",""type"":""object""},""Room"":{""additionalProperties"":false,""properties"":{""key"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Key"",""type"":""string""},""name"":{""title"":""Name"",""type"":""string""},""order"":{""minimum"":0,""title"":""Order"",""type"":""integer""},""short_description"":{""default"":"""",""title"":""Short Description"",""type"":""string""},""ambient_audio_resource_id"":{""anyOf"":[{""minLength"":1,""pattern"":""^\\S+$"",""type"":""string""},{""type"":""null""}],""default"":null,""title"":""Ambient Audio Resource Id""},""points"":{""items"":{""$ref"":""#/$defs/Point""},""title"":""Points"",""type"":""array""}},""required"":[""key"",""name"",""order"",""points""],""title"":""Room"",""type"":""object""},""TourMetadata"":{""additionalProperties"":false,""properties"":{""key"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Key"",""type"":""string""},""name"":{""title"":""Name"",""type"":""string""},""revision"":{""anyOf"":[{""format"":""date-time"",""type"":""string""},{""type"":""null""}],""default"":null,""title"":""Revision""}},""required"":[""key"",""name""],""title"":""TourMetadata"",""type"":""object""}},""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""title"":""Schema Version"",""type"":""integer""},""tour"":{""$ref"":""#/$defs/TourMetadata""},""rooms"":{""items"":{""$ref"":""#/$defs/Room""},""minItems"":1,""title"":""Rooms"",""type"":""array""},""guide"":{""anyOf"":[{""$ref"":""#/$defs/Guide""},{""type"":""null""}],""default"":null}},""required"":[""schema_version"",""tour"",""rooms""],""title"":""Tour"",""type"":""object""}";
@@ -316,5 +407,11 @@ namespace MusiyoBetsknate.Museo
         public const string ValidatorSession = @"{""$defs"":{""ValidatorProfile"":{""additionalProperties"":false,""properties"":{""username"":{""title"":""Username"",""type"":""string""},""name"":{""title"":""Name"",""type"":""string""}},""required"":[""username"",""name""],""title"":""ValidatorProfile"",""type"":""object""}},""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""title"":""Schema Version"",""type"":""integer""},""authenticated"":{""title"":""Authenticated"",""type"":""boolean""},""user"":{""anyOf"":[{""$ref"":""#/$defs/ValidatorProfile""},{""type"":""null""}],""default"":null},""csrf_token"":{""anyOf"":[{""pattern"":""^[A-Za-z0-9_-]{43}$"",""type"":""string""},{""type"":""null""}],""default"":null,""title"":""Csrf Token""}},""required"":[""schema_version"",""authenticated""],""title"":""ValidatorSession"",""type"":""object""}";
         public const string GuideQuestion = @"{""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""title"":""Schema Version"",""type"":""integer""},""question"":{""maxLength"":500,""minLength"":3,""title"":""Question"",""type"":""string""},""element_slug"":{""anyOf"":[{""maxLength"":100,""minLength"":1,""pattern"":""^\\S+$"",""type"":""string""},{""type"":""null""}],""default"":null,""title"":""Element Slug""}},""required"":[""schema_version"",""question""],""title"":""GuideQuestion"",""type"":""object""}";
         public const string GuideResponse = @"{""$defs"":{""GuideCitation"":{""additionalProperties"":false,""properties"":{""element_slug"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Element Slug"",""type"":""string""},""title"":{""minLength"":1,""title"":""Title"",""type"":""string""}},""required"":[""element_slug"",""title""],""title"":""GuideCitation"",""type"":""object""}},""additionalProperties"":false,""allOf"":[{""if"":{""properties"":{""status"":{""const"":""answered""}}},""then"":{""properties"":{""answer"":{""minLength"":1,""pattern"":""\\S"",""type"":""string""},""citations"":{""minItems"":1},""reason"":{""type"":""null""}}}},{""if"":{""properties"":{""status"":{""const"":""abstained""}}},""then"":{""properties"":{""answer"":{""type"":""null""},""citations"":{""maxItems"":0},""reason"":{""const"":""insufficient_evidence""}}}},{""if"":{""properties"":{""status"":{""const"":""provider_unavailable""}}},""then"":{""properties"":{""answer"":{""type"":""null""},""citations"":{""maxItems"":0},""reason"":{""const"":""provider_unavailable""}}}}],""properties"":{""schema_version"":{""const"":1,""title"":""Schema Version"",""type"":""integer""},""status"":{""enum"":[""answered"",""abstained"",""provider_unavailable""],""title"":""Status"",""type"":""string""},""answer"":{""anyOf"":[{""maxLength"":2000,""minLength"":1,""pattern"":""\\S"",""type"":""string""},{""type"":""null""}],""title"":""Answer""},""citations"":{""items"":{""$ref"":""#/$defs/GuideCitation""},""maxItems"":8,""title"":""Citations"",""type"":""array""},""reason"":{""anyOf"":[{""enum"":[""insufficient_evidence"",""provider_unavailable""],""type"":""string""},{""type"":""null""}],""title"":""Reason""}},""required"":[""schema_version"",""status"",""answer"",""citations"",""reason""],""title"":""GuideResponse"",""type"":""object""}";
+        public const string GuideQuiz = @"{""$defs"":{""QuizOption"":{""additionalProperties"":false,""properties"":{""id"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Id"",""type"":""string""},""text"":{""maxLength"":250,""minLength"":1,""title"":""Text"",""type"":""string""}},""required"":[""id"",""text""],""title"":""QuizOption"",""type"":""object""},""QuizQuestion"":{""additionalProperties"":false,""properties"":{""id"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Id"",""type"":""string""},""text"":{""maxLength"":1200,""minLength"":1,""title"":""Text"",""type"":""string""},""options"":{""items"":{""$ref"":""#/$defs/QuizOption""},""maxItems"":4,""minItems"":3,""title"":""Options"",""type"":""array""},""element_slug"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Element Slug"",""type"":""string""},""source_id"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Source Id"",""type"":""string""}},""required"":[""id"",""text"",""options"",""element_slug"",""source_id""],""title"":""QuizQuestion"",""type"":""object""}},""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""title"":""Schema Version"",""type"":""integer""},""tour_key"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Tour Key"",""type"":""string""},""room_key"":{""anyOf"":[{""minLength"":1,""pattern"":""^\\S+$"",""type"":""string""},{""type"":""null""}],""title"":""Room Key""},""questions"":{""items"":{""$ref"":""#/$defs/QuizQuestion""},""maxItems"":50,""title"":""Questions"",""type"":""array""}},""required"":[""schema_version"",""tour_key"",""room_key"",""questions""],""title"":""GuideQuiz"",""type"":""object""}";
+        public const string GuideQuizAnswer = @"{""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""title"":""Schema Version"",""type"":""integer""},""id"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Id"",""type"":""string""},""option_id"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Option Id"",""type"":""string""}},""required"":[""schema_version"",""id"",""option_id""],""title"":""GuideQuizAnswer"",""type"":""object""}";
+        public const string GuideQuizAnswerResult = @"{""$defs"":{""QuizCitation"":{""additionalProperties"":false,""properties"":{""element_slug"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Element Slug"",""type"":""string""},""source_id"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Source Id"",""type"":""string""},""quote"":{""maxLength"":800,""minLength"":1,""title"":""Quote"",""type"":""string""}},""required"":[""element_slug"",""source_id"",""quote""],""title"":""QuizCitation"",""type"":""object""},""Source"":{""additionalProperties"":false,""properties"":{""id"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Id"",""type"":""string""},""kind"":{""enum"":[""publication"",""interview"",""other""],""title"":""Kind"",""type"":""string""},""reference"":{""title"":""Reference"",""type"":""string""},""url"":{""anyOf"":[{""type"":""string""},{""type"":""null""}],""default"":null,""title"":""Url""}},""required"":[""id"",""kind"",""reference""],""title"":""Source"",""type"":""object""}},""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""title"":""Schema Version"",""type"":""integer""},""id"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Id"",""type"":""string""},""correct"":{""title"":""Correct"",""type"":""boolean""},""explanation"":{""maxLength"":1200,""minLength"":1,""title"":""Explanation"",""type"":""string""},""citation"":{""$ref"":""#/$defs/QuizCitation""},""source"":{""$ref"":""#/$defs/Source""}},""required"":[""schema_version"",""id"",""correct"",""explanation"",""citation"",""source""],""title"":""GuideQuizAnswerResult"",""type"":""object""}";
+        public const string VoiceCapabilities = @"{""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""default"":1,""title"":""Schema Version"",""type"":""integer""},""transcription"":{""enum"":[""disabled"",""configured""],""title"":""Transcription"",""type"":""string""},""synthesis"":{""enum"":[""disabled"",""configured""],""title"":""Synthesis"",""type"":""string""},""processing"":{""default"":""backend_local"",""enum"":[""backend_local"",""external_providers""],""title"":""Processing"",""type"":""string""},""providers"":{""items"":{""enum"":[""Groq"",""ElevenLabs""],""type"":""string""},""maxItems"":2,""title"":""Providers"",""type"":""array""},""retention"":{""const"":""request_only"",""default"":""request_only"",""title"":""Retention"",""type"":""string""},""input_mime"":{""const"":""audio/wav"",""default"":""audio/wav"",""title"":""Input Mime"",""type"":""string""},""max_input_bytes"":{""title"":""Max Input Bytes"",""type"":""integer""},""max_input_seconds"":{""title"":""Max Input Seconds"",""type"":""integer""},""request_timeout_seconds"":{""title"":""Request Timeout Seconds"",""type"":""integer""}},""required"":[""transcription"",""synthesis"",""max_input_bytes"",""max_input_seconds"",""request_timeout_seconds""],""title"":""VoiceCapabilities"",""type"":""object""}";
+        public const string GuideTranscription = @"{""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""default"":1,""title"":""Schema Version"",""type"":""integer""},""text"":{""maxLength"":500,""minLength"":3,""title"":""Text"",""type"":""string""}},""required"":[""text""],""title"":""GuideTranscription"",""type"":""object""}";
+        public const string GuideVoiceAnswer = @"{""$defs"":{""GuideCitation"":{""additionalProperties"":false,""properties"":{""element_slug"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Element Slug"",""type"":""string""},""title"":{""minLength"":1,""title"":""Title"",""type"":""string""}},""required"":[""element_slug"",""title""],""title"":""GuideCitation"",""type"":""object""},""GuideResponse"":{""additionalProperties"":false,""allOf"":[{""if"":{""properties"":{""status"":{""const"":""answered""}}},""then"":{""properties"":{""answer"":{""minLength"":1,""pattern"":""\\S"",""type"":""string""},""citations"":{""minItems"":1},""reason"":{""type"":""null""}}}},{""if"":{""properties"":{""status"":{""const"":""abstained""}}},""then"":{""properties"":{""answer"":{""type"":""null""},""citations"":{""maxItems"":0},""reason"":{""const"":""insufficient_evidence""}}}},{""if"":{""properties"":{""status"":{""const"":""provider_unavailable""}}},""then"":{""properties"":{""answer"":{""type"":""null""},""citations"":{""maxItems"":0},""reason"":{""const"":""provider_unavailable""}}}}],""properties"":{""schema_version"":{""const"":1,""title"":""Schema Version"",""type"":""integer""},""status"":{""enum"":[""answered"",""abstained"",""provider_unavailable""],""title"":""Status"",""type"":""string""},""answer"":{""anyOf"":[{""maxLength"":2000,""minLength"":1,""pattern"":""\\S"",""type"":""string""},{""type"":""null""}],""title"":""Answer""},""citations"":{""items"":{""$ref"":""#/$defs/GuideCitation""},""maxItems"":8,""title"":""Citations"",""type"":""array""},""reason"":{""anyOf"":[{""enum"":[""insufficient_evidence"",""provider_unavailable""],""type"":""string""},{""type"":""null""}],""title"":""Reason""}},""required"":[""schema_version"",""status"",""answer"",""citations"",""reason""],""title"":""GuideResponse"",""type"":""object""},""GuideSpeech"":{""additionalProperties"":false,""properties"":{""mime"":{""const"":""audio/wav"",""default"":""audio/wav"",""title"":""Mime"",""type"":""string""},""data_base64"":{""maxLength"":4000000,""minLength"":1,""title"":""Data Base64"",""type"":""string""}},""required"":[""data_base64""],""title"":""GuideSpeech"",""type"":""object""}},""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""default"":1,""title"":""Schema Version"",""type"":""integer""},""response"":{""$ref"":""#/$defs/GuideResponse""},""speech_status"":{""enum"":[""ready"",""disabled"",""unavailable"",""not_applicable""],""title"":""Speech Status"",""type"":""string""},""audio"":{""anyOf"":[{""$ref"":""#/$defs/GuideSpeech""},{""type"":""null""}]}},""required"":[""response"",""speech_status"",""audio""],""title"":""GuideVoiceAnswer"",""type"":""object""}";
     }
 }
