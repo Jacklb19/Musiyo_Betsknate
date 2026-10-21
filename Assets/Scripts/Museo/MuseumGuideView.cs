@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using MusiyoBetsknate.Museo;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -10,9 +11,10 @@ using UnityEngine.UI;
 namespace MusiyoBetsknate.Museum
 {
     /// <summary>
-    /// The conversation with the guide inside the point panel: a question field, the answer and its sources. Text from the
-    /// service is shown as plain text. Cited records in the loaded tour offer orientation to their room; others show their
-    /// title only.
+    /// The conversation with the guide inside the point panel: a question field, the answer and its sources, and by the
+    /// hearth the conversation about the visit (<see cref="MuseumHearthQuiz"/>) with its options as choices on the same
+    /// screen. Text from the service is shown as plain text. Cited records in the loaded tour offer orientation to their
+    /// room; others show their title only.
     /// </summary>
     public sealed class MuseumGuideView : MonoBehaviour
     {
@@ -33,6 +35,13 @@ namespace MusiyoBetsknate.Museum
         private Button cancel;
         private TMP_Text sendCaption;
         private readonly List<GameObject> shownSources = new List<GameObject>();
+        private MuseumHearthQuiz quiz;
+        private Transform readingColumn;
+        private TMP_Text quizText;
+        private Button quizStart, quizSkip, quizNext, quizClose, quizRetry, quizOptionTemplate;
+        private Transform quizOptions;
+        private readonly List<Button> shownOptions = new List<Button>();
+        private QuizQuestionContractV1 optionsFor;
         private int shownWait = -1;
         private bool wasOpen;
         private bool focusPending;
@@ -42,16 +51,25 @@ namespace MusiyoBetsknate.Museum
         public Button CancelButton => cancel;
         public TMP_Text Answer => answer;
         public IReadOnlyList<GameObject> Sources => shownSources;
+        public Button QuizStart => quizStart;
+        public Button QuizSkip => quizSkip;
+        public Button QuizNext => quizNext;
+        public Button QuizClose => quizClose;
+        public TMP_Text QuizText => quizText;
+        /// <summary>The options of the question on show, in published order.</summary>
+        public IReadOnlyList<Button> QuizOptions => shownOptions;
 
         /// <param name="bodyText">Panel body text whose style the conversation reuses.</param>
         /// <param name="content">Layout column of the point panel.</param>
         /// <param name="button">Creates a panel button from an interface text key.</param>
         public void Configure(MuseumGuide conversation, MuseumInteraction state, MuseumWayfinding orientation,
-            TMP_Text bodyText, Transform content, Func<string, Transform, UnityAction, Button> button)
+            TMP_Text bodyText, Transform content, Func<string, Transform, UnityAction, Button> button, MuseumHearthQuiz hearthQuiz = null)
         {
             guide = conversation;
             interaction = state;
             wayfinding = orientation;
+            quiz = hearthQuiz;
+            readingColumn = content;
             fieldRoot = CreateField(bodyText, content);
             spatialNote = Text(bodyText, content, "GuideSpatialNote");
             spatialNote.text = MuseumInterfaceText.Get("guide_spatial_text_pending");
@@ -82,6 +100,7 @@ namespace MusiyoBetsknate.Museum
             sourceButtonTemplate = button("guide_source_unplaced", sources, () => { });
             sourceButtonTemplate.name = "GuideSourceRoom";
             sourceButtonTemplate.gameObject.SetActive(false);
+            if (quiz != null) CreateQuiz(bodyText, content, button);
             guide.Changed += Refresh;
             guide.TypingRequested += BeginTyping;
             interaction.Changed += Refresh;
@@ -92,6 +111,31 @@ namespace MusiyoBetsknate.Museum
         {
             if (guide != null) { guide.Changed -= Refresh; guide.TypingRequested -= BeginTyping; }
             if (interaction != null) interaction.Changed -= Refresh;
+            if (quiz != null) quiz.Changed -= Refresh;
+        }
+
+        /// <summary>
+        /// The conversation about the visit: its text reads in the screen's column; starting, passing, going on and
+        /// ending stand with the other controls. The options are made per question in the reading column, wide enough
+        /// for their text.
+        /// </summary>
+        private void CreateQuiz(TMP_Text bodyText, Transform content, Func<string, Transform, UnityAction, Button> button)
+        {
+            quizText = Text(bodyText, content, "QuizText");
+            quizStart = button("quiz_start", content, () => quiz.Begin());
+            quizStart.name = "QuizStart";
+            quizSkip = button("quiz_skip", content, () => quiz.Next());
+            quizSkip.name = "QuizSkip";
+            quizNext = button("quiz_next", content, () => quiz.Next());
+            quizNext.name = "QuizNext";
+            quizClose = button("quiz_close", content, () => quiz.Finish());
+            quizClose.name = "QuizClose";
+            quizRetry = button("quiz_retry", content, () => quiz.Reload());
+            quizRetry.name = "QuizRetry";
+            quizOptionTemplate = button("quiz_start", content, () => { });
+            quizOptionTemplate.name = "QuizOption";
+            quizOptionTemplate.gameObject.SetActive(false);
+            quiz.Changed += Refresh;
         }
 
         /// <summary>Visitor text with rich-text tags shown literally, so a service answer cannot restyle the panel.</summary>
@@ -201,8 +245,8 @@ namespace MusiyoBetsknate.Museum
                 else focusPending = false;
             }
             guide.Typing = guide.Open && field.isFocused;
-            // The rate-limit countdown changes every second without any event.
-            int wait = guide.Client.RetryWaitRemaining;
+            // The rate-limit countdowns change every second without any event.
+            int wait = guide.Client.RetryWaitRemaining + (quiz != null ? quiz.Client.RetryWaitRemaining * 1000 : 0);
             if (wait != shownWait) { shownWait = wait; Refresh(); }
         }
 
@@ -211,8 +255,11 @@ namespace MusiyoBetsknate.Museum
             if (guide == null || field == null) return;
             bool open = guide.Open;
             bool spatial = MuseumInput.Current.Spatial;
-            bool offered = open && guide.Offered;
+            // While the visitor talks about the visit, the questions to the guide step aside.
+            bool quizzing = open && quiz != null && (quiz.Active || quiz.Done);
+            bool offered = open && guide.Offered && !quizzing;
             var client = guide.Client;
+            RefreshQuiz(open);
             fieldRoot.SetActive(offered && !spatial);
             spatialNote.gameObject.SetActive(offered && spatial);
             send.transform.parent.gameObject.SetActive(offered);
@@ -228,6 +275,88 @@ namespace MusiyoBetsknate.Museum
             if (open && !wasOpen) BeginTyping();
             if (!open && field.isFocused) field.DeactivateInputField();
             wasOpen = open;
+        }
+
+        private void RefreshQuiz(bool open)
+        {
+            if (quiz == null || quizText == null) return;
+            var client = quiz.Client;
+            bool failed = client.State == GuideQuizState.Failed || client.State == GuideQuizState.Incompatible;
+            bool answerLost = client.AnswerState == GuideQuizAnswerState.Unavailable || client.AnswerState == GuideQuizAnswerState.Incompatible;
+            var explanation = quiz.Explanation;
+            bool sending = client.AnswerState == GuideQuizAnswerState.Sending;
+            quizStart.gameObject.SetActive(open && quiz.Available && !quiz.Active);
+            quizSkip.gameObject.SetActive(open && quiz.Active && explanation == null && !sending);
+            quizNext.gameObject.SetActive(open && quiz.Active && explanation != null);
+            quizClose.gameObject.SetActive(open && quiz.Active);
+            quizRetry.gameObject.SetActive(open && (quiz.Active ? answerLost : failed));
+            string text = "";
+            if (open && quiz.Done) text = MuseumInterfaceText.Get("quiz_done_text");
+            else if (open && quiz.Active && quiz.Current != null)
+            {
+                text = quiz.Current.text;
+                if (explanation != null)
+                    text += "\n\n" + explanation.explanation + "\n\n" + MuseumInterfaceText.Format("quiz_evidence", explanation.citation.quote)
+                        + "\n" + MuseumInterfaceText.Format("quiz_source", explanation.source.reference);
+            }
+            else if (open && failed) text = MuseumInterfaceText.Get("quiz_failure");
+            quizText.text = text;
+            quizText.gameObject.SetActive(text.Length > 0);
+            ShowOptions(open && quiz.Active ? quiz.Current : null);
+        }
+
+        /// <summary>The options of the question on show, as choices in the reading column; the chosen one is marked.</summary>
+        private void ShowOptions(QuizQuestionContractV1 question)
+        {
+            if (question != optionsFor)
+            {
+                foreach (var item in shownOptions) Destroy(item.gameObject);
+                shownOptions.Clear();
+                optionsFor = question;
+                if (question != null)
+                {
+                    if (quizOptions == null)
+                    {
+                        // Made on first use, after the screen moved its controls aside, so the options stay wide.
+                        var list = new GameObject("QuizOptions", typeof(RectTransform), typeof(VerticalLayoutGroup));
+                        list.transform.SetParent(readingColumn, false);
+                        var column = list.GetComponent<VerticalLayoutGroup>();
+                        column.spacing = 8;
+                        column.childControlWidth = column.childControlHeight = true;
+                        column.childForceExpandHeight = false;
+                        quizOptions = list.transform;
+                    }
+                    quizOptions.SetSiblingIndex(quizText.transform.GetSiblingIndex() + 1);
+                    for (int index = 0; index < question.options.Length; index++)
+                    {
+                        int chosenIndex = index;
+                        var option = Instantiate(quizOptionTemplate, quizOptions);
+                        option.name = "QuizOption";
+                        option.onClick.RemoveAllListeners();
+                        option.onClick.AddListener(() => quiz.Choose(chosenIndex));
+                        var caption = option.GetComponentInChildren<TMP_Text>();
+                        caption.richText = false;
+                        caption.textWrappingMode = TextWrappingModes.Normal;
+                        caption.enableAutoSizing = true;
+                        caption.fontSizeMin = 18;
+                        caption.fontSizeMax = caption.fontSize;
+                        if (option.TryGetComponent<LayoutElement>(out var layout)) layout.preferredHeight = 64;
+                        option.gameObject.SetActive(true);
+                        shownOptions.Add(option);
+                    }
+                }
+            }
+            if (quizOptions != null) quizOptions.gameObject.SetActive(question != null);
+            if (question == null) return;
+            bool open = quiz.Chosen == null || quiz.Client.AnswerState == GuideQuizAnswerState.Failed
+                || quiz.Client.AnswerState == GuideQuizAnswerState.RateLimited;
+            for (int index = 0; index < shownOptions.Count; index++)
+            {
+                var option = question.options[index];
+                var caption = shownOptions[index].GetComponentInChildren<TMP_Text>();
+                caption.text = (quiz.Chosen == option.id ? MuseumInterfaceText.Get("quiz_chosen_mark") : "") + option.text;
+                shownOptions[index].interactable = open && quiz.Client.RetryWaitRemaining == 0;
+            }
         }
 
         private void LateUpdate()

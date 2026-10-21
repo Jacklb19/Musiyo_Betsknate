@@ -230,6 +230,23 @@
     "companion_characters": "Puedes acercarte a una pieza, leer su ficha y continuar cuando quieras.",
     "companion_instruments": "Puedes detenerte en esta sala y elegir qué ficha consultar.",
     "companion_hearth": "Este es un buen lugar para hacer una pausa. Tú eliges cuándo continuar.",
-    "companion_overlook": "Puedes observar el entorno o volver a las salas. La visita sigue a tu ritmo."
+    "companion_overlook": "Puedes observar el entorno o volver a las salas. La visita sigue a tu ritmo.",
+    "quiz_start": "Conversar sobre la visita",
+    "quiz_skip": "Pasar esta pregunta",
+    "quiz_next": "Siguiente pregunta",
+    "quiz_close": "Terminar por ahora",
+    "quiz_retry": "Volver a cargar",
+    "quiz_progress": "Pregunta {0} de {1}",
+    "quiz_sending": "Consultando la explicación…",
+    "quiz_correct": "Tu respuesta coincide con lo documentado.",
+    "quiz_incorrect": "Vamos a mirar lo que explica la fuente.",
+    "quiz_rate_limited": "Espera {0} segundos antes de volver a consultar.",
+    "quiz_unavailable": "Esta pregunta dejó de estar disponible. Vuelve a cargar las preguntas vigentes.",
+    "quiz_failure": "No se pudo consultar la conversación sobre la visita. Puedes volver a intentarlo o continuar tu visita.",
+    "quiz_done": "Gracias por compartir este momento.",
+    "quiz_done_text": "Puedes volver a las piezas, consultar sus fuentes o continuar tu visita a tu ritmo.",
+    "quiz_evidence": "Fragmento de apoyo: «{0}»",
+    "quiz_source": "Fuente: {0}",
+    "quiz_chosen_mark": "Tu respuesta: "
   }
 }

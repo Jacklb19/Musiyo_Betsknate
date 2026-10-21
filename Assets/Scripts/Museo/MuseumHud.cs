@@ -123,7 +123,10 @@ namespace MusiyoBetsknate.Museum
             guide = interaction.GetComponent<MuseumGuide>();
             if (guide == null) guide = interaction.gameObject.AddComponent<MuseumGuide>();
             guide.Configure(visitorTransform);
-            gameObject.AddComponent<MuseumGuideView>().Configure(guide, interaction, wayfinding, panelText, elementList.parent, ModelButton);
+            var quiz = interaction.GetComponent<MuseumHearthQuiz>();
+            if (quiz == null) quiz = interaction.gameObject.AddComponent<MuseumHearthQuiz>();
+            guide.Attach(quiz);
+            gameObject.AddComponent<MuseumGuideView>().Configure(guide, interaction, wayfinding, panelText, elementList.parent, ModelButton, quiz);
             farewell = interaction.GetComponent<MuseumFarewell>();
             if (farewell == null) farewell = interaction.gameObject.AddComponent<MuseumFarewell>();
             farewell.Configure(visitorTransform);

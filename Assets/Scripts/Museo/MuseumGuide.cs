@@ -49,6 +49,7 @@ namespace MusiyoBetsknate.Museum
             get
             {
                 if (Guide == null) return "";
+                if (quiz != null && (quiz.Active || quiz.Done)) return quiz.Message;
                 if (!Offered) return MuseumInterfaceText.Get("guide_unavailable");
                 switch (Client.State)
                 {
@@ -77,6 +78,15 @@ namespace MusiyoBetsknate.Museum
         public event Action TypingRequested;
 
         public void Configure(Transform visitorTransform) => visitor = visitorTransform;
+
+        /// <summary>The conversation about the visit by the hearth shares this screen; its changes refresh it.</summary>
+        public void Attach(MuseumHearthQuiz hearthQuiz)
+        {
+            if (quiz != null) quiz.Changed -= Notify;
+            quiz = hearthQuiz;
+            if (quiz != null) quiz.Changed += Notify;
+        }
+        private MuseumHearthQuiz quiz;
 
         private void OnEnable() => Connect();
         private void OnDisable()
