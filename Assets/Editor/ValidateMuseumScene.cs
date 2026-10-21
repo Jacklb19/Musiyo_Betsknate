@@ -19,7 +19,8 @@ namespace MusiyoBetsknate.Editor
             "punto.personajes.pedestal_5", "punto.instrumentos.pedestal_1",
             "punto.instrumentos.pedestal_2", "punto.instrumentos.pedestal_3",
             "punto.instrumentos.pedestal_4", "punto.instrumentos.pedestal_5",
-            "punto.instrumentos.danza_ocho", "guia.principal", "punto.mirador.creditos"
+            "punto.instrumentos.danza_ocho", "guia.principal", "punto.mirador.creditos",
+            MuseumGovernorPoint.Key
         };
 
         [MenuItem("Musiyo/Validate Museum Scene")]
@@ -28,7 +29,7 @@ namespace MusiyoBetsknate.Editor
             var errors = Validate(SceneManager.GetActiveScene());
             if (errors.Count > 0)
                 throw new InvalidOperationException(string.Join("\n", errors));
-            Debug.Log("Museum scene is valid: 16 unique technical anchors, expected positions, and colliders.");
+            Debug.Log("Museum scene is valid: " + ExpectedKeys.Count + " unique technical anchors, expected positions, and colliders.");
         }
 
         [MenuItem("Musiyo/Validate Saved Blockout")]
@@ -112,7 +113,7 @@ namespace MusiyoBetsknate.Editor
             foreach (var key in ExpectedKeys)
                 if (!keys.Contains(key)) errors.Add("Missing anchor: " + key);
             if (keys.Count != ExpectedKeys.Count)
-                errors.Add("Expected 16 technical anchors, found " + keys.Count + ".");
+                errors.Add("Expected " + ExpectedKeys.Count + " technical anchors, found " + keys.Count + ".");
 
             var colliders = root.GetComponentsInChildren<Collider>(true);
             if (colliders.Length < 30)

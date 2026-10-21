@@ -56,6 +56,9 @@ namespace MusiyoBetsknate.Museum
                     foreach (var point in points)
                     {
                         if (point == null || !point.isActiveAndEnabled) continue;
+                        // A stand that is not in the museum yet carries no notice either.
+                        if (point.Anchor.Station != null && point.Anchor.Station.TryGetComponent<PointLectern>(out var stand)
+                            && !stand.Standing) continue;
                         float distance = point.Anchor.DistanceTo(position);
                         if (distance <= point.Anchor.ActivationRadius && distance < nearest) { nearest = distance; next = point; }
                     }

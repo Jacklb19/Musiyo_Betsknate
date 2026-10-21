@@ -20,6 +20,7 @@ namespace MusiyoBetsknate.Tests
         private readonly ConcurrentDictionary<string, byte[]> models = new ConcurrentDictionary<string, byte[]>();
         private readonly ConcurrentDictionary<string, string> titles = new ConcurrentDictionary<string, string>();
         private readonly ConcurrentDictionary<string, int> downloads = new ConcurrentDictionary<string, int>();
+        private readonly ConcurrentDictionary<string, string> records = new ConcurrentDictionary<string, string>();
         public string Base { get; }
         /// <summary>Slugs whose model download answers 404.</summary>
         public ConcurrentDictionary<string, bool> Failing { get; } = new ConcurrentDictionary<string, bool>();
@@ -43,6 +44,14 @@ namespace MusiyoBetsknate.Tests
             models[slug] = glb;
             titles[slug] = title;
         }
+
+        /// <summary>Serves a record as given, for instance one with text only and no resources.</summary>
+        public void AddRecord(string slug, string json) => records[slug] = json;
+
+        /// <summary>The canonical synthetic record under another slug and title, with its text, source and credit and no resources.</summary>
+        public static string TextRecord(string slug, string title)
+            => Example("element.json").Replace("\"slug\": \"synthetic-item\"", "\"slug\": \"" + slug + "\"")
+                .Replace("\"title\": \"Elemento sintético\"", "\"title\": \"" + title + "\"");
 
         public int Downloads(string slug) => downloads.TryGetValue(slug, out var count) ? count : 0;
 
@@ -78,6 +87,8 @@ namespace MusiyoBetsknate.Tests
                 var path = context.Request.Url.AbsolutePath;
                 byte[] body = null;
                 string type = "application/json";
+                foreach (var record in records)
+                    if (path == "/api/v1/elements/" + record.Key) body = Encoding.UTF8.GetBytes(record.Value);
                 foreach (var slug in models.Keys)
                 {
                     if (path == "/api/v1/elements/" + slug) body = Encoding.UTF8.GetBytes(Element(slug));

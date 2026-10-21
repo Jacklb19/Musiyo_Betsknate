@@ -25,7 +25,7 @@ namespace MusiyoBetsknate.Tests
                     if (root.TryGetComponent(out TourRuntime found)) runtime = found;
                 Assert.That(runtime, Is.Not.Null);
                 Assert.That(runtime.GetComponentsInChildren<RoomAnchor>(true).Length, Is.EqualTo(6));
-                Assert.That(runtime.GetComponentsInChildren<TourPoint>(true).Length, Is.EqualTo(16));
+                Assert.That(runtime.GetComponentsInChildren<TourPoint>(true).Length, Is.EqualTo(17));
                 Assert.That(runtime.GetComponent<MuseumInteraction>(), Is.Not.Null);
                 Assert.That(runtime.GetComponent<DesktopPointInput>(), Is.Not.Null);
                 var visitor = runtime.GetComponentInChildren<DesktopVisitorController>(true);
@@ -58,7 +58,8 @@ namespace MusiyoBetsknate.Tests
                     "panel", "elementList", "elementTemplate", "retryButton", "closeButton", "pauseButton", "detailButton", "sensitivitySlider", "visitor" })
                     Assert.That(serialized.FindProperty(field).objectReferenceValue, Is.Not.Null, field);
                 var stands = runtime.GetComponentsInChildren<PointLectern>(true);
-                Assert.That(stands.Length, Is.EqualTo(5), "The characters room has one reading stand per pedestal.");
+                Assert.That(stands.Length, Is.EqualTo(6),
+                    "The characters room has one reading stand per pedestal and the governor's stand with information only.");
                 var served = new System.Collections.Generic.HashSet<string>();
                 foreach (var stand in stands)
                 {
@@ -68,6 +69,22 @@ namespace MusiyoBetsknate.Tests
                     Assert.That(stand.BoardSize.x, Is.InRange(.4f, .8f), stand.name);
                     Assert.That(stand.BoardSize.y, Is.InRange(.5f, 1), stand.name);
                     Assert.That(stand.Board.position.y, Is.InRange(.6f, 1), "The reading surface starts at lectern height.");
+                    Assert.That(stand.InformationOnly, Is.EqualTo(stand.Point.Key == "punto.personajes.gobernador"), stand.name);
+                    if (stand.InformationOnly)
+                    {
+                        // Nothing stands beside it: the point is the stand, and the visitor looks at its board.
+                        Assert.That(stand.Point.GetComponentInChildren<PointExhibitMount>(true), Is.Null);
+                        Assert.That(Vector3.Distance(stand.Point.LookTarget.position, stand.BoardCentre), Is.LessThan(.05f));
+                        var others = System.Array.FindAll(stands, other => other != stand);
+                        foreach (var other in others)
+                        {
+                            var apart = other.Point.transform.position - stand.Point.transform.position;
+                            apart.y = 0;
+                            Assert.That(apart.magnitude, Is.GreaterThan(stand.Point.ActivationRadius + other.Point.ActivationRadius),
+                                "The governor's stand opens apart from " + other.Point.Key);
+                        }
+                        continue;
+                    }
                     var toPoint = stand.Point.transform.position - stand.transform.position;
                     toPoint.y = 0;
                     Assert.That(toPoint.magnitude, Is.InRange(.8f, 1.6f), stand.name);

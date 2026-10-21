@@ -86,7 +86,7 @@ namespace MusiyoBetsknate.Editor
         }
 
         /// <summary>Reads the surface from the board material, in world space and with outward-facing triangles.</summary>
-        private static bool FindBoard(MeshFilter filter, out Vector3 bottom, out Vector3 normal, out Vector3 up, out Vector2 size)
+        internal static bool FindBoard(MeshFilter filter, out Vector3 bottom, out Vector3 normal, out Vector3 up, out Vector2 size)
         {
             var mesh = filter.sharedMesh;
             var materials = filter.GetComponent<MeshRenderer>().sharedMaterials;

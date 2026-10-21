@@ -9,22 +9,49 @@ namespace MusiyoBetsknate.Museum
         [SerializeField] private PointAnchor point;
         [SerializeField] private Transform board;
         [SerializeField] private Vector2 boardSize;
+        /// <summary>The stand is the whole point, with no exhibit beside it; it stands only while the tour declares the point.</summary>
+        [SerializeField] private bool informationOnly;
+        private TourPoint watched;
 
         public PointAnchor Point => point;
+        public bool InformationOnly => informationOnly;
+        /// <summary>False while an information-only stand waits for the tour to declare its point; nothing of it is shown then.</summary>
+        public bool Standing { get; private set; } = true;
         /// <summary>Bottom centre of the reading surface. Its forward axis points into the board, away from the reader.</summary>
         public Transform Board => board;
         public Vector2 BoardSize => boardSize;
 
-        public void Configure(PointAnchor anchor, Transform surface, Vector2 size)
+        public void Configure(PointAnchor anchor, Transform surface, Vector2 size, bool onlyInformation = false)
         {
             point = anchor;
             board = surface;
             boardSize = size;
+            informationOnly = onlyInformation;
             if (point != null) point.Attach(transform);
         }
 
-        private void OnEnable() { if (point != null) point.Attach(transform); }
-        private void OnDisable() { if (point != null && point.Station == transform) point.Attach(null); }
+        private void OnEnable()
+        {
+            if (point != null) point.Attach(transform);
+            watched = informationOnly && point != null ? point.GetComponent<TourPoint>() : null;
+            if (watched != null) watched.Changed += Follow;
+            Follow(watched);
+        }
+
+        private void OnDisable()
+        {
+            if (point != null && point.Station == transform) point.Attach(null);
+            if (watched != null) watched.Changed -= Follow;
+            watched = null;
+        }
+
+        /// <summary>An information-only stand appears with its point and goes with it, collision included.</summary>
+        private void Follow(TourPoint tourPoint)
+        {
+            Standing = !informationOnly || tourPoint != null && tourPoint.State != PointState.Undeclared;
+            foreach (var shown in GetComponents<Renderer>()) shown.enabled = Standing;
+            foreach (var solid in GetComponents<Collider>()) solid.enabled = Standing;
+        }
 
         /// <summary>Middle of the reading surface.</summary>
         public Vector3 BoardCentre => board.position + board.up * (boardSize.y * .5f);
