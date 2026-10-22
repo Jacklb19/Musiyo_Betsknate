@@ -10,7 +10,8 @@ namespace MusiyoBetsknate.Museum
     /// <summary>
     /// Optional, slow walk through the published points in the order of the tour, for visitors who prefer to watch rather
     /// than steer. It walks the museum's navigation mesh with the visitor's own character controller, so walls, the
-    /// lagoon's rim and pedestals block it as they block walking. It never turns the visitor or the head: the gaze stays
+    /// lagoon's rim and pedestals block it as they block walking. It keeps to the paths and floors: from the maize, the
+    /// lagoon's shore or anywhere off a path it first goes back to the nearest path, and never cuts across the maize. It never turns the visitor or the head: the gaze stays
     /// free. At each point it waits while the narration plays. Any walking input stops it and hands control back at once;
     /// menus, pauses, screen panels and a held piece only hold it where it is.
     /// </summary>
@@ -216,7 +217,10 @@ namespace MusiyoBetsknate.Museum
             return false;
         }
 
-        /// <summary>Shortest walkable route to a spot inside the point's radius: in front of its reading stand, or around it.</summary>
+        /// <summary>
+        /// Shortest walkable route along the paths to a spot inside the point's radius: in front of its reading stand, or
+        /// around it. Off-path ground counts several times its length (see <see cref="MuseumWayfinding.TryPathAlongPaths"/>).
+        /// </summary>
         private bool TryRoute(TourPoint stop, out Vector3[] route)
         {
             route = Array.Empty<Vector3>();
@@ -233,7 +237,7 @@ namespace MusiyoBetsknate.Museum
             var start = Feet();
             foreach (var spot in spots)
             {
-                if (!wayfinding.TryPathBetween(start, spot, out var candidate)) continue;
+                if (!wayfinding.TryPathAlongPaths(start, spot, out var candidate)) continue;
                 // The end must lie inside the point's radius, where the visitor's arrival opens it.
                 if (anchor.DistanceTo(candidate[candidate.Length - 1]) > anchor.ActivationRadius * .85f) continue;
                 float length = 0;

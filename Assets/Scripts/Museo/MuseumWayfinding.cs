@@ -141,6 +141,40 @@ namespace MusiyoBetsknate.Museum
             }
             Changed?.Invoke();
         }
+        /// <summary>Navigation area of open ground, maize and garden beds: walkable, but avoided where a path leads.</summary>
+        public const int OpenGroundArea = 3;
+        /// <summary>Navigation area of paths, thresholds and room floors.</summary>
+        public const int PathArea = 4;
+        /// <summary>
+        /// How much a metre of open ground counts against a metre of path for the automatic tour, so it goes back to the
+        /// nearest path and follows the paths instead of crossing the maize (owner, 22/10/2026).
+        /// </summary>
+        public const float OpenGroundCost = 8;
+
+        /// <summary>
+        /// Area of a walkable surface of the delivered museum, from its name or its parents' (museum_delivery.json):
+        /// the valley's provisional ground and the dressed valley ground are open ground; paths, thresholds, passages
+        /// and room floors are paths; anything else keeps the default area.
+        /// </summary>
+        public static int WalkArea(Transform surface)
+        {
+            for (int depth = 0; surface != null && depth < 4; depth++, surface = surface.parent)
+            {
+                int area = WalkArea(surface.name);
+                if (area != 0) return area;
+            }
+            return 0;
+        }
+
+        public static int WalkArea(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return 0;
+            if (name.StartsWith("Terreno_") || name.StartsWith("ValleyGround") || name.StartsWith("Jajan_")) return OpenGroundArea;
+            if (name.StartsWith("Sendero_") || name.StartsWith("Umbral_") || name.StartsWith("Pasaje_") || name.Contains("_Piso")
+                || name.StartsWith("Patio_Sendero")) return PathArea;
+            return 0;
+        }
+
         private bool EnsureNavigation()
         {
             if (navigation != null) return true;
@@ -162,6 +196,16 @@ namespace MusiyoBetsknate.Museum
                     excluded.Add(new NavMeshBuildMarkup { root = collider.transform, ignoreFromBuild = true });
             NavMeshBuilder.CollectSources(transform, ~0, NavMeshCollectGeometry.PhysicsColliders, 0, excluded, sources);
             if (sources.Count == 0) return false;
+            // Paths and floors lie a few centimetres over the valley ground; where they overlap the higher area wins,
+            // so a path keeps its own area across the open ground it crosses.
+            for (int index = 0; index < sources.Count; index++)
+            {
+                var source = sources[index];
+                int area = WalkArea(source.component != null ? source.component.transform : null);
+                if (area == 0) continue;
+                source.area = area;
+                sources[index] = source;
+            }
             // Guidance runs between rooms, so the mesh covers them and not the whole terrain around the museum.
             var bounds = new Bounds(transform.position, Vector3.one);
             foreach (var anchor in anchors.Values)
@@ -202,6 +246,35 @@ namespace MusiyoBetsknate.Museum
             }
             return false;
         }
+        /// <summary>
+        /// Path between two floor positions that keeps to the paths: open ground and garden beds cost
+        /// <see cref="OpenGroundCost"/> times a path's length, so the way first goes back to the nearest path and then
+        /// follows the paths. False when either end is off the mesh or they do not connect.
+        /// </summary>
+        public bool TryPathAlongPaths(Vector3 start, Vector3 destination, out Vector3[] corners)
+        {
+            corners = Array.Empty<Vector3>();
+            if (!EnsureNavigation()) return false;
+            var filter = new NavMeshQueryFilter { agentTypeID = agentType, areaMask = NavMesh.AllAreas };
+            filter.SetAreaCost(OpenGroundArea, OpenGroundCost);
+            filter.SetAreaCost(PathArea, 1);
+            if (!NavMesh.SamplePosition(start, out var from, 2, filter) || !NavMesh.SamplePosition(destination, out var to, .6f, filter)
+                || !NavMesh.CalculatePath(from.position, to.position, filter, path)
+                || path.status != NavMeshPathStatus.PathComplete || path.corners.Length < 1) return false;
+            corners = path.corners;
+            return true;
+        }
+
+        /// <summary>Navigation area under a floor position, or -1 off the mesh.</summary>
+        public int AreaAt(Vector3 position)
+        {
+            if (!EnsureNavigation()) return -1;
+            var filter = new NavMeshQueryFilter { agentTypeID = agentType, areaMask = NavMesh.AllAreas };
+            if (!NavMesh.SamplePosition(position, out var hit, .5f, filter)) return -1;
+            for (int area = 0; area < 32; area++) if ((hit.mask & (1 << area)) != 0) return area;
+            return -1;
+        }
+
         /// <summary>
         /// Walkable path between two floor positions on the museum's navigation mesh, built from its colliders, so it
         /// goes round walls, the lagoon's rim and pedestals. False when either end is off the mesh or they do not connect.
