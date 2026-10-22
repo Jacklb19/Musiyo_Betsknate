@@ -83,10 +83,11 @@ namespace MusiyoBetsknate.Museum
         private const int Sides = 20;
         private static readonly Dictionary<string, Mesh> Meshes = new();
         private readonly List<Material> materials = new();
-        private Transform head, leftArm, rightArm, body;
+        private Transform head, leftArm, rightArm, body, leftLeg, rightLeg;
         private Quaternion headRest, leftRest, rightRest;
         private float breath;
         private float wave;
+        private float step;
 
         public float Height { get; private set; }
         public Renderer[] Renderers { get; private set; } = new Renderer[0];
@@ -94,6 +95,8 @@ namespace MusiyoBetsknate.Museum
         public bool FromModel { get; private set; }
         public Transform Head => head;
         public GuideGesture Gesture { get; set; }
+        /// <summary>How fast the figure walks, from 0 (standing) to 1 (an ordinary pace): the legs and arms swing with it.</summary>
+        public float Stride { get; set; }
         /// <summary>Where the head turns to, within a comfortable angle; null keeps it ahead.</summary>
         public Vector3? LookAt { get; set; }
 
@@ -161,6 +164,8 @@ namespace MusiyoBetsknate.Museum
             var skin = Tone("GuideHead", definition.HeadColor);
             var parts = new List<Renderer>();
             body = Part("Body", transform, BodyMesh(), new[] { garment, trim }, Vector3.zero, unit, parts);
+            leftLeg = Part("LeftLeg", transform, LegMesh(), new[] { trim }, new Vector3(-.085f, .84f, 0) * unit, unit, parts);
+            rightLeg = Part("RightLeg", transform, LegMesh(), new[] { trim }, new Vector3(.085f, .84f, 0) * unit, unit, parts);
             head = Part("Head", transform, HeadMesh(), new[] { skin }, new Vector3(0, 1.39f, .01f) * unit, unit, parts);
             leftArm = Part("LeftArm", transform, ArmMesh(), new[] { garment, skin }, new Vector3(-.215f, 1.31f, 0) * unit, unit, parts);
             rightArm = Part("RightArm", transform, ArmMesh(), new[] { garment, skin }, new Vector3(.215f, 1.31f, 0) * unit, unit, parts);
@@ -193,6 +198,11 @@ namespace MusiyoBetsknate.Museum
             float delta = Time.deltaTime;
             breath += delta;
             if (body != null) body.localScale = new Vector3(1, 1 + Mathf.Sin(breath * 1.6f) * .006f, 1) * (Height / 1.62f);
+            float stride = Mathf.Clamp01(Stride);
+            step += delta * (4 + 3 * stride) * (stride > .02f ? 1 : 0);
+            float swing = Mathf.Sin(step) * 20 * stride;
+            if (leftLeg != null) leftLeg.localRotation = Quaternion.Euler(swing, 0, 0);
+            if (rightLeg != null) rightLeg.localRotation = Quaternion.Euler(-swing, 0, 0);
             if (head == null) return;
             var wanted = headRest;
             if (LookAt.HasValue)
@@ -213,8 +223,10 @@ namespace MusiyoBetsknate.Museum
             wave = Mathf.MoveTowards(wave, Gesture == GuideGesture.Wave ? 1 : 0, delta * 2.5f);
             // An open hand raised beside the head, swaying gently: the common gesture of inviting someone over.
             var raised = Quaternion.Euler(0, 0, 150 + Mathf.Sin(breath * 5) * 14);
-            rightArm.localRotation = Quaternion.Slerp(rightRest, raised, Smooth(wave));
-            var speaking = Gesture == GuideGesture.Speak ? Quaternion.Euler(-18 + Mathf.Sin(breath * 2.2f) * 6, 0, -10) : leftRest;
+            // Walking, the arms swing against the legs.
+            rightArm.localRotation = Quaternion.Slerp(rightRest * Quaternion.Euler(swing * .6f, 0, 0), raised, Smooth(wave));
+            var speaking = Gesture == GuideGesture.Speak ? Quaternion.Euler(-18 + Mathf.Sin(breath * 2.2f) * 6, 0, -10)
+                : leftRest * Quaternion.Euler(-swing * .6f, 0, 0);
             leftArm.localRotation = Quaternion.Slerp(leftArm.localRotation, speaking, 1 - Mathf.Exp(-delta * 3));
         }
 
@@ -228,15 +240,24 @@ namespace MusiyoBetsknate.Museum
         }
 
         /// <summary>
-        /// A long garment from hem to shoulders on an oval section (submesh 0), with a darker hem band (submesh 1), and the
-        /// neck. Radii are metres for a figure of 1.62 m; the parts are scaled for other heights.
+        /// A plain tunic from the hips to the shoulders on an oval section (submesh 0), with a band at its hem (submesh 1),
+        /// and the neck: an everyday garment of no particular place, so the figure reads as nobody in particular (a long
+        /// dark robe read as a friar's habit, 22/10/2026). Radii are metres for a figure of 1.62 m; the parts are scaled
+        /// for other heights.
         /// </summary>
         public static Mesh BodyMesh() => Cached("GuideBody", () =>
         {
-            var hem = new[] { (0f, .235f), (.02f, .25f), (.16f, .24f) };
-            var garment = new[] { (.16f, .24f), (.5f, .205f), (.9f, .165f), (1.05f, .175f), (1.2f, .2f), (1.29f, .205f),
+            var garment = new[] { (.8f, .2f), (.95f, .18f), (1.05f, .178f), (1.2f, .2f), (1.29f, .205f),
                 (1.34f, .17f), (1.37f, .1f), (1.39f, .055f), (1.48f, .05f), (1.5f, 0f) };
-            return Lathe(new[] { garment, hem }, .74f, Vector3.zero, true);
+            var hem = new[] { (.74f, .2f), (.75f, .212f), (.82f, .205f) };
+            return Lathe(new[] { garment, hem }, .74f, Vector3.zero, 1);
+        });
+
+        /// <summary>One leg hanging from the hip, where it pivots, down to the sole.</summary>
+        public static Mesh LegMesh() => Cached("GuideLeg", () =>
+        {
+            var leg = new[] { (0f, 0f), (.03f, .08f), (.4f, .062f), (.78f, .068f), (.83f, .07f), (.84f, 0f) };
+            return Lathe(new[] { leg }, .9f, Vector3.zero, -1, true);
         });
 
         /// <summary>An oval head without a face, a little deeper than wide, standing on the neck.</summary>
@@ -248,7 +269,7 @@ namespace MusiyoBetsknate.Museum
                 float angle = Mathf.PI * step / 12;
                 profile.Add((.115f - Mathf.Cos(angle) * .115f, Mathf.Sin(angle) * .095f));
             }
-            return Lathe(new[] { profile.ToArray() }, 1.12f, Vector3.zero, false);
+            return Lathe(new[] { profile.ToArray() }, 1.12f, Vector3.zero);
         });
 
         /// <summary>A sleeve hanging from the shoulder (submesh 0) and the hand at its end (submesh 1), pivoting at the shoulder.</summary>
@@ -262,7 +283,7 @@ namespace MusiyoBetsknate.Museum
                 hand.Add((.53f + Mathf.Sin(angle) * .085f, Mathf.Cos(angle) * .042f));
             }
             // The profile runs downward from the shoulder.
-            return Lathe(new[] { sleeve, hand.ToArray() }, .9f, Vector3.zero, false, true);
+            return Lathe(new[] { sleeve, hand.ToArray() }, .9f, Vector3.zero, -1, true);
         });
 
         private static Mesh Cached(string name, Func<Mesh> make)
@@ -275,15 +296,17 @@ namespace MusiyoBetsknate.Museum
 
         /// <summary>
         /// Revolves height–radius profiles around the vertical, one submesh per profile, with an oval section whose depth is
-        /// <paramref name="depth"/> times its width. A downward profile hangs below its origin.
+        /// <paramref name="depth"/> times its width. The profile numbered <paramref name="capped"/> is closed at its lowest
+        /// ring. A downward profile hangs below its origin.
         /// </summary>
-        public static Mesh Lathe((float height, float radius)[][] profiles, float depth, Vector3 offset, bool closeBottom, bool downward = false)
+        public static Mesh Lathe((float height, float radius)[][] profiles, float depth, Vector3 offset, int capped = -1, bool downward = false)
         {
             var vertices = new List<Vector3>();
             var normals = new List<Vector3>();
             var submeshes = new List<List<int>>();
-            foreach (var profile in profiles)
+            for (int number = 0; number < profiles.Length; number++)
             {
+                var profile = profiles[number];
                 var triangles = new List<int>();
                 int start = vertices.Count;
                 for (int ring = 0; ring < profile.Length; ring++)
@@ -312,10 +335,10 @@ namespace MusiyoBetsknate.Museum
                         if (downward) { triangles.Add(a); triangles.Add(c); triangles.Add(b); triangles.Add(b); triangles.Add(c); triangles.Add(d); }
                         else { triangles.Add(a); triangles.Add(b); triangles.Add(c); triangles.Add(b); triangles.Add(d); triangles.Add(c); }
                     }
-                if (closeBottom && profile[0].radius > 0 && profile[0].height <= .001f)
+                if (number == capped && profile[0].radius > 0)
                 {
                     int centre = vertices.Count;
-                    vertices.Add(offset + Vector3.up * profile[0].height);
+                    vertices.Add(offset + Vector3.up * (downward ? -profile[0].height : profile[0].height));
                     normals.Add(Vector3.down);
                     for (int side = 0; side < Sides; side++) { triangles.Add(centre); triangles.Add(start + side + 1); triangles.Add(start + side); }
                 }

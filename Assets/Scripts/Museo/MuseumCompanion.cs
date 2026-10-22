@@ -260,6 +260,7 @@ namespace MusiyoBetsknate.Museum
             transform.position = position;
             // A slight step, not a bounce.
             figure.localPosition = Vector3.up * (Mathf.Abs(Mathf.Sin(walkPhase)) * .015f * Mathf.Clamp01(speed));
+            Figure.Stride = travel / Mathf.Max(Time.deltaTime, 1e-4f) / settings.WalkSpeed;
         }
 
         /// <summary>

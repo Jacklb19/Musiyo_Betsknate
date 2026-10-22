@@ -109,18 +109,25 @@ namespace MusiyoBetsknate.Tests
             yield return Shot("companion_side", at + side * 2.4f + Vector3.up * 1.4f, at + Vector3.up * .95f, 50);
             yield return Shot("companion_visitor_view", visitor.transform.position + Vector3.up * 1.65f, at + Vector3.up * 1.1f);
 
-            var anchor = runtime.GuidePoint.Anchor;
+            // The scene's own anchor: the tour may still be retrying its unreachable service.
+            var anchor = UnityEngine.Object.FindObjectsByType<PointAnchor>(FindObjectsSortMode.None).First(item => item.Key == "guia.principal");
             var hearth = anchor.transform.position;
             var stones = UnityEngine.Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None).FirstOrDefault(item => item.name == "Fogon_Piedras_Shinyac");
             var fire = stones != null ? stones.bounds.center : hearth;
             Place(hearth + (hearth - fire).normalized * 6);
             for (float waited = 0; waited < 1.5f; waited += Time.unscaledDeltaTime) yield return null;
-            for (int view = 0; view < 4; view++)
+            // From inside the room, at eye height, around the fire; then from above with the roof put aside for the picture.
+            for (int view = 0; view < 6; view++)
             {
-                var direction = Quaternion.Euler(0, 45 + view * 90, 0) * Vector3.forward;
-                yield return Shot("hearth_" + view, new Vector3(fire.x, fire.y + 2.4f, fire.z) + direction * 3.6f, fire + Vector3.up * .3f, 75);
+                var direction = Quaternion.Euler(0, view * 60, 0) * Vector3.forward;
+                yield return Shot("hearth_" + view, new Vector3(fire.x, hearth.y + 1.6f, fire.z) + direction * 2.2f,
+                    new Vector3(fire.x, hearth.y + .5f, fire.z) - direction * 1.5f, 80);
             }
-            yield return Shot("hearth_top", new Vector3(fire.x, fire.y + 7.5f, fire.z) - Vector3.forward * .01f, fire, 70);
+            var roofs = UnityEngine.Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None)
+                .Where(item => item.enabled && (item.name.Contains("Techo") || item.name.Contains("Fleco"))).ToList();
+            foreach (var roof in roofs) roof.enabled = false;
+            yield return Shot("hearth_top", new Vector3(fire.x, hearth.y + 6.5f, fire.z) - Vector3.forward * .01f, new Vector3(fire.x, hearth.y, fire.z), 75);
+            foreach (var roof in roofs) roof.enabled = true;
             yield return Shot("hearth_arrival", visitor.transform.position + Vector3.up * 1.65f, fire + Vector3.up * .9f, 70);
             var scene = SceneManager.GetSceneByPath(MuseumScene);
             if (scene.IsValid() && scene.isLoaded) yield return SceneManager.UnloadSceneAsync(scene);

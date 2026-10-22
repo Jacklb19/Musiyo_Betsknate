@@ -4,16 +4,16 @@
     "companion": {
       "model": "",
       "height_m": 1.6,
-      "garment_color": "#5E4B3C",
-      "trim_color": "#3B2E26",
-      "head_color": "#C9B29A"
+      "garment_color": "#B48E5A",
+      "trim_color": "#4B505A",
+      "head_color": "#D9C6AA"
     },
     "interviewer": {
       "model": "",
       "height_m": 1.64,
-      "garment_color": "#3F5A55",
-      "trim_color": "#2A3C39",
-      "head_color": "#C4AA90"
+      "garment_color": "#7C9682",
+      "trim_color": "#454C48",
+      "head_color": "#D2BC9E"
     }
   }
 }

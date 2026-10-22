@@ -39,7 +39,7 @@ namespace MusiyoBetsknate.Tests
             foreach (var (name, mesh, axis) in new[]
             {
                 ("body", GuideFigure.BodyMesh(), Vector3.zero), ("head", GuideFigure.HeadMesh(), Vector3.zero),
-                ("arm", GuideFigure.ArmMesh(), Vector3.zero)
+                ("arm", GuideFigure.ArmMesh(), Vector3.zero), ("leg", GuideFigure.LegMesh(), Vector3.zero)
             })
             {
                 var copy = Object.Instantiate(mesh);
