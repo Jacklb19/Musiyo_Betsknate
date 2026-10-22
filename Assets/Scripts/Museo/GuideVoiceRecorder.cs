@@ -51,7 +51,11 @@ namespace MusiyoBetsknate.Museum
         private bool permissionAsked, permissionAnswered;
 #endif
 
-        public bool Available => Microphone.devices.Length > 0;
+        /// <summary>
+        /// A headset always has a microphone, and Android may list none until the permission is granted, which is only
+        /// asked when the visitor first talks; elsewhere a listed device is needed.
+        /// </summary>
+        public bool Available => Application.platform == RuntimePlatform.Android || Microphone.devices.Length > 0;
         public bool Recording => clip != null && Microphone.IsRecording(null);
         public float Elapsed => clip != null ? Mathf.Min(Time.realtimeSinceStartup - startedAt, clip.length) : 0;
         public bool AwaitingPermission
@@ -84,7 +88,7 @@ namespace MusiyoBetsknate.Museum
                 return GuideRecorderStart.PermissionPending;
             }
 #endif
-            if (!Available) return GuideRecorderStart.Unavailable;
+            if (Microphone.devices.Length == 0) return GuideRecorderStart.Unavailable;
             Microphone.GetDeviceCaps(null, out int lowest, out int highest);
             // Any rate is fine when the device says nothing; otherwise the closest to 16 kHz it can do.
             rate = lowest == 0 && highest == 0 ? WavAudio.RecordingRate : Mathf.Clamp(WavAudio.RecordingRate, lowest, highest);
