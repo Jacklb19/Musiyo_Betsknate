@@ -215,6 +215,8 @@ namespace MusiyoBetsknate.Museum
             if (blocked) { StopWalking(); teleport.Cancel(); return; }
             Teleport();
             var stick = input.Turn.ReadValue<Vector2>();
+            // Pushing the stick up or down scrolls an open screen; its slight sideways drift must not turn the visitor.
+            if (MuseumPanelScroll.Engaged && Mathf.Abs(stick.y) > Mathf.Abs(stick.x)) stick.x = 0;
             float degrees;
             // While a piece is in the hand the right stick turns the piece, not the visitor.
             if (interaction.GetComponent<MuseumModelGrab>()?.Held == true) { snapTurn.Disarm(); degrees = 0; }

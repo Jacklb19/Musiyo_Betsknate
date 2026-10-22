@@ -1,13 +1,15 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace MusiyoBetsknate.Museum
 {
     /// <summary>
-    /// Two small arrows that stand in the museum beside the piece on a pedestal and step through the pieces of its point,
-    /// instead of a list or Previous and Next buttons on its screen. They turn toward the visitor, are chosen with the same
-    /// pointer as the screen (the controller ray on a headset, the centre of the view or the mouse on a desktop) and grow
-    /// slightly while aimed at.
+    /// Two small arrows that stand in the museum beside the piece on a pedestal and step through the records of its point,
+    /// apart from the screen on the reading stand. Under each arrow stands the title of the record it leads to, and under
+    /// the piece which record of how many is on show («2 de 4»), so the visitor knows what a press changes (owner,
+    /// 22/10/2026). They turn toward the visitor, are chosen with the same pointer as the screen (the controller ray on a
+    /// headset, the centre of the view or the mouse on a desktop) and grow slightly while aimed at.
     /// </summary>
     public sealed class MuseumPieceCues : MonoBehaviour
     {
@@ -27,10 +29,21 @@ namespace MusiyoBetsknate.Museum
         private GraphicRaycaster raycaster;
         private Image previousDisc, nextDisc;
         private float heading;
+        /// <summary>Type size of the labels under the arrows and the piece, in interface units (millimetres).</summary>
+        public const float LabelSize = 34;
+        /// <summary>Width a label under an arrow may take before it wraps, in interface units.</summary>
+        public const float LabelWidth = 320;
+        private TMP_Text previousLabel, nextLabel, positionLabel;
+        private string shownPoint;
+        private int shownIndex = -2;
 
         public RectTransform Surface => surface;
         public Button Previous { get; private set; }
         public Button Next { get; private set; }
+        /// <summary>Title of the record the previous arrow leads to, the next arrow's, and the position on show.</summary>
+        public TMP_Text PreviousLabel => previousLabel;
+        public TMP_Text NextLabel => nextLabel;
+        public TMP_Text PositionLabel => positionLabel;
         /// <summary>Whether the arrows are wanted now; they still wait for a place to stand.</summary>
         public bool Shown { get; set; }
 
@@ -52,6 +65,10 @@ namespace MusiyoBetsknate.Museum
             raycaster = root.GetComponent<GraphicRaycaster>();
             Previous = Arrow("CarouselPrevious", -1, () => step(-1), out previousDisc);
             Next = Arrow("CarouselNext", 1, () => step(1), out nextDisc);
+            previousLabel = Label("PreviousTitle", (RectTransform)Previous.transform, new Vector2(0, 1), TextAlignmentOptions.TopLeft);
+            nextLabel = Label("NextTitle", (RectTransform)Next.transform, new Vector2(1, 1), TextAlignmentOptions.TopRight);
+            positionLabel = Label("PiecePosition", surface, new Vector2(.5f, 1), TextAlignmentOptions.Top);
+            ((RectTransform)positionLabel.transform).anchorMin = ((RectTransform)positionLabel.transform).anchorMax = new Vector2(.5f, 0);
             display?.AddCue(surface);
             root.SetActive(false);
         }
@@ -86,6 +103,52 @@ namespace MusiyoBetsknate.Museum
                 image.raycastTarget = false;
             }
             return button;
+        }
+
+        /// <summary>A short line of type below an arrow or the piece, on a dark pill so it reads over any part of the museum.</summary>
+        private TMP_Text Label(string name, RectTransform under, Vector2 pivot, TextAlignmentOptions alignment)
+        {
+            var item = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI));
+            item.transform.SetParent(under, false);
+            var rect = (RectTransform)item.transform;
+            rect.anchorMin = rect.anchorMax = new Vector2(pivot.x, 0);
+            rect.pivot = pivot;
+            rect.anchoredPosition = new Vector2(0, -12);
+            rect.sizeDelta = new Vector2(LabelWidth, LabelSize * 2.6f);
+            var text = item.GetComponent<TextMeshProUGUI>();
+            var font = Resources.Load<TMP_FontAsset>(MuseumTypography.BodyFont);
+            if (font != null) text.font = font;
+            text.fontSize = LabelSize;
+            text.alignment = alignment;
+            text.color = MuseumHudSkin.Text;
+            text.raycastTarget = false;
+            text.richText = false;
+            text.textWrappingMode = TextWrappingModes.Normal;
+            text.overflowMode = TextOverflowModes.Ellipsis;
+            text.outlineWidth = .18f;
+            text.outlineColor = new Color32(33, 23, 36, 230);
+            return text;
+        }
+
+        /// <summary>Titles of the neighbouring records and the position on show, rewritten only when they change.</summary>
+        private void RefreshLabels()
+        {
+            var point = interaction != null ? interaction.ActivePoint : null;
+            var elements = point != null && point.HasContent ? point.Content.elements : null;
+            int index = elements != null ? System.Array.IndexOf(elements, interaction.SelectedElement) : -1;
+            string key = point != null ? point.Anchor.Key : null;
+            if (key == shownPoint && index == shownIndex) return;
+            shownPoint = key;
+            shownIndex = index;
+            if (elements == null || elements.Length < 2 || index < 0)
+            {
+                previousLabel.text = nextLabel.text = positionLabel.text = "";
+                return;
+            }
+            int count = elements.Length;
+            previousLabel.text = elements[(index - 1 + count) % count].title;
+            nextLabel.text = elements[(index + 1) % count].title;
+            positionLabel.text = MuseumInterfaceText.Format("piece_position", index + 1, count);
         }
 
         /// <summary>A soft round disc made once, so the arrows need no texture asset.</summary>
@@ -137,6 +200,17 @@ namespace MusiyoBetsknate.Museum
             return true;
         }
 
+        /// <summary>Height of the lowest part of the piece on show, or of the arrows' centre while there is none.</summary>
+        private float Bottom(Vector3 centre)
+        {
+            var point = interaction != null ? interaction.ActivePoint : null;
+            var renderers = presenter != null && point != null && presenter.ModelPoint == point ? presenter.Renderers : null;
+            if (renderers == null || renderers.Length == 0) return centre.y;
+            float lowest = float.PositiveInfinity;
+            foreach (var item in renderers) if (item != null) lowest = Mathf.Min(lowest, item.bounds.min.y);
+            return float.IsInfinity(lowest) ? centre.y : lowest;
+        }
+
         private void LateUpdate()
         {
             if (surface == null) return;
@@ -147,6 +221,7 @@ namespace MusiyoBetsknate.Museum
             bool visible = Shown && (grab == null || !grab.Held) && TryPlace(out centre, out halfWidth);
             if (surface.gameObject.activeSelf != visible) surface.gameObject.SetActive(visible);
             if (!visible) return;
+            RefreshLabels();
             var toViewer = viewer != null ? viewer.position - centre : -surface.forward;
             toViewer.y = 0;
             if (toViewer.sqrMagnitude > .01f) heading = Mathf.Atan2(toViewer.x, toViewer.z) * Mathf.Rad2Deg;
@@ -154,6 +229,9 @@ namespace MusiyoBetsknate.Museum
             // The arrows stand a little in front of the piece, on the visitor's side, so the piece never hides them.
             surface.SetPositionAndRotation(centre + facing * Mathf.Min(halfWidth, .2f), Quaternion.LookRotation(-facing, Vector3.up));
             surface.sizeDelta = new Vector2((halfWidth + Gap + Diameter) * 2 * UnitsPerMetre, Diameter * UnitsPerMetre * 1.4f);
+            // The position stands just below the piece, where it does not cover it.
+            float below = Mathf.Max(0, (centre.y - Bottom(centre)) * UnitsPerMetre - surface.sizeDelta.y * .5f);
+            ((RectTransform)positionLabel.transform).anchoredPosition = new Vector2(0, -below - 12);
             raycaster.enabled = !MuseumInput.Current.Spatial && Cursor.lockState != CursorLockMode.Locked;
             var night = MuseumExperienceConfiguration.ColorValue(MuseumExperienceConfiguration.Current.PanelColor);
             var accent = MuseumExperienceConfiguration.ColorValue(MuseumExperienceConfiguration.Current.AccentColor);

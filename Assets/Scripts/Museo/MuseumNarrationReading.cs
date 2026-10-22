@@ -77,10 +77,12 @@ namespace MusiyoBetsknate.Museum
     }
 
     /// <summary>
-    /// Keeps the fragment of the transcription that is being heard in view on the point's screen. The panel's
-    /// content scrolls; the screen itself never moves in the museum. Timing comes from the narration's playback time and its
-    /// published WebVTT cues: without cues that match the transcription, nothing follows and the full transcription stays
-    /// readable with manual scrolling. Scrolling by hand suspends following until the visitor asks to resume or repeats.
+    /// Keeps the fragment of the transcription that is being heard in view on the point's screen and marks it, as the Web
+    /// does, so the text read is the text heard. The panel's content scrolls; the screen itself never moves in the museum.
+    /// Timing comes from the narration's playback time and its published WebVTT cues: without cues that match the
+    /// transcription, nothing follows or is marked and the full transcription stays readable with manual scrolling.
+    /// Scrolling by hand suspends following until the visitor asks to resume or repeats. Service text is wrapped so it is
+    /// shown literally; only the mark around the heard fragment is markup.
     /// </summary>
     public sealed class MuseumNarrationReading : MonoBehaviour
     {
@@ -109,6 +111,10 @@ namespace MusiyoBetsknate.Museum
         /// <summary>True when the narration's cues were found in its transcription, in order.</summary>
         public bool Aligned => fragments != null;
         public int ActiveCue => shownCue;
+        /// <summary>Index in the screen's text where the marked fragment starts, or -1 when nothing is marked.</summary>
+        public int MarkedIndex => markIndex;
+        /// <summary>Marking of the fragment being heard: a soft band of the accent colour and the title accent for its letters.</summary>
+        public const string MarkOpen = "<mark=#E7AE4538><color=#F5CC81>", MarkClose = "</color></mark>";
         public event Action Changed;
 
         public void Configure(MuseumNarration source, ScrollRect panelScroll, TMP_Text transcriptText, Button resumeButton)
@@ -127,6 +133,7 @@ namespace MusiyoBetsknate.Museum
             playable = canPlay;
             scroll = panelScroll;
             text = transcriptText;
+            if (text != null) text.richText = true;
             resume = resumeButton;
             if (scroll != null)
             {
@@ -185,8 +192,8 @@ namespace MusiyoBetsknate.Museum
         }
 
         /// <summary>
-        /// Shows the text exactly as published, without markup (service text is never parsed as rich text), and notes
-        /// where the fragment being heard starts so the panel can bring it into view.
+        /// Shows the text as published, literally (service text is never parsed as markup), with the fragment being heard
+        /// marked, and notes where that fragment starts so the panel can bring it into view.
         /// </summary>
         private void Compose(bool force)
         {
@@ -194,12 +201,36 @@ namespace MusiyoBetsknate.Museum
             int cue = Aligned && playable != null && playable() ? ReadingAlignment.CueAt(timedCues(), playbackTime()) : -1;
             if (!force && cue == shownCue) return;
             shownCue = cue;
-            var prefix = status + "\n";
-            markIndex = cue >= 0 ? prefix.Length + fragments[cue].start : -1;
+            text.text = Markup(status, transcription, attribution, cue >= 0 ? fragments[cue] : ((int, int)?)null, out markIndex);
             markMeasured = false;
-            if (force)
-                text.text = prefix + transcription + (string.IsNullOrEmpty(attribution) ? "" : "\n" + attribution);
             RefreshResume();
+        }
+
+        /// <summary>
+        /// The status line in small type, then the transcription with the heard fragment marked, then any credits. Returns
+        /// in <paramref name="marked"/> where the fragment's first character lies in the result, or -1.
+        /// </summary>
+        public static string Markup(string statusLine, string transcript, string credits, (int start, int length)? fragment, out int marked)
+        {
+            var result = new StringBuilder();
+            marked = -1;
+            if (!string.IsNullOrEmpty(statusLine))
+                result.Append("<size=").Append(ElementText.ReferenceSize).Append("%><color=")
+                    .Append(MuseumExperienceConfiguration.Current.MutedTextColor).Append('>').Append(ElementText.Plain(statusLine))
+                    .Append("</color></size>\n");
+            transcript ??= "";
+            if (fragment.HasValue && fragment.Value.start >= 0 && fragment.Value.start + fragment.Value.length <= transcript.Length)
+            {
+                var (start, length) = fragment.Value;
+                result.Append(ElementText.Plain(transcript.Substring(0, start))).Append(MarkOpen);
+                // The fragment is wrapped like all service text; its first letter follows the opening of that wrapping.
+                marked = result.Length + "<noparse>".Length;
+                result.Append(ElementText.Plain(transcript.Substring(start, length))).Append(MarkClose)
+                    .Append(ElementText.Plain(transcript.Substring(start + length)));
+            }
+            else result.Append(ElementText.Plain(transcript));
+            if (!string.IsNullOrEmpty(credits)) result.Append('\n').Append(ElementText.Plain(credits));
+            return result.ToString();
         }
 
         private void RefreshResume()

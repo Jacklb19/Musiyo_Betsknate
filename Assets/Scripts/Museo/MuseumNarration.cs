@@ -8,7 +8,8 @@ using UnityEngine.Networking;
 
 namespace MusiyoBetsknate.Museum
 {
-    public enum NarrationState { Idle, Loading, Playing, Paused, Finished, Unavailable }
+    /// <summary>Ready: loaded and offered with its button, not started; it is how a record chosen with the arrows begins.</summary>
+    public enum NarrationState { Idle, Loading, Playing, Paused, Finished, Unavailable, Ready }
 
     [RequireComponent(typeof(MuseumInteraction), typeof(TourLoader))]
     [RequireComponent(typeof(MuseumPointPresence))]
@@ -26,14 +27,26 @@ namespace MusiyoBetsknate.Museum
         private DateTimeOffset expiration;
         private bool pausedByVisit;
         private bool pausedByDistance;
+        /// <summary>Visitor's volume for the narration; a fade scales it without changing it.</summary>
+        private float volume = .8f;
+        private Coroutine fading;
+        private TourPoint narratedPoint;
+        /// <summary>Seconds the narration of a record takes to fade out when the visitor moves to another record.</summary>
+        public const float SwitchFadeSeconds = .6f;
         private MuseumPointPresence presence;
         public NarrationState State { get; private set; }
         public string Status { get; private set; } = "";
         public string Transcription { get; private set; } = "";
         public string Subtitle { get; private set; } = "";
+        /// <summary>
+        /// Credits shown with the narration: none. The narration's resource credit names the synthetic voice and its
+        /// provenance holds working notes; both belong to the closing credits (owner, 22/10/2026).
+        /// </summary>
         public string Attribution { get; private set; } = "";
         public bool Muted => source != null && source.mute;
-        public float Volume => source != null ? source.volume : .8f;
+        public float Volume => volume;
+        /// <summary>True while the previous record's narration fades out before the next one is offered.</summary>
+        public bool Fading => fading != null;
         public bool CanPlay => source != null && source.clip != null;
         public float PlaybackTime => CanPlay ? source.time : 0;
         public float Duration => CanPlay ? source.clip.length : 0;
@@ -99,20 +112,51 @@ namespace MusiyoBetsknate.Museum
             var target = NarrationFor(interaction.ActivePoint, element);
             if (target != null && target.has_narration && target.slug == narratedSlug && State != NarrationState.Idle
                 && State != NarrationState.Unavailable) return;
+            // Another record of the same point, chosen with the arrows: what was heard fades out, and the new record's
+            // narration is offered with its button instead of starting by itself. Arriving at a point starts it.
+            bool step = element != null && interaction.ActivePoint != null && interaction.ActivePoint == narratedPoint;
+            bool audible = step && CanPlay && (State == NarrationState.Playing || State == NarrationState.Paused);
+            if (fading != null) { StopCoroutine(fading); fading = null; source.volume = volume; }
+            if (audible && State == NarrationState.Playing) { fading = StartCoroutine(FadeThenLoad(target, step)); return; }
             Clear();
+            Begin(target, step);
+        }
+
+        private void Begin(ElementSummaryContractV1 target, bool offer)
+        {
+            narratedPoint = interaction.ActivePoint;
             if (target == null || !target.has_narration) return;
             narratedSlug = target.slug;
-            loading = StartCoroutine(Load(target.slug));
+            loading = StartCoroutine(Load(target.slug, !offer));
         }
+
+        private IEnumerator FadeThenLoad(ElementSummaryContractV1 target, bool offer)
+        {
+            for (float elapsed = 0; elapsed < SwitchFadeSeconds && source.isPlaying; elapsed += Time.unscaledDeltaTime)
+            {
+                source.volume = volume * (1 - Mathf.SmoothStep(0, 1, elapsed / SwitchFadeSeconds));
+                yield return null;
+            }
+            fading = null;
+            Clear();
+            source.volume = volume;
+            Begin(target, offer);
+        }
+
         public void Retry() => Select(interaction.SelectedElement);
-        public void SetVolume(float volume)
-        { source.volume = Mathf.Clamp01(volume); Changed?.Invoke(); }
+        public void SetVolume(float value)
+        {
+            volume = Mathf.Clamp01(value);
+            if (fading == null) source.volume = volume;
+            Changed?.Invoke();
+        }
         public void ToggleMute() { source.mute = !source.mute; Changed?.Invoke(); }
         public void TogglePause()
         {
             if (!CanPlay || interaction.State == InteractionState.Paused) return;
             pausedByDistance = false;
             if (State == NarrationState.Playing) { source.Pause(); SetState(NarrationState.Paused, MuseumInterfaceText.Get("narration_paused")); }
+            else if (State == NarrationState.Ready) Repeat();
             else if (State == NarrationState.Paused) { source.UnPause(); SetState(NarrationState.Playing, MuseumInterfaceText.Get("narration_playing")); }
             else Repeat();
         }
@@ -165,13 +209,15 @@ namespace MusiyoBetsknate.Museum
         }
         private void UpdateSubtitle()
         {
-            string text = cues.Count == 0 ? Transcription : State == NarrationState.Finished ? "" : WebVttReader.At(cues, PlaybackTime);
+            // A narration offered but not started has nothing being said yet.
+            string text = State == NarrationState.Ready ? "" : cues.Count == 0 ? Transcription
+                : State == NarrationState.Finished ? "" : WebVttReader.At(cues, PlaybackTime);
             if (text == Subtitle) return;
             Subtitle = text;
             SubtitleChanged?.Invoke();
         }
 
-        private IEnumerator Load(string slug)
+        private IEnumerator Load(string slug, bool autoplay = true)
         {
             SetState(NarrationState.Loading, MuseumInterfaceText.Get("narration_loading"));
             request = UnityWebRequest.Get(loader.ApiBase + "/elements/" + Uri.EscapeDataString(slug));
@@ -184,9 +230,7 @@ namespace MusiyoBetsknate.Museum
             var narration = NarrationResourcePolicy.Select(element);
             if (narration == null) { Unavailable(); yield break; }
             Transcription = narration.transcription;
-            Attribution = string.Join("\n", new[] {
-                string.IsNullOrEmpty(narration.credit) ? null : MuseumInterfaceText.Format("narration_credit", narration.credit),
-                string.IsNullOrEmpty(narration.provenance) ? null : MuseumInterfaceText.Format("narration_provenance", narration.provenance) }.Where(value => !string.IsNullOrEmpty(value)));
+            Attribution = "";
             UpdateSubtitle();
             Changed?.Invoke();
             request = AccessRequest(narration.id);
@@ -228,11 +272,15 @@ namespace MusiyoBetsknate.Museum
             }
             source.transform.position = interaction.ActivePoint.Anchor.LookTarget.position;
             source.clip = clip;
-            source.Play();
-            Starts++;
-            SetState(NarrationState.Playing, MuseumInterfaceText.Get("narration_playing"));
-            OnInteractionChanged();
-            if (presence.Away) OnPresenceChanged(true);
+            if (autoplay)
+            {
+                source.Play();
+                Starts++;
+                SetState(NarrationState.Playing, MuseumInterfaceText.Get("narration_playing"));
+                OnInteractionChanged();
+                if (presence.Away) OnPresenceChanged(true);
+            }
+            else SetState(NarrationState.Ready, MuseumInterfaceText.Get("narration_ready"));
             var subtitles = element.resources.FirstOrDefault(resource => resource.id == narration.subtitles_resource_id
                 && resource.kind == "subtitles" && resource.mime == "text/vtt");
             if (subtitles != null) subtitlesLoading = StartCoroutine(LoadSubtitles(subtitles.id));
@@ -271,6 +319,9 @@ namespace MusiyoBetsknate.Museum
         public void Clear()
         {
             narratedSlug = null;
+            narratedPoint = null;
+            if (fading != null) { StopCoroutine(fading); fading = null; }
+            if (source != null) source.volume = volume;
             if (loading != null) StopCoroutine(loading);
             if (subtitlesLoading != null) StopCoroutine(subtitlesLoading);
             loading = subtitlesLoading = null;

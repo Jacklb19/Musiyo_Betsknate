@@ -16,6 +16,8 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("entry_glide_max_distance")] public float EntryGlideMaxDistance;
         [JsonProperty("panel_fade_seconds")] public float PanelFadeSeconds;
         [JsonProperty("panel_scroll_step")] public float PanelScrollStep;
+        /// <summary>Speed of a point screen's text with the stick pushed all the way, in interface units per second.</summary>
+        [JsonProperty("panel_scroll_speed")] public float PanelScrollSpeed;
         [JsonProperty("model_control_columns")] public int ModelControlColumns;
         [JsonProperty("walk_speed")] public float WalkSpeed;
         [JsonProperty("sprint_speed")] public float SprintSpeed;
@@ -98,6 +100,7 @@ namespace MusiyoBetsknate.Museum
             var result = JsonConvert.DeserializeObject<MuseumExperienceConfiguration>(json);
             if (result == null || result.SchemaVersion != 5 || !Positive(result.EntryFadeSeconds)
                 || !Positive(result.PanelFadeSeconds) || !Positive(result.PanelScrollStep) || result.PanelScrollStep > 1
+                || !Positive(result.PanelScrollSpeed) || result.PanelScrollSpeed > 5000
                 || result.ModelControlColumns < 1 || !Positive(result.EntryMenuFadeShare) || result.EntryMenuFadeShare >= 1
                 || !Positive(result.EntryGlideSeconds) || !Positive(result.EntryGlideMaxDistance)
                 || !Positive(result.WalkSpeed) || !Positive(result.SprintSpeed) || result.SprintSpeed < result.WalkSpeed

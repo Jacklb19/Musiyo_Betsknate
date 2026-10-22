@@ -310,6 +310,10 @@
     "vignette_strong": "Fuerte",
     "height_offset": "Altura de la vista",
     "height_value": "{0:+0;-0;0} cm",
-    "settings_description_short": "Tus preferencias se guardan en este dispositivo."
+    "settings_description_short": "Tus preferencias se guardan en este dispositivo.",
+    "record_more": "Más sobre esta pieza",
+    "narration_ready": "Narración lista.",
+    "play_narration": "Escuchar la narración ({input:narration_pause})",
+    "play_narration_xr": "Escuchar la narración"
   }
 }

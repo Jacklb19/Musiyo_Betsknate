@@ -115,6 +115,12 @@ namespace MusiyoBetsknate.Tests
             yield return null;
             Assert.That(carousel.activeInHierarchy, Is.True, "A point with several records shows the arrows beside its piece.");
             Assert.That(Says("2 de 4") && Says("Pieza sintética A"), Is.True, "The screen says which record is on show.");
+            // Beside the piece, apart from the screen, the arrows say where they lead and which record of how many is on show.
+            var cues = flow.GetComponent<MuseumPieceCues>();
+            Assert.That(cues.PositionLabel.text, Is.EqualTo("2 de 4"));
+            Assert.That(cues.NextLabel.text, Is.EqualTo("Pieza sintética B"));
+            Assert.That(cues.PreviousLabel.text, Is.EqualTo("Registro común"));
+            Assert.That(cues.Surface.IsChildOf(display.Surface), Is.False, "The arrows stand apart from the screen.");
             Assert.That(UnityEngine.Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
                 .Any(item => item.name == "ElementChoice" || item.name == "ModelAction" && item.gameObject.activeInHierarchy
                     && item.GetComponentInChildren<TMP_Text>().text.StartsWith("Examinar")), Is.False,

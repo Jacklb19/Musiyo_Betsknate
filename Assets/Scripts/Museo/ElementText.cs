@@ -10,8 +10,10 @@ namespace MusiyoBetsknate.Museum
     /// <summary>
     /// The text of a record as the museum reads it: each block with its label, its text and a small reference number, and
     /// at the end, in small type, the numbered short references and one credit line. Attributions, contexts and sources
-    /// never interrupt the reading (owner's decision of 21/10/2026). The result is TextMeshPro markup: everything that
-    /// comes from the service is wrapped so it is shown literally and never parsed as markup.
+    /// never interrupt the reading (owner's decision of 21/10/2026). The credit line is the record's own credits only
+    /// (belonging, creator, capture and digitisation, research): the resources' credits and provenance notes, and the
+    /// synthetic voice of the narrations, belong to the closing credits (owner, 22/10/2026). The result is TextMeshPro
+    /// markup: everything that comes from the service is wrapped so it is shown literally and never parsed as markup.
     /// </summary>
     public static class ElementText
     {
@@ -32,48 +34,72 @@ namespace MusiyoBetsknate.Museum
         public static bool TryFormat(string selectedSlug, string json, bool withNarration, out string text, out string description)
         {
             text = description = null;
+            if (!TryFormatSections(selectedSlug, json, out var sections)) return false;
+            description = sections.Description;
+            var output = new StringBuilder().AppendLine(Plain(sections.Title)).AppendLine().Append(sections.Body);
+            if (withNarration && !string.IsNullOrEmpty(sections.Transcription))
+                output.AppendLine().AppendLine("Narración · transcripción").AppendLine(Plain(sections.Transcription));
+            output.Append(sections.Closing);
+            text = output.ToString().TrimEnd() + "\n";
+            return true;
+        }
+
+        /// <summary>
+        /// The parts of a record for a screen that shows the narration first: its title, the reading text (description,
+        /// blocks with their reference numbers and restrictions), the narration's transcription and the closing
+        /// references with the credit line. Body and Closing are markup; the others are plain service text.
+        /// </summary>
+        public static bool TryFormatSections(string selectedSlug, string json, out RecordSections sections)
+        {
+            sections = null;
             if (!ElementContractV1.TryParse(json, out var element) || element.slug != selectedSlug) return false;
-            description = element.description;
             var notes = RecordReferences.BlockNotes(element);
-            var output = new StringBuilder().AppendLine(Plain(element.title)).AppendLine().AppendLine(Plain(element.description));
+            var body = new StringBuilder().AppendLine(Plain(element.description));
             foreach (var block in element.blocks ?? Array.Empty<TextBlockContractV1>())
             {
                 string label = block.kind == "documented_fact" ? "Información documentada"
                     : block.kind == "testimony" ? "Testimonio" : "Interpretación";
-                output.AppendLine().AppendLine(label).Append(Plain(block.text));
+                body.AppendLine().AppendLine(label).Append(Plain(block.text));
                 var note = notes.FirstOrDefault(item => item.BlockId == block.id);
-                if (note != null) output.Append("<sup>").Append(note.Number).Append("</sup>");
-                output.AppendLine();
+                if (note != null) body.Append("<sup>").Append(note.Number).Append("</sup>");
+                body.AppendLine();
             }
-            foreach (var resource in element.resources ?? Array.Empty<ResourceContractV1>())
-                if (withNarration && resource.kind == "narration" && !string.IsNullOrEmpty(resource.transcription))
-                {
-                    output.AppendLine().AppendLine("Narración · transcripción").AppendLine(Plain(resource.transcription));
-                    if (!string.IsNullOrEmpty(resource.credit)) output.Append("Crédito: ").AppendLine(Plain(resource.credit));
-                }
             foreach (var restriction in element.restrictions ?? Array.Empty<RestrictionContractV1>())
-                output.AppendLine().AppendLine(Plain(restriction.description));
+                body.AppendLine().AppendLine(Plain(restriction.description));
+            var closing = new StringBuilder();
             string credits = RecordReferences.CreditLine(element);
             if (notes.Count > 0 || credits.Length > 0)
             {
-                output.AppendLine().Append("<size=").Append(ReferenceSize).Append("%><color=")
+                closing.AppendLine().Append("<size=").Append(ReferenceSize).Append("%><color=")
                     .Append(MuseumExperienceConfiguration.Current.MutedTextColor).Append('>');
                 if (notes.Count > 0)
                 {
-                    output.Append("<b>Referencias</b>\n");
+                    closing.Append("<b>Referencias</b>\n");
                     foreach (var note in notes.Where((item, index) => notes.FindIndex(other => other.Number == item.Number) == index))
-                        output.Append(note.Number).Append(". ").Append(Plain(note.Text)).Append('\n');
+                        closing.Append(note.Number).Append(". ").Append(Plain(note.Text)).Append('\n');
                 }
-                if (credits.Length > 0) output.Append(notes.Count > 0 ? "\n" : "").Append(Plain(credits)).Append('\n');
-                output.Append("</color></size>");
+                if (credits.Length > 0) closing.Append(notes.Count > 0 ? "\n" : "").Append(Plain(credits)).Append('\n');
+                closing.Append("</color></size>");
             }
-            text = output.ToString().TrimEnd() + "\n";
+            var narration = (element.resources ?? Array.Empty<ResourceContractV1>())
+                .FirstOrDefault(resource => resource.kind == "narration" && !string.IsNullOrEmpty(resource.transcription));
+            sections = new RecordSections
+            {
+                Title = element.title ?? "", Description = element.description ?? "", Body = body.ToString(),
+                Transcription = narration?.transcription ?? "", Closing = closing.ToString(),
+            };
             return true;
         }
 
         /// <summary>Service text, shown literally inside markup.</summary>
         public static string Plain(string value)
             => string.IsNullOrEmpty(value) ? "" : "<noparse>" + value.Replace("</noparse>", "</nopar​se>") + "</noparse>";
+    }
+
+    /// <summary>A record cut into the parts a screen arranges: see <see cref="ElementText.TryFormatSections"/>.</summary>
+    public sealed class RecordSections
+    {
+        public string Title, Description, Body, Transcription, Closing;
     }
 
     /// <summary>One numbered short reference of a record: the block it follows and the line read at the end.</summary>
@@ -143,10 +169,19 @@ namespace MusiyoBetsknate.Museum
             return notes;
         }
 
-        /// <summary>"Role: Name · Role: Name"; a credit without a role reads as its name alone.</summary>
+        /// <summary>Words that mark a credit for the synthetic voice, which is credited at the end of the museum only.</summary>
+        private static readonly string[] SyntheticVoice = { "elevenlabs", "voz sintética", "voz sintetica" };
+
+        public static bool IsSyntheticVoice(string value)
+            => !string.IsNullOrEmpty(value) && SyntheticVoice.Any(word => value.IndexOf(word, StringComparison.OrdinalIgnoreCase) >= 0);
+
+        /// <summary>
+        /// "Role: Name · Role: Name"; a credit without a role reads as its name alone. A credit for the synthetic voice is
+        /// left to the closing credits, whatever the service still sends.
+        /// </summary>
         public static string CreditLine(ElementContractV1 element)
             => string.Join(" · ", (element.credits ?? Array.Empty<CreditContractV1>())
-                .Where(credit => !string.IsNullOrWhiteSpace(credit.name))
+                .Where(credit => !string.IsNullOrWhiteSpace(credit.name) && !IsSyntheticVoice(credit.name) && !IsSyntheticVoice(credit.role))
                 .Select(credit => string.IsNullOrWhiteSpace(credit.role) ? credit.name.Trim() : credit.role.Trim() + ": " + credit.name.Trim()));
     }
 }

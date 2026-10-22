@@ -62,8 +62,11 @@ namespace MusiyoBetsknate.Museum
         private ScrollRect panelScroll;
         private string panelSubject;
         private string summary;
-        /// <summary>The whole record without the narration's transcription, for the screen by a stand.</summary>
-        private string record;
+        /// <summary>The record's reading text and closing references, for the screen by a stand, which shows the narration first.</summary>
+        private RecordSections record;
+        /// <summary>Below the narration on the screen by a stand: «Más sobre esta pieza» and the references at the end.</summary>
+        private TMP_Text recordText;
+        private MuseumPanelScroll panelScrolling;
         private MuseumLecternDisplay lectern;
         private MuseumPointPresence presence;
         private MuseumInput input;
@@ -110,6 +113,7 @@ namespace MusiyoBetsknate.Museum
             if (lectern == null) lectern = interaction.gameObject.AddComponent<MuseumLecternDisplay>();
             lectern.Configure((RectTransform)panel.transform, visitor != null ? visitor.GetComponentInChildren<Camera>() : null);
             CreateNarrationInterface();
+            CreateRecordInterface();
             CreateCarouselInterface();
             serviceNotice = interaction.GetComponent<MuseumServiceNotice>();
             if (serviceNotice == null) serviceNotice = interaction.gameObject.AddComponent<MuseumServiceNotice>();
@@ -313,19 +317,18 @@ namespace MusiyoBetsknate.Museum
             return panelScroll;
         }
 
-        /// <summary>Page keys and the right controller stick scroll long panels; the mouse wheel stays free for model zoom.</summary>
+        /// <summary>
+        /// Page keys step through long panels and the right controller stick scrolls them continuously, at a speed that
+        /// follows how far it is pushed; the mouse wheel stays free for model zoom. A bar beside the text shows the place.
+        /// </summary>
         private void ScrollPointPanel()
         {
-            var scroll = MuseumInput.Current.ScrollPanel;
-            if (!scroll.WasPressedThisFrame() || !panel.activeSelf || PanelScroll() == null) return;
+            if (panelScrolling == null) return;
             // While a piece is in the hand the stick turns the piece.
-            if (grab != null && grab.Held && MuseumInput.Current.Spatial) return;
-            int direction = System.Math.Sign(scroll.ReadValue<float>());
-            if (direction == 0) return;
-            // Scrolling by hand takes the panel away from the narration until the visitor asks to follow it again.
-            narrationReading?.Suspend();
-            panelScroll.verticalNormalizedPosition = Mathf.Clamp01(panelScroll.verticalNormalizedPosition
-                + direction * MuseumExperienceConfiguration.Current.PanelScrollStep);
+            bool held = grab != null && grab.Held && MuseumInput.Current.Spatial;
+            if (panelScrolling.Step(MuseumInput.Current.ScrollPanel, panel.activeSelf && !held, Time.unscaledDeltaTime))
+                // Scrolling by hand takes the panel away from the narration until the visitor asks to follow it again.
+                narrationReading?.Suspend();
         }
 
         private CanvasGroup PanelGroup()
@@ -411,7 +414,8 @@ namespace MusiyoBetsknate.Museum
             {
                 CancelDetail();
                 requestedSlug = null;
-                detail = summary = record = null;
+                detail = summary = null;
+                record = null;
             }
             // A folding screen keeps what it was showing until it has closed.
             if (!showPanel && lectern.InWorld) return;
@@ -428,6 +432,7 @@ namespace MusiyoBetsknate.Museum
                 || interaction.State == InteractionState.ModelExamination));
             // Only a formatted record carries markup, and in it the service text is shown literally; nothing else is parsed.
             panelText.richText = false;
+            recordText.gameObject.SetActive(false);
             if (paused) { panelText.text = MuseumInterfaceText.Get("pause_description"); return; }
             if (notice)
             {
@@ -466,19 +471,25 @@ namespace MusiyoBetsknate.Museum
             {
                 CancelDetail();
                 requestedSlug = element.slug;
-                detail = summary = record = null;
+                detail = summary = null;
+                record = null;
                 reading = StartCoroutine(LoadDetail(element.slug));
             }
             if (interaction.DetailInWorld && interaction.State != InteractionState.Reading)
             {
-                // The screen by the stand is a label: where the record stands among its point's, its name and all its text.
+                // The screen by the stand is a label read in the order it is heard: where the record stands among its
+                // point's and its name; then the narration, its fragment marked as it is heard; then «Más sobre esta pieza»
+                // with the rest of the record; and the references and credits at the end.
                 int count = point.Content.elements.Length;
                 int position = System.Array.IndexOf(point.Content.elements, element);
-                // The record begins with the piece's name; the narration's transcription follows below it on its own.
                 panelText.richText = true;
-                panelText.text = ElementText.Plain(point.Content.name
-                    + (count > 1 ? " · " + MuseumInterfaceText.Format("piece_position", position + 1, count) : "")) + "\n"
-                    + (record ?? ElementText.Plain(element.title) + "\n\n" + (detail ?? ElementText.Plain(MuseumInterfaceText.Get("detail_loading")))).TrimEnd();
+                panelText.text = "<size=" + ElementText.ReferenceSize + "%><color=" + MuseumExperienceConfiguration.Current.MutedTextColor + ">"
+                    + ElementText.Plain(point.Content.name + (count > 1 ? " · " + MuseumInterfaceText.Format("piece_position", position + 1, count) : ""))
+                    + "</color></size>\n<b>" + ElementText.Plain(record?.Title ?? element.title) + "</b>";
+                recordText.gameObject.SetActive(true);
+                recordText.text = record != null
+                    ? "<b>" + ElementText.Plain(MuseumInterfaceText.Get("record_more")) + "</b>\n" + record.Body + record.Closing
+                    : ElementText.Plain(detail ?? MuseumInterfaceText.Get("detail_loading"));
                 return;
             }
             if (interaction.State != InteractionState.Reading)
@@ -508,7 +519,7 @@ namespace MusiyoBetsknate.Museum
             { detail = MuseumInterfaceText.Get("detail_unavailable"); Refresh(); yield break; }
             detail = formatted;
             summary = description;
-            ElementText.TryFormat(slug, json, false, out record, out _);
+            ElementText.TryFormatSections(slug, json, out record);
             Refresh();
         }
 
@@ -605,7 +616,9 @@ namespace MusiyoBetsknate.Museum
             bool selected = interaction.SelectedElement?.has_3d_model == true
                 && interaction.State != InteractionState.Paused && interaction.State != InteractionState.Exploration;
             bool examining = interaction.State == InteractionState.ModelExamination;
-            modelText.gameObject.SetActive(selected && interaction.State != InteractionState.Reading);
+            // By a stand the piece is on its pedestal for all to see: the screen speaks of it only while it comes or fails.
+            modelText.gameObject.SetActive(selected && interaction.State != InteractionState.Reading
+                && (!interaction.DetailInWorld || model.State == ModelLoadState.Loading || model.State == ModelLoadState.Unavailable));
             modelText.text = model.Status + (string.IsNullOrEmpty(model.Attribution) ? "" : "\n" + model.Attribution);
             // By a stand the piece is examined by taking it in the hand, so the screen offers no examination.
             examineButton.gameObject.SetActive(selected && interaction.State == InteractionState.ElementSelected && model.CanExamine
@@ -618,6 +631,9 @@ namespace MusiyoBetsknate.Museum
         {
             narrationText = Instantiate(panelText, elementList.parent);
             narrationText.name = "NarrationStatus";
+            // Right below the piece's name, so what is heard is what is read first.
+            narrationText.transform.SetSiblingIndex(panelText.transform.GetSiblingIndex() + 1);
+            narrationText.richText = true;
             narrationText.GetComponent<LayoutElement>().minHeight = 0;
             narrationControls = new GameObject("NarrationControls", typeof(RectTransform), typeof(VerticalLayoutGroup));
             narrationControls.transform.SetParent(elementList.parent, false);
@@ -687,7 +703,8 @@ namespace MusiyoBetsknate.Museum
             narrationControls.SetActive(selected && narration.CanPlay && !inWorld);
             narrationToggle.gameObject.SetActive(selected && narration.CanPlay && inWorld);
             SetCaption(narrationToggle, narration.State == NarrationState.Playing ? "pause_narration_keyboard"
-                : narration.State == NarrationState.Paused ? "resume_narration_keyboard" : "repeat_narration");
+                : narration.State == NarrationState.Paused ? "resume_narration_keyboard"
+                : narration.State == NarrationState.Ready ? "play_narration" : "repeat_narration");
             audioPauseButton.GetComponentInChildren<TMP_Text>().text = narration.State == NarrationState.Playing
                 ? MuseumInterfaceText.Get("pause_narration_keyboard") : MuseumInterfaceText.Get("resume_narration_keyboard");
             audioMuteButton.GetComponentInChildren<TMP_Text>().text = narration.Muted ? MuseumInterfaceText.Get("unmute_narration") : MuseumInterfaceText.Get("mute_narration");
@@ -710,6 +727,20 @@ namespace MusiyoBetsknate.Museum
             int index = keyedCaptions.FindIndex(entry => entry.caption == caption);
             if (index >= 0) keyedCaptions[index] = (caption, textKey);
             caption.text = MuseumInterfaceText.Get(textKey);
+        }
+
+        /// <summary>The text below the narration on the screen by a stand; it reads in the column, after the narration.</summary>
+        private void CreateRecordInterface()
+        {
+            recordText = Instantiate(panelText, elementList.parent);
+            recordText.name = "RecordMore";
+            recordText.richText = true;
+            recordText.text = "";
+            recordText.GetComponent<LayoutElement>().minHeight = 0;
+            recordText.transform.SetSiblingIndex(narrationText.transform.GetSiblingIndex() + 1);
+            recordText.gameObject.SetActive(false);
+            panelScrolling = panel.AddComponent<MuseumPanelScroll>();
+            panelScrolling.Configure(PanelScroll());
         }
 
         private void CreateStationInterface()
@@ -802,6 +833,7 @@ namespace MusiyoBetsknate.Museum
             float reading = MuseumLecternDisplay.TextSize * preferences.ReadingScale;
             if (panelText != null) panelText.fontSize = reading;
             if (narrationText != null) narrationText.fontSize = reading;
+            if (recordText != null) recordText.fontSize = reading;
             if (modelText != null) modelText.fontSize = reading;
             RefreshSubtitle();
         }
