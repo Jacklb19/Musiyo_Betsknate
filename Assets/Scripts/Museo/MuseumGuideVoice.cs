@@ -326,6 +326,9 @@ namespace MusiyoBetsknate.Museum
             var point = runtime.GuidePoint;
             if (point != null) speaker.transform.position = point.Anchor.LookTarget.position;
             speaker.clip = spoken;
+            // The guide's voice and a narration are never heard together (UD-8): the guide pauses any narration it starts over.
+            var narration = GetComponent<MuseumNarration>();
+            if (narration != null && narration.State == NarrationState.Playing) narration.TogglePause();
             speaker.Play();
             Changed?.Invoke();
         }

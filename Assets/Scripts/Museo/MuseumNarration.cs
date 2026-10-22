@@ -293,6 +293,11 @@ namespace MusiyoBetsknate.Museum
             SetState(NarrationState.Idle, "");
         }
         private void SetState(NarrationState state, string status)
-        { State = state; Status = status; Changed?.Invoke(); }
+        {
+            // A narration and the guide's voice are never heard together (UD-8): a narration that starts silences the guide.
+            var guideVoice = state == NarrationState.Playing ? GetComponent<MuseumGuideVoice>() : null;
+            if (guideVoice != null && guideVoice.Speaking) guideVoice.StopSpeech();
+            State = state; Status = status; Changed?.Invoke();
+        }
     }
 }
