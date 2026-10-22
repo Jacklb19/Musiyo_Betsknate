@@ -24,6 +24,7 @@ namespace MusiyoBetsknate.Museum
         private Quaternion museumRotation;
         private bool inSet;
         private bool placed;
+        private MuseumEntryBackdrop shown;
         private System.Func<bool> headTracked;
 
         /// <summary>True while the visitor stands in the entry set instead of the museum.</summary>
@@ -74,10 +75,15 @@ namespace MusiyoBetsknate.Museum
             float share = MuseumExperienceConfiguration.Current.EntryMenuFadeShare;
             bool menu = flow.Phase == VisitPhase.Menu;
             bool leaving = flow.Phase == VisitPhase.Entering && flow.TransitionProgress < share;
-            if (scenic && (menu || leaving)) moved = EnterSet();
+            // At the end of the visit the visitor is carried to the fire, in the dark, for the credits.
+            var ending = flow.GetComponent<MuseumEnding>();
+            bool credits = ending != null && ending.InSet;
+            if (credits) moved = EnterSet(ending.Backdrop);
+            else if (scenic && (menu || leaving)) moved = EnterSet(backdrop);
             else moved = LeaveSet();
             float dark = 0;
-            if (flow.Phase == VisitPhase.Entering)
+            if (flow.Phase == VisitPhase.Ending && ending != null) dark = ending.Darkness;
+            else if (flow.Phase == VisitPhase.Entering)
             {
                 float progress = flow.TransitionProgress;
                 dark = progress < share ? Mathf.SmoothStep(0, 1, progress / share) : Mathf.SmoothStep(1, 0, (progress - share) / (1 - share));
@@ -92,19 +98,28 @@ namespace MusiyoBetsknate.Museum
         /// the left of the fire and the fire burns on the right. This happens once, as soon as the head is tracked: the set
         /// never turns with the head afterwards.
         /// </summary>
-        private bool EnterSet()
+        private bool EnterSet(MuseumEntryBackdrop set)
         {
+            if (inSet && set != shown)
+            {
+                // From the credits to the title menu over another set: the visitor stays out of the museum.
+                shown?.Show(false, view);
+                shown = set;
+                placed = false;
+                set.Show(true, view);
+            }
             if (!inSet)
             {
                 museumPosition = visitor.position;
                 museumRotation = visitor.rotation;
                 inSet = true;
                 placed = false;
-                backdrop.Show(true, view);
+                shown = set;
+                set.Show(true, view);
             }
             if (placed || headTracked != null && !headTracked()) return false;
             placed = true;
-            var pose = backdrop.CameraPose;
+            var pose = set.CameraPose;
             float yaw = pose.eulerAngles.y;
             var feet = new Vector3(pose.position.x, MuseumEntryBackdrop.Origin.y, pose.position.z);
             // The head may stand anywhere in the play area: the set is placed under the head, not under the origin.
@@ -122,10 +137,18 @@ namespace MusiyoBetsknate.Museum
             if (!inSet) return false;
             inSet = false;
             placed = false;
-            backdrop?.Show(false, view);
+            shown?.Show(false, view);
+            shown = null;
             visitor.SetPositionAndRotation(museumPosition, museumRotation);
             Physics.SyncTransforms();
             return true;
+        }
+
+        /// <summary>Where the visitor returns to the museum when leaving the set: a new visit after the credits starts over.</summary>
+        public void ReplaceMuseumPose(Vector3 position, Quaternion rotation)
+        {
+            museumPosition = position;
+            museumRotation = Quaternion.Euler(0, rotation.eulerAngles.y, 0);
         }
 
         private void OnDestroy()

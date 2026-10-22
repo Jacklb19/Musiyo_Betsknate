@@ -71,6 +71,8 @@ namespace MusiyoBetsknate.Museum
         /// <summary>Silences the music only; narrations and the guide are unaffected.</summary>
         public bool Muted { get; set; }
         public bool VoiceActive { get; private set; }
+        /// <summary>From 1 to 0 as the museum fades out at the end of the visit; the credits are heard with the fire alone.</summary>
+        public float Fade { get; set; } = 1;
         public float CurrentVolume => sources[playing] != null ? sources[playing].volume : 0;
         public AudioSource Playing => sources[playing];
 
@@ -115,7 +117,7 @@ namespace MusiyoBetsknate.Museum
             duck = Mathf.MoveTowards(duck, wanted, Time.unscaledDeltaTime / settings.DuckSeconds);
             float level = Application.platform == RuntimePlatform.Android ? settings.LevelHeadset : settings.Level;
             float target = TargetVolume(VisitorVolume(), level, musicLevel, Muted, duck)
-                * Mathf.Clamp01((Time.unscaledTime - started) / settings.FadeInSeconds);
+                * Mathf.Clamp01((Time.unscaledTime - started) / settings.FadeInSeconds) * Mathf.Clamp01(Fade);
             var current = sources[playing];
             var next = sources[1 - playing];
             float remaining = track.length - current.time;

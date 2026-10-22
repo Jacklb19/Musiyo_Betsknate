@@ -19,6 +19,7 @@ namespace MusiyoBetsknate.Museum
         private MuseumEntryViewpoint viewpoint;
         private Camera stage;
         private bool hidVisitorCamera;
+        private MuseumEntryBackdrop endingSet;
         private readonly RaycastHit[] obstacles = new RaycastHit[8];
 
         /// <summary>A headset owns its view. Tests replace this probe.</summary>
@@ -70,6 +71,22 @@ namespace MusiyoBetsknate.Museum
         public void Apply()
         {
             if (flow == null) return;
+            // The closing credits are seen from the camera of the fire, as the title menu is.
+            var ending = flow.GetComponent<MuseumEnding>();
+            if (ending != null && ending.InSet && visitorCamera != null && !HeadsetActive())
+            {
+                if (stage == null) CreateStage();
+                var set = ending.Backdrop;
+                if (Backdrop != null && Backdrop != set) Backdrop.Show(false, stage);
+                stage.transform.SetPositionAndRotation(set.CameraPose.position, set.CameraPose.rotation);
+                stage.fieldOfView = BackdropFieldOfView;
+                set.Show(true, stage);
+                endingSet = set;
+                Show();
+                return;
+            }
+            if (endingSet != null && endingSet != Backdrop) endingSet.Show(false, stage);
+            endingSet = null;
             bool gliding = flow.Phase == VisitPhase.Entering && flow.Transition == EntryTransition.Glide;
             float share = configuration.EntryMenuFadeShare;
             // A fading entry changes view while the screen is dark.

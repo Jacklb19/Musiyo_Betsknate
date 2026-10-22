@@ -141,6 +141,11 @@ namespace MusiyoBetsknate.Museum
             backdrop.Configure(MuseumEntryBackdrop.Parse(settings.EntryBackdrop), () => loader.ApiBase, settings.EntryMaskElement);
             entry.Configure(visitor != null ? visitor.GetComponentInChildren<Camera>() : null, visitorTransform,
                 interaction.GetComponentInChildren<MuseumEntryViewpoint>(true), backdrop);
+            // The end of the route asks whether to finish, and the credits roll by the same fire as the title menu.
+            var ending = interaction.GetComponent<MuseumEnding>();
+            if (ending == null) ending = interaction.gameObject.AddComponent<MuseumEnding>();
+            var eyes = visitor != null ? visitor.GetComponentInChildren<Camera>() : null;
+            ending.Configure(visitorTransform, eyes != null ? eyes.transform : visitorTransform, eyes, backdrop);
             var menu = GetComponent<MuseumMenuHud>();
             if (menu == null) menu = gameObject.AddComponent<MuseumMenuHud>();
             menu.Configure(visitFlow, interaction, loader, preferences, menuPrefab);

@@ -270,6 +270,18 @@
     "voice_rate_limited": "Has hecho muchas consultas seguidas. Podrás volver a hablar en {0} s.",
     "voice_failed": "No se pudo enviar la grabación al servicio del museo. Vuelve a intentarlo.",
     "voice_speech_unavailable": "La voz del guía no está disponible ahora; aquí tienes la respuesta escrita.",
-    "guide_spatial_voice": "En el visor puedes preguntar con tu voz: pulsa «Hablar con el guía»."
+    "guide_spatial_voice": "En el visor puedes preguntar con tu voz: pulsa «Hablar con el guía».",
+    "ending_title": "Has llegado al final del recorrido.",
+    "ending_question": "¿Quieres darlo por finalizado?",
+    "ending_finish": "Sí, finalizar",
+    "ending_keep": "Seguir recorriendo",
+    "credits_kicker": "Créditos",
+    "credits_thanks": "Gracias por tu visita.",
+    "credits_skip": "Saltar",
+    "credits_controls": "Clic o {input:confirm}: pausar · Mantener: acelerar · {input:pause}: saltar",
+    "credits_controls_xr": "Gatillo: pausar · Mantener: acelerar · Botón Y: saltar",
+    "credits_paused": "En pausa · Clic o {input:confirm}: continuar · {input:pause}: saltar",
+    "credits_paused_xr": "En pausa · Gatillo: continuar · Botón Y: saltar",
+    "credits_fast": "Más rápido · suelta para volver al ritmo"
   }
 }

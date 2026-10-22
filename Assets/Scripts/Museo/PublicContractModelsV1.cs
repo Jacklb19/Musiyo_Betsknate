@@ -56,6 +56,21 @@ namespace MusiyoBetsknate.Museo
     }
 
     [Serializable, Preserve]
+    public sealed partial class CreditLineContractV1
+    {
+        [Preserve] public string role;
+        [Preserve] public string text;
+    }
+
+    [Serializable, Preserve]
+    public sealed partial class CreditSectionContractV1
+    {
+        [Preserve] public string key;
+        [Preserve] public string title;
+        [Preserve] public CreditLineContractV1[] lines;
+    }
+
+    [Serializable, Preserve]
     public sealed partial class ElementContractV1
     {
         [Preserve] public string slug;
@@ -176,6 +191,15 @@ namespace MusiyoBetsknate.Museo
     {
         [Preserve] public string date;
         [Preserve] public string author;
+    }
+
+    [Serializable, Preserve]
+    public sealed partial class MuseumCreditsContractV1
+    {
+        [Preserve] public int schema_version;
+        [Preserve] public string title;
+        [Preserve] public string subtitle;
+        [Preserve] public CreditSectionContractV1[] sections;
     }
 
     [Serializable, Preserve]
@@ -413,5 +437,6 @@ namespace MusiyoBetsknate.Museo
         public const string VoiceCapabilities = @"{""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""default"":1,""title"":""Schema Version"",""type"":""integer""},""transcription"":{""enum"":[""disabled"",""configured""],""title"":""Transcription"",""type"":""string""},""synthesis"":{""enum"":[""disabled"",""configured""],""title"":""Synthesis"",""type"":""string""},""processing"":{""default"":""backend_local"",""enum"":[""backend_local"",""external_providers""],""title"":""Processing"",""type"":""string""},""providers"":{""items"":{""enum"":[""Groq"",""ElevenLabs""],""type"":""string""},""maxItems"":2,""title"":""Providers"",""type"":""array""},""retention"":{""const"":""request_only"",""default"":""request_only"",""title"":""Retention"",""type"":""string""},""input_mime"":{""const"":""audio/wav"",""default"":""audio/wav"",""title"":""Input Mime"",""type"":""string""},""max_input_bytes"":{""title"":""Max Input Bytes"",""type"":""integer""},""max_input_seconds"":{""title"":""Max Input Seconds"",""type"":""integer""},""request_timeout_seconds"":{""title"":""Request Timeout Seconds"",""type"":""integer""}},""required"":[""transcription"",""synthesis"",""max_input_bytes"",""max_input_seconds"",""request_timeout_seconds""],""title"":""VoiceCapabilities"",""type"":""object""}";
         public const string GuideTranscription = @"{""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""default"":1,""title"":""Schema Version"",""type"":""integer""},""text"":{""maxLength"":500,""minLength"":3,""title"":""Text"",""type"":""string""}},""required"":[""text""],""title"":""GuideTranscription"",""type"":""object""}";
         public const string GuideVoiceAnswer = @"{""$defs"":{""GuideCitation"":{""additionalProperties"":false,""properties"":{""element_slug"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Element Slug"",""type"":""string""},""title"":{""minLength"":1,""title"":""Title"",""type"":""string""}},""required"":[""element_slug"",""title""],""title"":""GuideCitation"",""type"":""object""},""GuideResponse"":{""additionalProperties"":false,""allOf"":[{""if"":{""properties"":{""status"":{""const"":""answered""}}},""then"":{""properties"":{""answer"":{""minLength"":1,""pattern"":""\\S"",""type"":""string""},""citations"":{""minItems"":1},""reason"":{""type"":""null""}}}},{""if"":{""properties"":{""status"":{""const"":""abstained""}}},""then"":{""properties"":{""answer"":{""type"":""null""},""citations"":{""maxItems"":0},""reason"":{""const"":""insufficient_evidence""}}}},{""if"":{""properties"":{""status"":{""const"":""provider_unavailable""}}},""then"":{""properties"":{""answer"":{""type"":""null""},""citations"":{""maxItems"":0},""reason"":{""const"":""provider_unavailable""}}}}],""properties"":{""schema_version"":{""const"":1,""title"":""Schema Version"",""type"":""integer""},""status"":{""enum"":[""answered"",""abstained"",""provider_unavailable""],""title"":""Status"",""type"":""string""},""answer"":{""anyOf"":[{""maxLength"":2000,""minLength"":1,""pattern"":""\\S"",""type"":""string""},{""type"":""null""}],""title"":""Answer""},""citations"":{""items"":{""$ref"":""#/$defs/GuideCitation""},""maxItems"":8,""title"":""Citations"",""type"":""array""},""reason"":{""anyOf"":[{""enum"":[""insufficient_evidence"",""provider_unavailable""],""type"":""string""},{""type"":""null""}],""title"":""Reason""}},""required"":[""schema_version"",""status"",""answer"",""citations"",""reason""],""title"":""GuideResponse"",""type"":""object""},""GuideSpeech"":{""additionalProperties"":false,""properties"":{""mime"":{""const"":""audio/wav"",""default"":""audio/wav"",""title"":""Mime"",""type"":""string""},""data_base64"":{""maxLength"":4000000,""minLength"":1,""title"":""Data Base64"",""type"":""string""}},""required"":[""data_base64""],""title"":""GuideSpeech"",""type"":""object""}},""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""default"":1,""title"":""Schema Version"",""type"":""integer""},""response"":{""$ref"":""#/$defs/GuideResponse""},""speech_status"":{""enum"":[""ready"",""disabled"",""unavailable"",""not_applicable""],""title"":""Speech Status"",""type"":""string""},""audio"":{""anyOf"":[{""$ref"":""#/$defs/GuideSpeech""},{""type"":""null""}]}},""required"":[""response"",""speech_status"",""audio""],""title"":""GuideVoiceAnswer"",""type"":""object""}";
+        public const string MuseumCredits = @"{""$defs"":{""CreditLine"":{""additionalProperties"":false,""properties"":{""role"":{""anyOf"":[{""type"":""string""},{""type"":""null""}],""default"":null,""title"":""Role""},""text"":{""title"":""Text"",""type"":""string""}},""required"":[""text""],""title"":""CreditLine"",""type"":""object""},""CreditSection"":{""additionalProperties"":false,""properties"":{""key"":{""enum"":[""project"",""pieces"",""testimonies"",""media"",""sources"",""technology""],""title"":""Key"",""type"":""string""},""title"":{""title"":""Title"",""type"":""string""},""lines"":{""items"":{""$ref"":""#/$defs/CreditLine""},""title"":""Lines"",""type"":""array""}},""required"":[""key"",""title"",""lines""],""title"":""CreditSection"",""type"":""object""}},""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""default"":1,""title"":""Schema Version"",""type"":""integer""},""title"":{""title"":""Title"",""type"":""string""},""subtitle"":{""title"":""Subtitle"",""type"":""string""},""sections"":{""items"":{""$ref"":""#/$defs/CreditSection""},""title"":""Sections"",""type"":""array""}},""required"":[""title"",""subtitle""],""title"":""MuseumCredits"",""type"":""object""}";
     }
 }

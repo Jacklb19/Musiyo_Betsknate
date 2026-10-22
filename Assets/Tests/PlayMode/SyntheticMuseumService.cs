@@ -31,6 +31,11 @@ namespace MusiyoBetsknate.Tests
         /// <summary>Slugs whose access is no longer granted (HTTP 404), as after a revocation.</summary>
         public ConcurrentDictionary<string, bool> Revoked { get; } = new ConcurrentDictionary<string, bool>();
         private readonly ConcurrentDictionary<string, int> grants = new ConcurrentDictionary<string, int>();
+        /// <summary>Body of GET /credits; without one the credits are not published (HTTP 404).</summary>
+        public string Credits { get; set; }
+        public int CreditRequests { get; private set; }
+        /// <summary>The canonical synthetic credits of the shared contract.</summary>
+        public static string ExampleCredits => Example("museum_credits.json");
 
         public SyntheticMuseumService()
         {
@@ -97,6 +102,11 @@ namespace MusiyoBetsknate.Tests
                 string type = "application/json";
                 foreach (var record in records)
                     if (path == "/api/v1/elements/" + record.Key) body = Encoding.UTF8.GetBytes(record.Value);
+                if (path == "/api/v1/credits")
+                {
+                    CreditRequests++;
+                    if (Credits != null) body = Encoding.UTF8.GetBytes(Credits);
+                }
                 foreach (var slug in models.Keys)
                 {
                     if (path == "/api/v1/elements/" + slug) body = Encoding.UTF8.GetBytes(Element(slug));

@@ -54,6 +54,8 @@ namespace MusiyoBetsknate.Museum
         /// <summary>True when a set other than the museum is built and can be shown.</summary>
         public bool Active => Kind != EntryBackdropKind.Museum && root != null;
         public Transform CameraPose => cameraAnchor;
+        /// <summary>The set itself, shown and hidden as a whole; the closing credits stand in it beside the fire.</summary>
+        public Transform Root => root;
         public bool Shown => shown;
         /// <summary>How bright the fire burns this moment, from 0 to 1; the entry menu takes its warm light from it.</summary>
         public float FireLevel { get; private set; }

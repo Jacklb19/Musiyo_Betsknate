@@ -11,6 +11,8 @@ namespace MusiyoBetsknate.Museum
     public sealed class MuseumMenuHud : MonoBehaviour
     {
         private enum MenuPage { Home, Settings, Controls }
+        /// <summary>Seconds over which the title menu rises after the closing credits.</summary>
+        public const float AfterEndingFadeSeconds = 1.4f;
         private MuseumVisitFlow flow;
         private MuseumInteraction interaction;
         private TourLoader loader;
@@ -345,13 +347,15 @@ namespace MusiyoBetsknate.Museum
             bool visible = flow.Phase == VisitPhase.Menu || !entering && interaction.State == InteractionState.Paused;
             overlay.SetActive(visible || entering);
             overlayGroup.interactable = overlayGroup.blocksRaycasts = visible;
-            if (visible) overlayGroup.alpha = 1;
+            // After the credits the title menu rises gently over the fire; any other opening shows it at once.
+            if (visible && !(flow.AfterEnding && flow.Phase == VisitPhase.Menu)) overlayGroup.alpha = 1;
+            else if (visible && !wasVisible) overlayGroup.alpha = 0;
             // Over the staged entry the backdrop lets the museum show through; a pause keeps the denser one.
             if (overlay.TryGetComponent<MuseumMenuThemeBinding>(out var theme) && theme.ColorToken == MuseumMenuColorToken.Backdrop
                 && overlay.TryGetComponent<Graphic>(out var backdrop))
                 backdrop.color = MuseumExperienceConfiguration.ColorValue(flow.Phase != VisitPhase.Exploring && flow.Entry != null
                     && flow.Entry.Available ? configuration.EntryBackdropColor : configuration.BackdropColor);
-            fade.gameObject.SetActive(entering && (flow.Transition == EntryTransition.Fade || FromBackdrop));
+            fade.gameObject.SetActive(entering && (flow.Transition == EntryTransition.Fade || FromBackdrop) || flow.Phase == VisitPhase.Ending);
             UpdateTransition();
             if (!visible) page = MenuPage.Home;
             // Enter or Escape that closed the menu must not also activate a point or reopen the pause.
@@ -410,7 +414,9 @@ namespace MusiyoBetsknate.Museum
         private void Update()
         {
             if (!bound) return;
-            if (flow.Phase == VisitPhase.Entering) UpdateTransition();
+            if (flow.Phase == VisitPhase.Entering || flow.Phase == VisitPhase.Ending) UpdateTransition();
+            if (overlayGroup.interactable && overlayGroup.alpha < 1)
+                overlayGroup.alpha = Mathf.MoveTowards(overlayGroup.alpha, 1, Time.unscaledDeltaTime / AfterEndingFadeSeconds);
             // The key being chosen for an action, and the one that just was, never also operates the menu.
             if (!overlayGroup.interactable || input.Capturing || input.CaptureEndedThisFrame) { navigationArmed = false; return; }
             if (page != MenuPage.Home && (input.Back.WasPressedThisFrame()
@@ -462,6 +468,8 @@ namespace MusiyoBetsknate.Museum
         /// <summary>The menu dissolves first. A glide then shows the way in; a fade goes dark before the museum appears.</summary>
         private void UpdateTransition()
         {
+            // At the end of the visit the screen goes dark over the museum and opens again on the fire.
+            if (flow.Phase == VisitPhase.Ending) { fade.alpha = flow.GetComponent<MuseumEnding>()?.Darkness ?? 1; return; }
             if (flow.Phase != VisitPhase.Entering) { fade.alpha = 0; return; }
             float share = configuration.EntryMenuFadeShare;
             float progress = flow.TransitionProgress;

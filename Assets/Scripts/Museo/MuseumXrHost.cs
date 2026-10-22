@@ -100,6 +100,7 @@ namespace MusiyoBetsknate.Museum
             interaction.GetComponent<MuseumArrival>()?.Configure(head.transform);
             interaction.GetComponent<MuseumGuide>()?.Configure(head.transform);
             interaction.GetComponent<MuseumFarewell>()?.Configure(head.transform);
+            interaction.GetComponent<MuseumEnding>()?.ConfigureView(head.transform, head);
             interaction.GetComponent<MuseumWayfinding>()?.Configure(head.transform);
             interaction.GetComponent<MuseumServiceNotice>()?.Configure(head.transform);
             interaction.GetComponent<MuseumModelGrab>()?.ConfigureSpatial(trackingOrigin);

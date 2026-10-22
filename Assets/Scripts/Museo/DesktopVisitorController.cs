@@ -111,6 +111,20 @@ namespace MusiyoBetsknate.Museum
             return false;
         }
 
+        /// <summary>Stands the visitor at a pose, looking level, at rest; a new visit starts this way after the credits.</summary>
+        public void PlaceAt(Vector3 position, Quaternion rotation)
+        {
+            if (body == null) body = GetComponent<CharacterController>();
+            body.enabled = false;
+            transform.SetPositionAndRotation(position, Quaternion.Euler(0, rotation.eulerAngles.y, 0));
+            pitch = 0;
+            if (viewCamera != null) viewCamera.transform.localRotation = Quaternion.identity;
+            verticalSpeed = 0;
+            planarVelocity = Vector3.zero;
+            body.enabled = true;
+            Physics.SyncTransforms();
+        }
+
         public void CapturePointer(bool value)
         {
             captured = value;
