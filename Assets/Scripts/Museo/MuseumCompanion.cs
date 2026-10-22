@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 namespace MusiyoBetsknate.Museum
@@ -11,8 +10,8 @@ namespace MusiyoBetsknate.Museum
     /// The guide's figure walking the visit with the visitor. It keeps a comfortable distance behind, along the way the
     /// visitor actually walked, steps aside instead of blocking, keeps out of the line to the exhibit being read, waits at
     /// its own anchor by the hearth, and is never drawn against the visitor's eyes. It has no collider, never moves the
-    /// visitor or the camera, and answers no questions: the conversation stays with <see cref="MuseumGuide"/> at the
-    /// guide anchor. The figure reuses the neutral placeholder of the museum model; nothing in it represents a person.
+    /// visitor or the camera. The visitor can ask it a spoken question anywhere (<see cref="MuseumCompanionVoice"/>); the
+    /// conversation about the visit stays with <see cref="MuseumGuide"/> at the guide anchor. The figure is the companion's own neutral figure (<see cref="GuideFigure"/>); nothing in it represents a person.
     /// </summary>
     public sealed class MuseumCompanion : MonoBehaviour
     {
@@ -47,12 +46,17 @@ namespace MusiyoBetsknate.Museum
         private float speed;
 
         public Transform MaskMount { get; private set; }
+        /// <summary>The companion's figure; its look comes from <c>Resources/MuseumGuideFigures.json</c>.</summary>
+        public GuideFigure Figure { get; private set; }
         public bool Placed => placed;
         public bool Visible => figure != null && figure.gameObject.activeSelf && figureRenderers.Any(renderer => renderer.enabled);
         /// <summary>The visitor asked for quiet: no remarks are made.</summary>
         public bool Muted { get; set; }
-        /// <summary>True while the companion's own voice plays. Remarks have no recorded voice yet, so it stays false.</summary>
-        public bool Speaking => false;
+        /// <summary>True while the companion's own voice plays: the spoken answer to a visitor's question.</summary>
+        public bool Speaking => voice != null && voice.Speaking;
+        /// <summary>Spoken questions to the companion, anywhere in the museum.</summary>
+        public MuseumCompanionVoice Voice => voice;
+        private MuseumCompanionVoice voice;
         public string RemarkText => remarks?.Current?.Text ?? "";
         public MuseumCompanionRemarks Remarks => remarks;
         public string Zone { get; private set; }
@@ -81,6 +85,9 @@ namespace MusiyoBetsknate.Museum
             rooms = FindObjectsByType<RoomAnchor>(FindObjectsSortMode.None);
             BuildFigure();
             BuildBubble();
+            voice = GetComponent<MuseumCompanionVoice>();
+            if (voice == null) voice = gameObject.AddComponent<MuseumCompanionVoice>();
+            if (GetComponent<MuseumCompanionVoicePanel>() == null) gameObject.AddComponent<MuseumCompanionVoicePanel>();
             Show(false);
         }
 
@@ -90,46 +97,33 @@ namespace MusiyoBetsknate.Museum
             hiddenOriginals.Clear();
         }
 
-        /// <summary>Copies the neutral guide placeholder of the museum model, standing, and hides the seated original.</summary>
+        /// <summary>
+        /// Builds the companion's own figure (<see cref="GuideFigure"/>) and hides the seated placeholder of the museum model.
+        /// Nothing of the museum's meshes is reused: on the headset, static batching merges them, and a copy of the merged
+        /// mesh showed the whole room as a grey sheet 8 km wide (Quest 3, 22/10/2026).
+        /// </summary>
         private void BuildFigure()
         {
-            figure = new GameObject("Figure").transform;
-            figure.SetParent(transform, false);
-            var all = FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            var body = all.FirstOrDefault(renderer => renderer.name == BodyPiece && renderer.TryGetComponent<MeshFilter>(out _));
-            var top = all.FirstOrDefault(renderer => renderer.name == HeadPiece && renderer.TryGetComponent<MeshFilter>(out _));
-            if (body == null || top == null)
-            {
-                Debug.LogWarning("The museum model has no guide placeholder; the companion is not shown.");
-                enabled = false;
-                return;
-            }
-            var bodyBounds = body.bounds;
-            var foot = new Vector3(bodyBounds.center.x, bodyBounds.min.y, bodyBounds.center.z);
-            var copies = new List<Renderer>();
-            foreach (var source in new[] { body, top })
-            {
-                var copy = new GameObject(source.name == BodyPiece ? "Body" : "Head");
-                copy.transform.SetParent(figure, false);
-                copy.AddComponent<MeshFilter>().sharedMesh = source.GetComponent<MeshFilter>().sharedMesh;
-                var renderer = copy.AddComponent<MeshRenderer>();
-                renderer.sharedMaterials = source.sharedMaterials;
-                renderer.shadowCastingMode = ShadowCastingMode.On;
-                renderer.receiveShadows = true;
-                copy.transform.localRotation = source.transform.rotation;
-                copy.transform.localScale = source.transform.lossyScale * settings.FigureScale;
-                copy.transform.localPosition = (source.transform.position - foot) * settings.FigureScale;
-                copies.Add(renderer);
-                source.enabled = false;
-                hiddenOriginals.Add(source);
-            }
-            figureRenderers = copies.ToArray();
-            var headBounds = top.bounds;
-            figureHeight = (headBounds.max.y - foot.y) * settings.FigureScale;
+            HidePlaceholder(hiddenOriginals);
+            Figure = GuideFigure.Build(transform, GuideFigureSettings.Companion, settings.FigureScale);
+            figure = Figure.transform;
+            figureRenderers = Figure.Renderers;
+            figureHeight = Figure.Height;
             MaskMount = new GameObject("MaskMount").transform;
             MaskMount.SetParent(figure, false);
             // In front of the head, at its middle, facing the way the figure faces.
-            MaskMount.localPosition = new Vector3(0, (headBounds.center.y - foot.y) * settings.FigureScale, headBounds.extents.z * settings.FigureScale * .85f);
+            MaskMount.localPosition = Figure.Head.localPosition + new Vector3(0, .115f, .11f) * (figureHeight / 1.62f);
+        }
+
+        /// <summary>Hides the provisional guide pieces of the museum model; the guides' own figures stand in for them.</summary>
+        public static void HidePlaceholder(List<Renderer> hidden)
+        {
+            foreach (var renderer in FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if ((renderer.name == BodyPiece || renderer.name == HeadPiece) && renderer.enabled)
+                {
+                    renderer.enabled = false;
+                    hidden.Add(renderer);
+                }
         }
 
         /// <summary>A small panel above the figure for its words; it turns toward the visitor and never takes input.</summary>
@@ -186,6 +180,7 @@ namespace MusiyoBetsknate.Museum
             if (rejoinPending && Rejoin(floor, eyes)) rejoinPending = false;
             Move(floor);
             Face(floor);
+            Gesture(eyes);
             float distance = Vector3.Distance(eyes, transform.position + Vector3.up * figureHeight * .7f);
             Show(distance > settings.HideWithin);
             UpdateRemark(exploring, eyes);
@@ -325,9 +320,21 @@ namespace MusiyoBetsknate.Museum
                 settings.TurnSpeed * Time.deltaTime);
         }
 
+        /// <summary>While the visitor asks it something, the figure looks at them, listens, thinks and speaks.</summary>
+        private void Gesture(Vector3 eyes)
+        {
+            if (Figure == null) return;
+            bool talking = voice != null && voice.Conversing;
+            Figure.LookAt = talking ? eyes : (Vector3?)null;
+            Figure.Gesture = !talking ? GuideGesture.Idle
+                : voice.Stage == CompanionVoiceStage.Recording || voice.Stage == CompanionVoiceStage.Review ? GuideGesture.Listen
+                : voice.Stage == CompanionVoiceStage.Transcribing || voice.Stage == CompanionVoiceStage.Thinking ? GuideGesture.Think
+                : voice.Speaking ? GuideGesture.Speak : GuideGesture.Idle;
+        }
+
         private void UpdateRemark(bool exploring, Vector3 eyes)
         {
-            bool busy = interaction.State != InteractionState.Exploration
+            bool busy = (voice != null && voice.Conversing) || interaction.State != InteractionState.Exploration
                 || (narration ??= FindAnyObjectByType<MuseumNarration>()) != null && narration.State == NarrationState.Playing;
             var remark = remarks.Tick(new CompanionMoment(Time.unscaledTimeAsDouble, Zone, exploring && interaction.State != InteractionState.Paused,
                 busy, Muted));

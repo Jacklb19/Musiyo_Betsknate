@@ -57,6 +57,7 @@ namespace MusiyoBetsknate.Tests
             Assert.That(Object.FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None)
                 .Where(renderer => renderer.name == MuseumCompanion.BodyPiece).All(renderer => !renderer.enabled),
                 "The seated placeholder is replaced by the walking figure.");
+            AssertHumanSized(companion);
 
             bool welcomed = false;
             var log = new System.Text.StringBuilder();
@@ -95,6 +96,46 @@ namespace MusiyoBetsknate.Tests
             var joined = companion.transform.position - body.transform.position;
             joined.y = 0;
             Assert.That(joined.magnitude, Is.LessThan(MuseumCompanionSettings.Current.FollowDistance + 1.5f), "The companion rejoins after a jump.");
+        }
+
+        /// <summary>
+        /// The headset build merges the museum's static meshes before the visit; the companion's figure must not change.
+        /// A copy of a merged mesh once showed the whole room as a grey sheet of 8266 × 356 m (Quest 3, 22/10/2026).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheCompanionKeepsAPersonsSizeWhenTheMuseumIsStaticallyBatched()
+        {
+            yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(MuseumScene,
+                new LoadSceneParameters(LoadSceneMode.Additive));
+            var scene = SceneManager.GetSceneByPath(MuseumScene);
+            // As the Android player does: every piece marked for batching is merged into shared meshes.
+            var batched = scene.GetRootGameObjects().Where(root => root.GetComponent<MuseumCompanion>() == null).ToArray();
+            foreach (var root in batched) StaticBatchingUtility.Combine(root);
+            var flow = Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var settings = new UnityEditor.SerializedObject(flow.GetComponent<TourLoader>());
+            settings.FindProperty("apiBase").stringValue = "http://127.0.0.1:9/api/v1";
+            settings.ApplyModifiedPropertiesWithoutUndo();
+            flow.GetComponent<MuseumEntryView>().HeadsetActive = () => false;
+            var companion = Object.FindAnyObjectByType<MuseumCompanion>();
+            var body = Object.FindAnyObjectByType<DesktopVisitorController>().GetComponent<CharacterController>();
+            yield return null;
+            flow.EnterImmediately();
+            Place(body, new Vector3(0, .05f, -56));
+            for (int frame = 0; frame < 10; frame++) yield return null;
+            Assert.That(companion.Placed, Is.True);
+            AssertHumanSized(companion);
+            Assert.That(companion.Figure.Renderers.Select(renderer => renderer.GetComponent<MeshFilter>()?.sharedMesh)
+                .All(mesh => mesh != null && !mesh.name.StartsWith("Combined")), Is.True, "The figure never shows a merged museum mesh.");
+        }
+
+        private static void AssertHumanSized(MuseumCompanion companion)
+        {
+            Assert.That(companion.Figure, Is.Not.Null);
+            var bounds = companion.Figure.WorldBounds();
+            Assert.That(bounds.size.y, Is.InRange(1.3f, 2.1f), "The figure stands as tall as a person: " + bounds.size);
+            Assert.That(Mathf.Max(bounds.size.x, bounds.size.z), Is.InRange(.3f, 1.4f), "The figure is as wide as a person: " + bounds.size);
+            Assert.That(Vector3.Distance(new Vector3(bounds.center.x, 0, bounds.center.z),
+                new Vector3(companion.transform.position.x, 0, companion.transform.position.z)), Is.LessThan(.5f), "The figure stands where the companion is.");
         }
 #endif
     }

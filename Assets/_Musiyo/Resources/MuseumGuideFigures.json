@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "figures": {
+    "companion": {
+      "model": "",
+      "height_m": 1.6,
+      "garment_color": "#5E4B3C",
+      "trim_color": "#3B2E26",
+      "head_color": "#C9B29A"
+    },
+    "interviewer": {
+      "model": "",
+      "height_m": 1.64,
+      "garment_color": "#3F5A55",
+      "trim_color": "#2A3C39",
+      "head_color": "#C4AA90"
+    }
+  }
+}
