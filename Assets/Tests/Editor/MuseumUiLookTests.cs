@@ -199,6 +199,12 @@ namespace MusiyoBetsknate.Tests
             look.FormatSlider(volume, amount => "x" + amount.ToString(System.Globalization.CultureInfo.InvariantCulture));
             Assert.That(look.SliderValueText(volume), Is.EqualTo("x0.5"));
             Assert.That(fixture.Menu.View.Pause.Primary.GetComponent<MuseumMenuChoice>(), Is.Not.Null);
+            // Nothing authored repaints a choice or the rule when a page opens again.
+            foreach (var binding in fixture.Menu.View.Pause.GetComponentsInChildren<MuseumMenuThemeBinding>(true))
+                Assert.That(binding.GetComponentInParent<Selectable>(), Is.Null, binding.name + " keeps a binding inside a choice.");
+            Assert.That(fixture.Menu.View.Pause.transform.Find("Viewport/Content/PresentationRule").GetComponent<MuseumMenuThemeBinding>(), Is.Null);
+            foreach (var choice in new[] { fixture.Menu.View.Pause.Settings, fixture.Menu.View.Pause.Primary })
+                Assert.That(choice.GetComponentInChildren<TMP_Text>(true).fontSize, Is.EqualTo(MuseumTitleScreen.ChoiceSize));
             Assert.That(fixture.Menu.View.Main.Scroll.content.Find("LoadingLine"), Is.Not.Null);
         }
 

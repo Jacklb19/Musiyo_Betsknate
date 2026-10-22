@@ -77,7 +77,10 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(input.Move.enabled, Is.False);
                 yield return Tap(keyboard.backspaceKey);
                 Assert.That(menu.View.Main.gameObject.activeSelf, Is.True);
+                // Backwards from the first choice wraps to the last: the way out, then the controls.
                 Press(keyboard.leftShiftKey);
+                yield return Tap(keyboard.tabKey);
+                Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(menu.QuitMainButton.gameObject));
                 yield return Tap(keyboard.tabKey);
                 Release(keyboard.leftShiftKey);
                 Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(menu.View.Main.Controls.gameObject));

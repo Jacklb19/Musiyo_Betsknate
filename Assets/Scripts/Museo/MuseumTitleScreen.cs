@@ -265,6 +265,8 @@ namespace MusiyoBetsknate.Museum
             var rule = page.transform.Find("Viewport/Content/PresentationRule");
             if (rule != null && rule.TryGetComponent<Image>(out var line))
             {
+                // The authored binding would paint the rule in the second accent again each time the page opens.
+                foreach (var binding in rule.GetComponents<MuseumMenuThemeBinding>()) Discard(binding);
                 var tint = accentColor;
                 tint.a = .7f;
                 line.color = tint;
@@ -354,6 +356,8 @@ namespace MusiyoBetsknate.Museum
             TMP_Text label = null, value = null;
             foreach (var text in choice.GetComponentsInChildren<TMP_Text>(true))
             {
+                // The look owns the size and colour of a caption; an authored binding would put them back on enable.
+                foreach (var binding in text.GetComponents<MuseumMenuThemeBinding>()) Discard(binding);
                 if (text.name == "Value") value = text;
                 else if (label == null) label = text;
             }
