@@ -73,7 +73,7 @@ namespace MusiyoBetsknate.Tests
         }
 
 #if UNITY_EDITOR
-        [UnityTest]
+        [UnityTest, Timeout(600000)]
         public IEnumerator CaptureTheExhibitionAgainstTheLiveApi()
         {
             var api = Environment.GetEnvironmentVariable("MUSIYO_LIVE_API");
@@ -220,8 +220,10 @@ namespace MusiyoBetsknate.Tests
                 if (route.Length < 2) continue;
                 var line = new GameObject("CaptureRoute_" + name).AddComponent<LineRenderer>();
                 line.positionCount = route.Length + 1;
-                line.SetPosition(0, floor + Vector3.up * .3f);
-                for (int index = 0; index < route.Length; index++) line.SetPosition(index + 1, route[index] + Vector3.up * .3f);
+                // Drawn above the roofs, so the picture from above shows the routes inside the rooms too.
+                Vector3 Above(Vector3 spot) => new Vector3(spot.x, 14, spot.z);
+                line.SetPosition(0, Above(floor));
+                for (int index = 0; index < route.Length; index++) line.SetPosition(index + 1, Above(route[index]));
                 line.widthMultiplier = .45f;
                 line.material = new Material(Shader.Find("Sprites/Default"));
                 line.startColor = line.endColor = colour;
