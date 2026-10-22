@@ -6,8 +6,10 @@ using UnityEngine.UI;
 namespace MusiyoBetsknate.Museum
 {
     /// <summary>
-    /// Carries the point panel into the museum: it unfolds in front of the reading stand of the active point,
-    /// floats there turned toward the visitor, and uses the stable point anchor where there is no stand.
+    /// Carries the point panel into the museum. By a reading stand the screen rests on the stand's board, centred on it,
+    /// leaning back with it and fixed in the museum like a real label (owner's decision D1 of 22/10/2026): it is read by
+    /// stopping in front of it. Where a point has no stand, the screen floats at the stable point anchor turned toward
+    /// the visitor.
     /// </summary>
     public sealed class MuseumLecternDisplay : MonoBehaviour
     {
@@ -120,7 +122,12 @@ namespace MusiyoBetsknate.Museum
         public PointLectern Find(TourPoint point)
         {
             if (point == null) return null;
-            stands ??= FindObjectsByType<PointLectern>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            if (stands == null)
+            {
+                stands = FindObjectsByType<PointLectern>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+                // The stands of the museum take their finish once, when the visit first looks for them.
+                if (Application.isPlaying) foreach (var stand in stands) MuseumLecternFinish.Apply(stand);
+            }
             foreach (var stand in stands)
                 if (stand != null && stand.Point == point.Anchor && stand.Board != null) return stand;
             return null;
@@ -166,16 +173,16 @@ namespace MusiyoBetsknate.Museum
                 surface.sizeDelta = panel.sizeDelta + Vector2.one * (Border * 2);
                 panel.gameObject.SetActive(true);
                 aimMark.SetAsLastSibling();
-                heading = HeadingToViewer();
+                if (stand == null) heading = HeadingToViewer();
             }
             Apply();
         }
 
-        /// <summary>Compass angle from the stand toward the visitor; the reading side of the board when nobody is watching.</summary>
+        /// <summary>Compass angle from the point toward the visitor; the point's front when nobody is watching.</summary>
         private float HeadingToViewer()
         {
-            var centre = Host != null ? Host.BoardCentre : Anchor.transform.position;
-            var direction = viewer != null ? viewer.position - centre : Host != null ? Host.Facing : Anchor.transform.forward;
+            var centre = Anchor.transform.position;
+            var direction = viewer != null ? viewer.position - centre : Anchor.transform.forward;
             direction.y = 0;
             // Right above the stand there is no side to turn to, so the screen keeps its heading.
             return direction.sqrMagnitude < .01f ? heading : Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
@@ -296,10 +303,30 @@ namespace MusiyoBetsknate.Museum
             float target = open && InWorld ? 1 : 0;
             var settings = MuseumExperienceConfiguration.Current;
             Openness = Mathf.MoveTowards(Openness, target, Mathf.Max(0, elapsed) / settings.LecternUnfoldSeconds);
-            // The screen keeps turning toward the visitor, eased so it does not jitter with every step.
-            if (InWorld)
+            // A floating screen keeps turning toward the visitor, eased so it does not jitter with every step; a screen
+            // resting on a stand stays where it is.
+            if (InWorld && Host == null)
                 heading = Mathf.LerpAngle(heading, HeadingToViewer(), 1 - Mathf.Exp(-Mathf.Max(0, elapsed) / settings.LecternFollowSeconds));
             Apply();
+        }
+
+        /// <summary>
+        /// Where the lower edge of a screen resting on a stand lies and how it is turned: on the board's plane, centred
+        /// across it, at the configured height above the stand's base, leaning back with the board (never more than the
+        /// configured tilt) and facing the board's reader. Its forward axis points into the board, away from the reader.
+        /// </summary>
+        public static Pose RestingPose(PointLectern stand, MuseumExperienceConfiguration settings)
+        {
+            var board = stand.Board;
+            var facing = stand.Facing;
+            float boardTilt = Vector3.Angle(board.up, Vector3.up);
+            float tilt = Mathf.Min(boardTilt, settings.LecternScreenTilt);
+            // Up the board's slope to the height of the lower edge, without leaving the board.
+            float climb = Mathf.Abs(board.up.y) > .01f ? (stand.transform.position.y + settings.LecternScreenBottom - board.position.y) / board.up.y : 0;
+            climb = Mathf.Clamp(climb, 0, stand.BoardSize.y);
+            var edge = board.position + board.up * climb - board.forward * settings.LecternScreenGap;
+            var rotation = Quaternion.LookRotation(-facing, Vector3.up) * Quaternion.Euler(tilt, 0, 0);
+            return new Pose(edge, rotation);
         }
 
         private void Apply()
@@ -308,11 +335,20 @@ namespace MusiyoBetsknate.Museum
             if (surface.gameObject.activeSelf != visible) surface.gameObject.SetActive(visible);
             if (!visible) return;
             var settings = MuseumExperienceConfiguration.Current;
-            // It floats in front of the stand, on the side the visitor is on, upright and facing them.
-            var toViewer = Quaternion.Euler(0, heading, 0) * Vector3.forward;
-            var centre = Host != null ? Host.BoardCentre : Anchor.transform.position;
-            centre.y = (Host != null ? Host.transform.position.y : Anchor.transform.position.y) + settings.LecternFloatHeight;
-            surface.SetPositionAndRotation(centre + toViewer * settings.LecternFloatDistance, Quaternion.LookRotation(-toViewer, Vector3.up));
+            if (Host != null)
+            {
+                // It rests on the stand, fixed in the museum.
+                var pose = RestingPose(Host, settings);
+                surface.SetPositionAndRotation(pose.position, pose.rotation);
+            }
+            else
+            {
+                // Without a stand it floats at the point, on the side the visitor is on, upright and facing them.
+                var toViewer = Quaternion.Euler(0, heading, 0) * Vector3.forward;
+                var centre = Anchor.transform.position;
+                centre.y = Anchor.transform.position.y + settings.LecternFloatHeight;
+                surface.SetPositionAndRotation(centre + toViewer * settings.LecternFloatDistance, Quaternion.LookRotation(-toViewer, Vector3.up));
+            }
             float eased = Mathf.SmoothStep(0, 1, Openness);
             float scale = settings.LecternScreenWidth / surface.sizeDelta.x;
             // The screen rises from its lower edge.

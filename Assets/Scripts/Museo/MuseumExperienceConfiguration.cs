@@ -30,6 +30,15 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("lectern_float_height")] public float LecternFloatHeight;
         [JsonProperty("lectern_float_distance")] public float LecternFloatDistance;
         [JsonProperty("lectern_follow_seconds")] public float LecternFollowSeconds;
+        /// <summary>Height above the stand's base of the lower edge of the screen that rests on a reading stand, in metres.</summary>
+        [JsonProperty("lectern_screen_bottom")] public float LecternScreenBottom;
+        /// <summary>Most the screen on a stand leans back from upright, in degrees; it leans with the board up to this.</summary>
+        [JsonProperty("lectern_screen_tilt")] public float LecternScreenTilt;
+        /// <summary>Gap between a stand's board and the screen resting on it, in metres.</summary>
+        [JsonProperty("lectern_screen_gap")] public float LecternScreenGap;
+        /// <summary>Finish of the reading stands: the wood of the stand and the face of its board.</summary>
+        [JsonProperty("lectern_wood_color")] public string LecternWoodColor;
+        [JsonProperty("lectern_board_color")] public string LecternBoardColor;
         [JsonProperty("default_sensitivity")] public float DefaultSensitivity;
         [JsonProperty("minimum_sensitivity")] public float MinimumSensitivity;
         [JsonProperty("maximum_sensitivity")] public float MaximumSensitivity;
@@ -105,7 +114,9 @@ namespace MusiyoBetsknate.Museum
                 || !Positive(result.PointLeaveMargin) || !Positive(result.LecternScreenWidth)
                 || !Positive(result.LecternUnfoldSeconds) || !Positive(result.LecternViewingDistance)
                 || !Positive(result.LecternFloatHeight) || !Positive(result.LecternFloatDistance)
-                || !Positive(result.LecternFollowSeconds)
+                || !Positive(result.LecternFollowSeconds) || !Positive(result.LecternScreenBottom) || result.LecternScreenBottom > 2
+                || !Finite(result.LecternScreenTilt) || result.LecternScreenTilt < 0 || result.LecternScreenTilt > 60
+                || !Finite(result.LecternScreenGap) || result.LecternScreenGap < 0 || result.LecternScreenGap > .2f
                 || !Positive(result.KeyboardLookSpeed) || !Positive(result.MaximumPitch) || result.MaximumPitch >= 90
                 || !Positive(result.MinimumSensitivity) || !Positive(result.MaximumSensitivity)
                 || !Finite(result.DefaultSensitivity) || result.DefaultSensitivity < result.MinimumSensitivity
@@ -118,6 +129,7 @@ namespace MusiyoBetsknate.Museum
             ColorValue(result.TextColor); ColorValue(result.AccentColor);
             ColorValue(result.SelectedColor); ColorValue(result.PointerColor);
             ColorValue(result.MutedTextColor); ColorValue(result.SecondaryAccentColor);
+            ColorValue(result.LecternWoodColor); ColorValue(result.LecternBoardColor);
             MuseumEntryBackdrop.Parse(result.EntryBackdrop);
             if (!Finite(result.PointOpenSeconds) || result.PointOpenSeconds < 0 || result.PointOpenSeconds > 3
                 || result.ServiceRetrySeconds == null || result.ServiceRetrySeconds.Length == 0
