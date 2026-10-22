@@ -396,6 +396,8 @@ namespace MusiyoBetsknate.Museum
             // By a stand the screen already holds the whole record, so nothing asks to open it.
             detailButton.gameObject.SetActive(!interaction.DetailInWorld && (interaction.State == InteractionState.ElementSelected
                 || interaction.State == InteractionState.ModelExamination));
+            // Only a formatted record carries markup, and in it the service text is shown literally; nothing else is parsed.
+            panelText.richText = false;
             if (paused) { panelText.text = MuseumInterfaceText.Get("pause_description"); return; }
             if (notice)
             {
@@ -443,9 +445,10 @@ namespace MusiyoBetsknate.Museum
                 int count = point.Content.elements.Length;
                 int position = System.Array.IndexOf(point.Content.elements, element);
                 // The record begins with the piece's name; the narration's transcription follows below it on its own.
-                panelText.text = point.Content.name
-                    + (count > 1 ? " · " + MuseumInterfaceText.Format("piece_position", position + 1, count) : "") + "\n"
-                    + (record ?? element.title + "\n\n" + (detail ?? MuseumInterfaceText.Get("detail_loading"))).TrimEnd();
+                panelText.richText = true;
+                panelText.text = ElementText.Plain(point.Content.name
+                    + (count > 1 ? " · " + MuseumInterfaceText.Format("piece_position", position + 1, count) : "")) + "\n"
+                    + (record ?? ElementText.Plain(element.title) + "\n\n" + (detail ?? ElementText.Plain(MuseumInterfaceText.Get("detail_loading")))).TrimEnd();
                 return;
             }
             if (interaction.State != InteractionState.Reading)
@@ -457,6 +460,7 @@ namespace MusiyoBetsknate.Museum
                         : MuseumInterfaceText.Get("detail_controls"));
                 return;
             }
+            panelText.richText = detail != null;
             panelText.text = detail ?? MuseumInterfaceText.Get("detail_loading");
         }
 

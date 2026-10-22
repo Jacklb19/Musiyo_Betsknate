@@ -108,7 +108,7 @@ namespace MusiyoBetsknate.Tests
             var view = UnityEngine.Object.FindAnyObjectByType<MuseumGuideView>();
             var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
             var camera = visitor.GetComponentInChildren<Camera>();
-            string Screen() => string.Join("\n", display.Surface.GetComponentsInChildren<TMP_Text>(false).Select(text => text.text));
+            string Screen() => string.Join("\n", display.Surface.GetComponentsInChildren<TMP_Text>(false).Select(text => { text.ForceMeshUpdate(); return text.GetParsedText(); }));
             var stands = UnityEngine.Object.FindObjectsByType<PointLectern>(FindObjectsSortMode.None);
 
             // The governor's stand, when the API declares its point.
@@ -118,13 +118,40 @@ namespace MusiyoBetsknate.Tests
             {
                 var stand = stands.Single(candidate => candidate.Point == governor.Anchor);
                 Assert.That(visitor.FocusPoint(governor.Anchor, stand.ViewingSpot(1.3f), stand.ViewTarget), Is.True);
-                yield return Until(() => Screen().Contains("Crédito:"), 15);
+                yield return Until(() => Screen().Contains("Referencias"), 15);
                 yield return Until(() => display.Openness >= 1, 3);
                 yield return new WaitForSecondsRealtime(.5f);
                 Render(camera, "1_gobernador");
                 File.WriteAllText(Path.Combine(Folder, "1_gobernador.txt"), Screen());
-                summary.Add("governor_screen_has_source_and_credit: " + (Screen().Contains("Fuente:") && Screen().Contains("Crédito:")));
+                summary.Add("governor_screen_ends_with_references_not_inline_sources: " + (Screen().Contains("Referencias") && !Screen().Contains("Fuente:")));
                 summary.Add("governor_model_requests_after_open: " + presenter.State);
+                // Where it stands in the courtyard, with the Castle and the arc of pedestals, as a visitor coming in sees it.
+                // The Castle shows while its own point is visited, so the pictures are taken from there.
+                var castle = runtime.FindPoint("punto.personajes.castillo");
+                if (castle != null && castle.HasContent)
+                {
+                    var castleStand = stands.FirstOrDefault(candidate => candidate.Point == castle.Anchor);
+                    Assert.That(castleStand != null ? visitor.FocusPoint(castle.Anchor, castleStand.ViewingSpot(1.4f), castleStand.ViewTarget)
+                        : visitor.FocusPoint(castle.Anchor), Is.True);
+                    yield return Until(() => interaction.ActivePoint == castle, 5);
+                    yield return Until(() => presenter.State == ModelLoadState.Ready && presenter.ModelPoint == castle, 60);
+                    yield return new WaitForSecondsRealtime(.6f);
+                    summary.Add("castle_piece_for_courtyard_pictures: " + presenter.State + " " + presenter.ModelSlug);
+                }
+                var wide = new GameObject("CourtyardCamera").AddComponent<Camera>();
+                wide.fieldOfView = 70;
+                wide.nearClipPlane = .05f;
+                foreach (var (name, eye, target) in new[]
+                {
+                    ("1b_gobernador_desde_la_entrada", new Vector3(1.5f, 1.65f, -8.5f), new Vector3(-4.5f, 1.2f, 1.5f)),
+                    ("1c_gobernador_desde_el_castillo", new Vector3(1.5f, 1.65f, .2f), new Vector3(-6.6f, 1, 2.6f)),
+                    ("1d_patio_desde_arriba", new Vector3(0, 13, -9), new Vector3(-1.5f, 0, 1)),
+                })
+                {
+                    wide.transform.SetPositionAndRotation(eye, Quaternion.LookRotation(target - eye, Vector3.up));
+                    Render(wide, name);
+                }
+                UnityEngine.Object.Destroy(wide.gameObject);
             }
 
             // Matachín: the arrows stand by the pedestal on the point's own record, and its mask comes to the pedestal.

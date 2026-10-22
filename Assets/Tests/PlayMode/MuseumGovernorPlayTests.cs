@@ -71,7 +71,7 @@ namespace MusiyoBetsknate.Tests
         }
 
         private static string ScreenText(MuseumLecternDisplay display)
-            => string.Join("\n", display.Surface.GetComponentsInChildren<TMP_Text>(false).Select(text => text.text));
+            => string.Join("\n", display.Surface.GetComponentsInChildren<TMP_Text>(false).Select(text => { text.ForceMeshUpdate(); return text.GetParsedText(); }));
 
 #if UNITY_EDITOR
         [UnityTest]
@@ -130,12 +130,15 @@ namespace MusiyoBetsknate.Tests
             for (float waited = 0; display.Openness < 1 && waited < 3; waited += Time.unscaledDeltaTime) yield return null;
             Assert.That(display.Host, Is.EqualTo(stand), "The record unfolds from the governor's own stand.");
             string text = "";
-            for (float waited = 0; !(text = ScreenText(display)).Contains("Crédito:") && waited < 10; waited += Time.unscaledDeltaTime) yield return null;
+            for (float waited = 0; !(text = ScreenText(display)).Contains("Referencias") && waited < 10; waited += Time.unscaledDeltaTime) yield return null;
             StringAssert.Contains("Gobernador y cabildantes", text);
             StringAssert.Contains("El gobernador y los cabildantes", text);
             StringAssert.Contains("Interpretación sintética para validar el contrato.", text);
-            StringAssert.Contains("Fuente: Referencia sintética", text);
-            StringAssert.Contains("Crédito: Autor de prueba", text);
+            // The reading ends with its short reference and credit line, in small type, instead of naming them inline.
+            StringAssert.Contains("Interpretación sintética para validar el contrato.1", text);
+            StringAssert.Contains("1. Referencia sintética.", text);
+            StringAssert.Contains("Autor de prueba", text);
+            StringAssert.DoesNotContain("Fuente:", text);
             StringAssert.DoesNotContain("Cargando", text);
             // No model, picture or narration is asked for or offered, and no arrows step to other pieces.
             yield return new WaitForSecondsRealtime(1);
