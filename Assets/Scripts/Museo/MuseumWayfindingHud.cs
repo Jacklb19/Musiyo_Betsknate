@@ -23,6 +23,7 @@ namespace MusiyoBetsknate.Museum
         private TMP_Text title;
         private Transform choices;
         private bool wasOpen;
+        private RectTransform legendPill;
         private MuseumInput input;
         private readonly System.Collections.Generic.List<(TMP_Text caption, string textKey)> keyedCaptions = new();
         public void Configure(MuseumWayfinding wayfinding, MuseumInteraction state, Button buttonTemplate, TMP_Text textTemplate)
@@ -47,7 +48,9 @@ namespace MusiyoBetsknate.Museum
             menuRect.pivot = new Vector2(0, 1);
             menuRect.anchoredPosition = new Vector2(24, -110);
             menuRect.sizeDelta = new Vector2(630, 690);
-            menu.GetComponent<Image>().color = new Color(.06f, .12f, .11f, .97f);
+            MuseumHudSkin.Surface(menu.GetComponent<Image>());
+            legend.color = MuseumHudSkin.Text;
+            legendPill = MuseumHudSkin.PillBehind(legend);
             var layout = menu.GetComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(20, 20, 16, 16);
             layout.spacing = 8;
@@ -57,6 +60,7 @@ namespace MusiyoBetsknate.Museum
             title.name = "WayfindingTitle";
             title.alignment = TextAlignmentOptions.TopLeft;
             title.fontSize = 25;
+            title.color = MuseumHudSkin.Text;
             title.gameObject.AddComponent<LayoutElement>().preferredHeight = 80;
             choices = new GameObject("RoomChoices", typeof(RectTransform), typeof(VerticalLayoutGroup)).transform;
             choices.SetParent(menu.transform, false);
@@ -102,6 +106,7 @@ namespace MusiyoBetsknate.Museum
             button.onClick.AddListener(action);
             button.GetComponentInChildren<TMP_Text>().text = label;
             button.gameObject.AddComponent<LayoutElement>().preferredHeight = 48;
+            MuseumHudSkin.Choice(button);
             return button;
         }
         private void Refresh()
@@ -115,6 +120,7 @@ namespace MusiyoBetsknate.Museum
             menu.SetActive(guide.MenuOpen);
             legend.gameObject.SetActive(!guide.MenuOpen && !interaction.BlocksMovement && StatusWanted);
             legend.text = MuseumInterfaceText.Format("wayfinding_legend", guide.CurrentRoomName, string.IsNullOrEmpty(guide.Status) ? MuseumInterfaceText.Get("wayfinding_free") : guide.Status);
+            MuseumHudSkin.Fit(legendPill, legend);
             title.text = guide.Rooms.Count == 0 ? MuseumInterfaceText.Format("wayfinding_title_empty", guide.CurrentRoomName)
                 : MuseumInterfaceText.Format("wayfinding_title", guide.CurrentRoomName);
             if (guide.MenuOpen)
