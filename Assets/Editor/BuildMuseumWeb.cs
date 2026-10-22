@@ -69,13 +69,18 @@ namespace MusiyoBetsknate.Editor
             }
         }
 
-        /// <summary>The one player file of a kind, compressed (.br or .gz) or not.</summary>
+        /// <summary>The one player file of a kind, compressed (.unityweb, .br or .gz) or not.</summary>
         private static string Find(string output, string pattern)
         {
-            var files = new System.Collections.Generic.List<string>(Directory.GetFiles(Path.Combine(output, "Build"), pattern));
-            files.AddRange(Directory.GetFiles(Path.Combine(output, "Build"), pattern + ".br"));
-            files.AddRange(Directory.GetFiles(Path.Combine(output, "Build"), pattern + ".gz"));
-            if (files.Count != 1) throw new InvalidOperationException("Expected one build file: " + pattern);
+            // With the decompression fallback Unity names the compressed files ".unityweb"; without it ".br" or ".gz".
+            // Windows matches "*.data" against "x.data.br" as well, so the suffix is checked by hand.
+            string suffix = pattern.TrimStart('*');
+            var files = new System.Collections.Generic.List<string>();
+            foreach (var file in Directory.GetFiles(Path.Combine(output, "Build")))
+                if (file.EndsWith(suffix, StringComparison.Ordinal) || file.EndsWith(suffix + ".unityweb", StringComparison.Ordinal)
+                    || file.EndsWith(suffix + ".br", StringComparison.Ordinal) || file.EndsWith(suffix + ".gz", StringComparison.Ordinal))
+                    files.Add(file);
+            if (files.Count != 1) throw new InvalidOperationException("Expected one build file: " + pattern + " (found " + files.Count + ")");
             return "Build/" + Path.GetFileName(files[0]);
         }
 
