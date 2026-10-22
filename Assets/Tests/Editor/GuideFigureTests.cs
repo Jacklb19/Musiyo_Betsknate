@@ -19,10 +19,14 @@ namespace MusiyoBetsknate.Tests
                 {
                     var figure = GuideFigure.Build(holder.transform, role);
                     var bounds = figure.WorldBounds();
-                    Assert.That(bounds.size.y, Is.EqualTo(settings.For(role).Height).Within(.05f), role + " stands at its height.");
+                    Assert.That(bounds.size.y, Is.EqualTo(figure.Height).Within(.05f), role + " is as tall as it says.");
+                    Assert.That(figure.Height, Is.InRange(role == GuideFigureSettings.Interviewer ? 1.1f : 1.5f, role == GuideFigureSettings.Interviewer ? 1.35f : 1.7f));
                     Assert.That(Mathf.Max(bounds.size.x, bounds.size.z), Is.InRange(.35f, 1.4f), role + " is as wide as a person.");
                     Assert.That(bounds.min.y, Is.EqualTo(0).Within(.02f), role + " stands on its origin.");
-                    Assert.That(figure.FromModel, Is.False, "No replacement model is chosen yet (D5).");
+                    Assert.That(figure.FromModel, Is.False, "The woven figure is built, not a replacement model.");
+                    Assert.That(figure.Seated, Is.EqualTo(role == GuideFigureSettings.Interviewer), "The hearth guide sits; the companion walks.");
+                    Assert.That(figure.Renderers.Select(renderer => renderer.GetComponent<MeshFilter>().sharedMesh.name).Count(name => name.Contains("Body")),
+                        Is.EqualTo(1), "Tunic, belt and sayo are one mesh.");
                     Assert.That(figure.GetComponentsInChildren<Collider>(), Is.Empty);
                     Assert.That(figure.Renderers.SelectMany(renderer => renderer.sharedMaterials).All(material => material != null
                         && material.shader.name == "Universal Render Pipeline/Lit"), Is.True, "Tones come from the shipped URP material.");
@@ -32,14 +36,14 @@ namespace MusiyoBetsknate.Tests
             }
         }
 
-        /// <summary>Every face of the neutral figure is drawn from outside: Unity culls the inside of clockwise triangles.</summary>
+        /// <summary>Every face of the woven figure is drawn from outside: Unity culls the inside of clockwise triangles.</summary>
         [Test]
-        public void TheNeutralFigureFacesOutward()
+        public void TheWovenFigureFacesOutward()
         {
             foreach (var (name, mesh, axis) in new[]
             {
-                ("body", GuideFigure.BodyMesh(), Vector3.zero), ("head", GuideFigure.HeadMesh(), Vector3.zero),
-                ("arm", GuideFigure.ArmMesh(), Vector3.zero), ("leg", GuideFigure.LegMesh(), Vector3.zero)
+                ("body", GuideFigure.BodyMesh(), Vector3.zero), ("seated body", GuideFigure.SeatedBodyMesh(), Vector3.zero),
+                ("head", GuideFigure.HeadMesh(), Vector3.zero), ("leg", GuideFigure.LegMesh(), Vector3.zero)
             })
             {
                 var copy = Object.Instantiate(mesh);
@@ -76,21 +80,21 @@ namespace MusiyoBetsknate.Tests
         {
             Assert.That(() => GuideFigureSettings.Parse("{\"schema_version\":1,\"figures\":{\"companion\":{\"height_m\":12}}}"),
                 Throws.InvalidOperationException);
-            Assert.That(() => GuideFigureSettings.Parse("{\"schema_version\":1,\"figures\":{\"companion\":{\"garment_color\":\"not a colour\"}}}"),
+            Assert.That(() => GuideFigureSettings.Parse("{\"schema_version\":1,\"figures\":{\"companion\":{\"sayo_color\":\"not a colour\"}}}"),
                 Throws.InvalidOperationException);
             Assert.That(() => GuideFigureSettings.Parse("{\"schema_version\":2,\"figures\":{}}"), Throws.InvalidOperationException);
             var parsed = GuideFigureSettings.Parse("{\"schema_version\":1,\"figures\":{\"interviewer\":{\"model\":\"Guides/Other\",\"height_m\":1.7}}}");
             Assert.That(parsed.For("interviewer").Model, Is.EqualTo("Guides/Other"));
-            Assert.That(parsed.For("companion").Height, Is.EqualTo(1.62f), "A role without an entry gets the neutral figure.");
+            Assert.That(parsed.For("companion").Height, Is.EqualTo(1.6f), "A role without an entry gets the woven figure.");
         }
 
         [Test]
-        public void AMissingReplacementModelFallsBackToTheNeutralFigure()
+        public void AMissingReplacementModelFallsBackToTheWovenFigure()
         {
             var holder = new GameObject("Holder");
             try
             {
-                UnityEngine.TestTools.LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("neutral figure"));
+                UnityEngine.TestTools.LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("woven figure"));
                 var figure = GuideFigure.Build(holder.transform, new GuideFigureDefinition { Model = "Guides/DoesNotExist" });
                 Assert.That(figure.FromModel, Is.False);
                 Assert.That(figure.Renderers, Is.Not.Empty);

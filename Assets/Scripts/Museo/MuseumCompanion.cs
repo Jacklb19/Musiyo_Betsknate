@@ -45,7 +45,11 @@ namespace MusiyoBetsknate.Museum
         private float figureHeight = 1.5f;
         private float speed;
 
-        public Transform MaskMount { get; private set; }
+        /// <summary>
+        /// Where a worn mask would go. The guides wear no mask (D5, 22/10/2026), so there is none and the scene's mask
+        /// component is removed when the visit starts.
+        /// </summary>
+        public Transform MaskMount => null;
         /// <summary>The companion's figure; its look comes from <c>Resources/MuseumGuideFigures.json</c>.</summary>
         public GuideFigure Figure { get; private set; }
         public bool Placed => placed;
@@ -70,6 +74,7 @@ namespace MusiyoBetsknate.Museum
 
         private void Awake()
         {
+            if (TryGetComponent<MuseumCompanionMask>(out var mask)) Destroy(mask);
             settings = MuseumCompanionSettings.Current;
             remarks = new MuseumCompanionRemarks(settings);
         }
@@ -105,14 +110,11 @@ namespace MusiyoBetsknate.Museum
         private void BuildFigure()
         {
             HidePlaceholder(hiddenOriginals);
-            Figure = GuideFigure.Build(transform, GuideFigureSettings.Companion, settings.FigureScale);
+            // Its look and height come from the guides' figures alone (MuseumGuideFigures.json).
+            Figure = GuideFigure.Build(transform, GuideFigureSettings.Companion);
             figure = Figure.transform;
             figureRenderers = Figure.Renderers;
             figureHeight = Figure.Height;
-            MaskMount = new GameObject("MaskMount").transform;
-            MaskMount.SetParent(figure, false);
-            // In front of the head, at its middle, facing the way the figure faces.
-            MaskMount.localPosition = Figure.Head.localPosition + new Vector3(0, .115f, .11f) * (figureHeight / 1.62f);
         }
 
         /// <summary>Hides the provisional guide pieces of the museum model; the guides' own figures stand in for them.</summary>
@@ -350,7 +352,6 @@ namespace MusiyoBetsknate.Museum
         private void Show(bool visible)
         {
             foreach (var renderer in figureRenderers) if (renderer != null) renderer.enabled = visible && placed;
-            if (MaskMount != null) MaskMount.gameObject.SetActive(visible && placed);
             if (!visible && bubble != null && !placed) bubble.gameObject.SetActive(false);
         }
 

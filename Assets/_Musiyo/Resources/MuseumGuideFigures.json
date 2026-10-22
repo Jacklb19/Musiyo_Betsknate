@@ -4,16 +4,26 @@
     "companion": {
       "model": "",
       "height_m": 1.6,
-      "garment_color": "#B48E5A",
-      "trim_color": "#4B505A",
-      "head_color": "#D9C6AA"
+      "seated": false,
+      "sayo_color": "#EDE2C3",
+      "stripe_color": "#1F1B17",
+      "stripe_count": 18,
+      "stripe_width": 0.14,
+      "tunic_color": "#2B2622",
+      "belt_color": "#F1ECE0",
+      "head_color": "#9A7048"
     },
     "interviewer": {
       "model": "",
-      "height_m": 1.64,
-      "garment_color": "#7C9682",
-      "trim_color": "#454C48",
-      "head_color": "#D2BC9E"
+      "height_m": 1.6,
+      "seated": true,
+      "sayo_color": "#EDE2C3",
+      "stripe_color": "#1F1B17",
+      "stripe_count": 18,
+      "stripe_width": 0.14,
+      "tunic_color": "#2B2622",
+      "belt_color": "#F1ECE0",
+      "head_color": "#9A7048"
     }
   }
 }
