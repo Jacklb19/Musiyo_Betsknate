@@ -504,6 +504,8 @@ namespace MusiyoBetsknate.Museum
             rect.anchorMin = source.anchorMin; rect.anchorMax = source.anchorMax; rect.pivot = source.pivot;
             rect.anchoredPosition = source.anchoredPosition; rect.sizeDelta = source.sizeDelta;
             Func<float, string> percent = amount => Mathf.RoundToInt(Mathf.InverseLerp(slider.minValue, slider.maxValue, amount) * 100) + " %";
+            if (slider.name == "HeightOffset")
+                percent = amount => MuseumInterfaceText.Format("height_value", MuseumComfort.Centimetres(amount));
             sliderValues[slider] = (value, percent);
             value.text = percent(slider.value);
             slider.onValueChanged.AddListener(amount =>

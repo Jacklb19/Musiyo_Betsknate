@@ -119,7 +119,7 @@ namespace MusiyoBetsknate.Tests
             foreach (Transform child in content)
                 if (child.name == "Heading") headings.Add(child.GetComponent<TMP_Text>().text);
             Assert.That(headings, Is.EqualTo(new[] { MuseumInterfaceText.Get("heading_sound"), MuseumInterfaceText.Get("heading_reading"),
-                MuseumInterfaceText.Get("heading_control") }));
+                MuseumInterfaceText.Get("heading_control"), MuseumInterfaceText.Get("heading_comfort") }));
             foreach (Transform child in content)
                 if (child.name == "Heading") Assert.That(child.GetComponent<Selectable>(), Is.Null);
             // Reading order: the sound first, then the reading, then the control, and the reset at the end.
@@ -135,7 +135,7 @@ namespace MusiyoBetsknate.Tests
             fixture.Menu.Configure(fixture.Flow, fixture.Interaction, fixture.Loader, fixture.Preferences);
             int count = 0;
             foreach (Transform child in content) if (child.name == "Heading") count++;
-            Assert.That(count, Is.EqualTo(3));
+            Assert.That(count, Is.EqualTo(4));
             Assert.That(fixture.Menu.View.Settings.Subtitles.transform.Find("Value"), Is.Not.Null);
             Assert.That(fixture.Menu.View.Settings.Subtitles.GetComponentsInChildren<TMP_Text>(true).Length, Is.EqualTo(2));
         }

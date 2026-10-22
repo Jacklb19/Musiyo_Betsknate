@@ -10,6 +10,8 @@ namespace MusiyoBetsknate.Museum
 {
     public sealed class MuseumHud : MonoBehaviour
     {
+        /// <summary>Shipped size of the subtitles, before the visitor's choice.</summary>
+        public const float SubtitleSize = 24;
         [SerializeField] private TourLoader loader;
         [SerializeField] private MuseumInteraction interaction;
         [SerializeField] private DesktopPointInput pointInput;
@@ -611,7 +613,7 @@ namespace MusiyoBetsknate.Museum
             narrationToggle.name = "NarrationToggle";
             subtitleText = Instantiate(focusText, transform);
             subtitleText.name = "NarrationSubtitles";
-            subtitleText.fontSize = 24;
+            subtitleText.fontSize = SubtitleSize;
             subtitleText.overflowMode = TextOverflowModes.Truncate;
             subtitleText.raycastTarget = false;
             var rect = subtitleText.rectTransform;
@@ -765,7 +767,18 @@ namespace MusiyoBetsknate.Museum
             visitor?.SetSensitivity(preferences.Sensitivity);
             sensitivitySlider?.SetValueWithoutNotify(preferences.Sensitivity);
             volumeSlider?.SetValueWithoutNotify(preferences.Volume);
-            narration?.SetVolume(preferences.Volume);
+            // The general volume stands over every voice; each one keeps its own share under it.
+            narration?.SetVolume(preferences.Volume * preferences.NarrationLevel);
+            interaction.GetComponent<MuseumGuideVoice>()?.SetVolume(preferences.Volume * preferences.GuideLevel);
+            var music = FindAnyObjectByType<MuseumMusic>();
+            if (music != null) { music.SetMasterVolume(preferences.Volume); music.SetMusicLevel(preferences.MusicLevel); }
+            if (Application.isPlaying) MuseumUiSounds.Current.SetVolume(preferences.Volume);
+            // Sizes: the subtitles on the screen and the reading on a stand follow the visitor's choice.
+            if (subtitleText != null) subtitleText.fontSize = SubtitleSize * preferences.SubtitleScale;
+            float reading = MuseumLecternDisplay.TextSize * preferences.ReadingScale;
+            if (panelText != null) panelText.fontSize = reading;
+            if (narrationText != null) narrationText.fontSize = reading;
+            if (modelText != null) modelText.fontSize = reading;
             RefreshSubtitle();
         }
     }

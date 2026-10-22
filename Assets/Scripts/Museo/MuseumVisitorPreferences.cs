@@ -10,16 +10,29 @@ namespace MusiyoBetsknate.Museum
     public sealed class MuseumVisitorPreferences
     {
         public const string StorageKey = "musiyo.visitor-preferences.v1";
-        private const int Version = 3;
+        private const int Version = 4;
         [JsonProperty("schema_version", Required = Required.Always)] private int schemaVersion = Version;
         [JsonProperty("sensitivity", Required = Required.Always)] public float Sensitivity { get; private set; }
+        /// <summary>The general volume: every sound of the visit is heard under it.</summary>
         [JsonProperty("volume", Required = Required.Always)] public float Volume { get; private set; }
         [JsonProperty("music_level")] public float MusicLevel { get; private set; } = 1;
+        /// <summary>Share of the general volume for the narrations of the records.</summary>
+        [JsonProperty("narration_level")] public float NarrationLevel { get; private set; } = 1;
+        /// <summary>Share of the general volume for the guide's spoken answers.</summary>
+        [JsonProperty("guide_level")] public float GuideLevel { get; private set; } = 1;
         [JsonProperty("subtitles", Required = Required.Always)] public bool Subtitles { get; private set; }
+        /// <summary>Size of the subtitles relative to their shipped size.</summary>
+        [JsonProperty("subtitle_scale")] public float SubtitleScale { get; private set; } = 1;
+        /// <summary>Size of the text of a record on its stand relative to its shipped size.</summary>
+        [JsonProperty("reading_scale")] public float ReadingScale { get; private set; } = 1;
         /// <summary>Headset turning chosen by the visitor, or null to follow the shipped default.</summary>
         [JsonProperty("turn_mode")] public string TurnMode { get; private set; }
         /// <summary>Continuous turning speed chosen by the visitor, or 0 to follow the shipped default.</summary>
         [JsonProperty("turn_speed")] public float TurnSpeed { get; private set; }
+        /// <summary>The vignette that narrows the view while moving on a headset: off, soft or strong.</summary>
+        [JsonProperty("vignette")] public string Vignette { get; private set; } = MuseumComfort.Name(MuseumVignette.Soft);
+        /// <summary>Metres added to the height of the eyes on a headset, for a seated visitor or a tall one.</summary>
+        [JsonProperty("height_offset")] public float HeightOffset { get; private set; }
         [JsonIgnore] private MuseumExperienceConfiguration configuration;
         public event Action Changed;
 
@@ -31,7 +44,7 @@ namespace MusiyoBetsknate.Museum
                 try { result = JsonConvert.DeserializeObject<MuseumVisitorPreferences>(saved); }
                 catch (JsonException) { }
             }
-            // Earlier versions carry over their values and use full relative music level.
+            // Earlier versions carry over their values and take the shipped defaults for what they did not know.
             if (result == null || result.schemaVersion < 1 || result.schemaVersion > Version
                 || !MuseumExperienceConfiguration.Finite(result.Sensitivity)
                 || result.Sensitivity < settings.MinimumSensitivity || result.Sensitivity > settings.MaximumSensitivity
@@ -40,15 +53,23 @@ namespace MusiyoBetsknate.Museum
                 result = new MuseumVisitorPreferences { Sensitivity = settings.DefaultSensitivity,
                     Volume = settings.DefaultVolume, Subtitles = settings.DefaultSubtitles };
             }
-            if (!MuseumExperienceConfiguration.Finite(result.MusicLevel) || result.MusicLevel < 0 || result.MusicLevel > 1)
-                result.MusicLevel = 1;
+            if (!Unit(result.MusicLevel)) result.MusicLevel = 1;
+            if (!Unit(result.NarrationLevel)) result.NarrationLevel = 1;
+            if (!Unit(result.GuideLevel)) result.GuideLevel = 1;
+            if (!MuseumComfort.IsScale(MuseumComfort.SubtitleScales, result.SubtitleScale)) result.SubtitleScale = 1;
+            if (!MuseumComfort.IsScale(MuseumComfort.ReadingScales, result.ReadingScale)) result.ReadingScale = 1;
             if (MuseumTurning.ParseMode(result.TurnMode) == null) result.TurnMode = null;
             if (!MuseumExperienceConfiguration.Finite(result.TurnSpeed) || result.TurnSpeed < MuseumTurning.MinimumSpeed
                 || result.TurnSpeed > MuseumTurning.MaximumSpeed) result.TurnSpeed = 0;
+            if (MuseumComfort.ParseVignette(result.Vignette) == null) result.Vignette = MuseumComfort.Name(MuseumVignette.Soft);
+            if (!MuseumExperienceConfiguration.Finite(result.HeightOffset) || Mathf.Abs(result.HeightOffset) > MuseumComfort.MaxHeightOffset)
+                result.HeightOffset = 0;
             result.schemaVersion = Version;
             result.configuration = settings;
             return result;
         }
+
+        private static bool Unit(float value) => MuseumExperienceConfiguration.Finite(value) && value >= 0 && value <= 1;
 
         public void SetSensitivity(float value)
         {
@@ -69,6 +90,30 @@ namespace MusiyoBetsknate.Museum
             MusicLevel = Mathf.Clamp01(value);
             Changed?.Invoke();
         }
+        public void SetNarrationLevel(float value)
+        {
+            if (!MuseumExperienceConfiguration.Finite(value)) return;
+            NarrationLevel = Mathf.Clamp01(value);
+            Changed?.Invoke();
+        }
+        public void SetGuideLevel(float value)
+        {
+            if (!MuseumExperienceConfiguration.Finite(value)) return;
+            GuideLevel = Mathf.Clamp01(value);
+            Changed?.Invoke();
+        }
+        public void SetSubtitleScale(float value)
+        {
+            if (!MuseumComfort.IsScale(MuseumComfort.SubtitleScales, value)) return;
+            SubtitleScale = value;
+            Changed?.Invoke();
+        }
+        public void SetReadingScale(float value)
+        {
+            if (!MuseumComfort.IsScale(MuseumComfort.ReadingScales, value)) return;
+            ReadingScale = value;
+            Changed?.Invoke();
+        }
         public void SetTurnMode(MuseumTurnMode mode) { TurnMode = MuseumTurning.Name(mode); Changed?.Invoke(); }
         public void SetTurnSpeed(float degreesPerSecond)
         {
@@ -76,16 +121,28 @@ namespace MusiyoBetsknate.Museum
             TurnSpeed = Mathf.Clamp(degreesPerSecond, MuseumTurning.MinimumSpeed, MuseumTurning.MaximumSpeed);
             Changed?.Invoke();
         }
+        public void SetVignette(MuseumVignette vignette) { Vignette = MuseumComfort.Name(vignette); Changed?.Invoke(); }
+        public void SetHeightOffset(float metres)
+        {
+            if (!MuseumExperienceConfiguration.Finite(metres)) return;
+            HeightOffset = Mathf.Clamp(metres, -MuseumComfort.MaxHeightOffset, MuseumComfort.MaxHeightOffset);
+            Changed?.Invoke();
+        }
         /// <summary>Turning the visitor chose, or the shipped default.</summary>
         public MuseumTurnMode Turn(MuseumTurnMode fallback) => MuseumTurning.ParseMode(TurnMode) ?? fallback;
+        /// <summary>The vignette the visitor chose; soft until they choose.</summary>
+        public MuseumVignette VignetteChoice => MuseumComfort.ParseVignette(Vignette) ?? MuseumVignette.Soft;
         public void Reset()
         {
             Sensitivity = configuration.DefaultSensitivity;
             Volume = configuration.DefaultVolume;
-            MusicLevel = 1;
+            MusicLevel = NarrationLevel = GuideLevel = 1;
             Subtitles = configuration.DefaultSubtitles;
+            SubtitleScale = ReadingScale = 1;
             TurnMode = null;
             TurnSpeed = 0;
+            Vignette = MuseumComfort.Name(MuseumVignette.Soft);
+            HeightOffset = 0;
             Changed?.Invoke();
         }
         public string Serialize() => JsonConvert.SerializeObject(this);

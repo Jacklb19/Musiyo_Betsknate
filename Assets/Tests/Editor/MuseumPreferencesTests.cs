@@ -28,7 +28,7 @@ namespace MusiyoBetsknate.Tests
         }
 
         [TestCase("invalid")]
-        [TestCase("{\"schema_version\":4,\"sensitivity\":0.3,\"volume\":0.5,\"subtitles\":false}")]
+        [TestCase("{\"schema_version\":5,\"sensitivity\":0.3,\"volume\":0.5,\"subtitles\":false}")]
         [TestCase("{\"schema_version\":1,\"sensitivity\":-3,\"volume\":0.5,\"subtitles\":false}")]
         [TestCase("{\"schema_version\":1,\"sensitivity\":0.3,\"volume\":9,\"subtitles\":false}")]
         [TestCase("{\"sensitivity\":0.3,\"volume\":0.5,\"subtitles\":false}")]

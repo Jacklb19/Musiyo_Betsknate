@@ -64,6 +64,7 @@ namespace MusiyoBetsknate.Museum
         private MuseumCompanion companion;
         private MuseumMusicSettings settings;
         private float fallbackVolume = -1;
+        private float masterVolume = -1;
 
         public AudioClip Track => track;
         /// <summary>The visitor's own music level (0 to 1) on top of the general volume, for a settings control.</summary>
@@ -78,6 +79,8 @@ namespace MusiyoBetsknate.Museum
 
         public void Configure(AudioClip clip) => track = clip;
         public void SetMusicLevel(float value) { if (MuseumExperienceConfiguration.Finite(value)) musicLevel = Mathf.Clamp01(value); }
+        /// <summary>The visitor's general volume, under which the music plays; set by the interface from the preferences.</summary>
+        public void SetMasterVolume(float value) { if (MuseumExperienceConfiguration.Finite(value)) masterVolume = Mathf.Clamp01(value); }
 
         /// <summary>The volume the music aims at: the visitor's volume times the music level, ducked while a voice speaks.</summary>
         public static float TargetVolume(float visitorVolume, float level, float musicLevel, bool muted, float duck)
@@ -158,6 +161,7 @@ namespace MusiyoBetsknate.Museum
         /// <summary>The visitor's general volume: the one the narration applies, or the saved preference before it exists.</summary>
         private float VisitorVolume()
         {
+            if (masterVolume >= 0) return masterVolume;
             if (narration != null) return narration.Volume;
             if (fallbackVolume < 0)
                 fallbackVolume = MuseumVisitorPreferences.Load(MuseumExperienceConfiguration.Current,
