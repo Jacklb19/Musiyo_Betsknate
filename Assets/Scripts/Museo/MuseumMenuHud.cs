@@ -666,7 +666,7 @@ namespace MusiyoBetsknate.Museum
             var page = home.activeSelf ? home : settings.activeSelf ? settings : controls;
             var options = new System.Collections.Generic.List<Selectable>();
             foreach (var option in page.GetComponentsInChildren<Selectable>())
-                if (option.IsInteractable() && option.gameObject.activeInHierarchy) options.Add(option);
+                if (option.IsInteractable() && option.gameObject.activeInHierarchy && !(option is Scrollbar)) options.Add(option);
             if (options.Count == 0) return;
             int index = options.FindIndex(option => option.gameObject == current);
             index = index < 0 ? 0 : (index + step + options.Count) % options.Count;

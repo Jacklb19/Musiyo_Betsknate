@@ -226,8 +226,8 @@ namespace MusiyoBetsknate.Museum
                 {
                     case "PresentationKicker":
                         label.color = accentColor;
-                        label.fontSize = HeadingSize;
-                        label.characterSpacing = 18;
+                        label.fontSize = HeadingSize + 1;
+                        label.characterSpacing = 14;
                         label.fontStyle = FontStyles.UpperCase;
                         break;
                     case "Title":
@@ -273,6 +273,7 @@ namespace MusiyoBetsknate.Museum
                 if (rule.TryGetComponent<LayoutElement>(out var size)) { size.preferredWidth = 120; size.preferredHeight = 2; }
             }
             if (page.Kind == MuseumMenuPageKind.Main) LoadingLine(page);
+            ScrollBar(page);
             foreach (var button in page.GetComponentsInChildren<Button>(true))
             {
                 var row = button.GetComponentInParent<MuseumRebindRow>(true);
@@ -280,6 +281,61 @@ namespace MusiyoBetsknate.Museum
                 else Choice(button);
             }
             foreach (var slider in page.GetComponentsInChildren<Slider>(true)) StyleSlider(slider);
+        }
+
+        /// <summary>
+        /// A thin line at the right edge of a page that scrolls, with the visible part in the accent colour, so a page
+        /// longer than the screen says so and can be dragged; it hides itself when everything fits. The wheel and the
+        /// keyboard scroll as before. Longer pages are also allowed to stand taller on a tall screen.
+        /// </summary>
+        private void ScrollBar(MuseumMenuPageView page)
+        {
+            var scroll = page.Scroll;
+            if (scroll == null || scroll.viewport == null) return;
+            scroll.scrollSensitivity = 40;
+            if (page.Kind != MuseumMenuPageKind.Main && page.TryGetComponent<LayoutElement>(out var size) && size.preferredHeight < 1000)
+                size.preferredHeight = 1000;
+            var previous = page.transform.Find("ScrollLine");
+            if (previous != null) Discard(previous.gameObject);
+            var bar = new GameObject("ScrollLine", typeof(RectTransform), typeof(Image), typeof(Scrollbar)).GetComponent<Scrollbar>();
+            bar.transform.SetParent(page.transform, false);
+            var track = bar.GetComponent<Image>();
+            track.sprite = MuseumUiSprites.Rounded(2);
+            track.type = Image.Type.Sliced;
+            var quiet = textColor;
+            quiet.a = .12f;
+            track.color = quiet;
+            track.raycastTarget = true;
+            var rect = (RectTransform)bar.transform;
+            var viewport = scroll.viewport;
+            rect.anchorMin = new Vector2(1, 0);
+            rect.anchorMax = new Vector2(1, 1);
+            rect.pivot = new Vector2(1, .5f);
+            rect.offsetMin = new Vector2(-4 - 14, viewport.offsetMin.y);
+            rect.offsetMax = new Vector2(-14, viewport.offsetMax.y);
+            var handle = new GameObject("Handle", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+            handle.transform.SetParent(bar.transform, false);
+            handle.sprite = MuseumUiSprites.Rounded(2);
+            handle.type = Image.Type.Sliced;
+            var tint = accentColor;
+            tint.a = .7f;
+            handle.color = tint;
+            handle.rectTransform.anchorMin = Vector2.zero;
+            handle.rectTransform.anchorMax = Vector2.one;
+            handle.rectTransform.offsetMin = handle.rectTransform.offsetMax = Vector2.zero;
+            bar.handleRect = handle.rectTransform;
+            bar.targetGraphic = handle;
+            bar.direction = Scrollbar.Direction.BottomToTop;
+            var colors = bar.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = colors.selectedColor = colors.pressedColor = Color.white;
+            bar.colors = colors;
+            // The line is not a stop for the keyboard: focus moves among the choices only.
+            var navigation = bar.navigation;
+            navigation.mode = Navigation.Mode.None;
+            bar.navigation = navigation;
+            scroll.verticalScrollbar = bar;
+            scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
         }
 
         /// <summary>The arrival card: the same rounded surface and faces as the menus, its one choice a quiet button.</summary>

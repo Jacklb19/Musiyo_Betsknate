@@ -206,6 +206,20 @@ namespace MusiyoBetsknate.Tests
             foreach (var choice in new[] { fixture.Menu.View.Pause.Settings, fixture.Menu.View.Pause.Primary })
                 Assert.That(choice.GetComponentInChildren<TMP_Text>(true).fontSize, Is.EqualTo(MuseumTitleScreen.ChoiceSize));
             Assert.That(fixture.Menu.View.Main.Scroll.content.Find("LoadingLine"), Is.Not.Null);
+            // A page longer than the screen shows a thin line at its edge that scrolls it; the keyboard never stops on it.
+            var settings = fixture.Menu.View.Settings;
+            Assert.That(settings.Scroll.verticalScrollbar, Is.Not.Null);
+            Assert.That(settings.Scroll.verticalScrollbar.transform.IsChildOf(settings.transform), Is.True);
+            Assert.That(settings.Scroll.verticalScrollbar.navigation.mode, Is.EqualTo(Navigation.Mode.None));
+            Assert.That(settings.Scroll.verticalScrollbarVisibility, Is.EqualTo(ScrollRect.ScrollbarVisibility.AutoHide));
+            Assert.That(settings.GetComponent<LayoutElement>().preferredHeight, Is.GreaterThanOrEqualTo(1000));
+            fixture.Menu.View.Main.Settings.onClick.Invoke();
+            var move = typeof(MuseumMenuHud).GetMethod("MoveSelection", BindingFlags.Instance | BindingFlags.NonPublic);
+            for (int step = 0; step < 24; step++)
+            {
+                move.Invoke(fixture.Menu, new object[] { 1 });
+                Assert.That(EventSystem.current.currentSelectedGameObject.GetComponent<Scrollbar>(), Is.Null);
+            }
         }
 
         [Test]
