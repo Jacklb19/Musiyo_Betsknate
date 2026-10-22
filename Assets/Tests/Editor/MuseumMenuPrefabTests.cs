@@ -270,8 +270,9 @@ namespace MusiyoBetsknate.Tests
             menu.View.Main.Settings.onClick.Invoke();
             menu.Back();
             menu.View.Main.Settings.onClick.Invoke();
+            Assert.That(menu.SubtitlesValue.text, Is.EqualTo(MuseumInterfaceText.Get("option_off")));
             Assert.That(menu.View.Settings.Subtitles.GetComponentInChildren<TMPro.TMP_Text>().text,
-                Is.EqualTo(MuseumInterfaceText.Get("show_subtitles")));
+                Is.EqualTo(MuseumInterfaceText.Get("subtitles_option")));
         }
 
         [Test]
@@ -344,19 +345,19 @@ namespace MusiyoBetsknate.Tests
             Assert.That(menu.View.Settings.Sensitivity.gameObject.activeSelf, Is.False);
             Assert.That(EventSystem.current.currentSelectedGameObject, Is.SameAs(menu.View.Settings.Volume.gameObject));
             // Headset turning: continuous by default, steps on request, each with its own caption.
-            var turning = menu.TurnModeButton.GetComponentInChildren<TMPro.TMP_Text>();
+            var turning = menu.TurnModeValue;
             Assert.That(menu.TurnModeButton.gameObject.activeInHierarchy, Is.True);
-            Assert.That(turning.text, Is.EqualTo(MuseumInterfaceText.Get("turn_mode_continuous")));
+            Assert.That(turning.text, Is.EqualTo(MuseumInterfaceText.Get("turn_continuous")));
             Assert.That(menu.TurnSpeedButton.gameObject.activeInHierarchy, Is.True);
             menu.TurnModeButton.onClick.Invoke();
             Assert.That(menu.Preferences.Turn(MuseumTurnMode.Continuous), Is.EqualTo(MuseumTurnMode.Snap));
-            Assert.That(turning.text, Is.EqualTo(MuseumInterfaceText.Get("turn_mode_snap")));
+            Assert.That(turning.text, Is.EqualTo(MuseumInterfaceText.Get("turn_snap")));
             Assert.That(menu.TurnSpeedButton.gameObject.activeSelf, Is.False, "Speed only applies to continuous turning.");
             menu.TurnModeButton.onClick.Invoke();
             float speed = MuseumXrConfiguration.Current.TurnSpeed(menu.Preferences.TurnSpeed);
             menu.TurnSpeedButton.onClick.Invoke();
             Assert.That(MuseumXrConfiguration.Current.TurnSpeed(menu.Preferences.TurnSpeed), Is.Not.EqualTo(speed));
-            Assert.That(menu.TurnSpeedButton.GetComponentInChildren<TMPro.TMP_Text>().text,
+            Assert.That(menu.TurnSpeedValue.text,
                 Does.Contain(MuseumXrConfiguration.Current.TurnSpeed(menu.Preferences.TurnSpeed).ToString()));
             menu.View.Settings.Reset.onClick.Invoke();
             Assert.That(menu.Preferences.TurnMode, Is.Null);
