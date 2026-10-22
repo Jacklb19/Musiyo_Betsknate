@@ -40,6 +40,7 @@ namespace MusiyoBetsknate.Museum
         private GuideVoiceClient client;
         private IGuideVoiceRecorder recorder;
         private AudioSource speaker;
+        private float volume = 1;
         private AudioClip spoken;
         private GuideResponseContractV1 heard;
         private string consentedTo;
@@ -58,6 +59,14 @@ namespace MusiyoBetsknate.Museum
         /// <summary>Interface text key of the last problem, while <see cref="Stage"/> is Problem.</summary>
         public string ProblemKey => problem;
         public AudioSource Speaker => speaker;
+        /// <summary>Volume of the guide's voice, from 0 to 1: the general volume times the visitor's level for the guide.</summary>
+        public float Volume => volume;
+        public void SetVolume(float value)
+        {
+            if (!MuseumExperienceConfiguration.Finite(value)) return;
+            volume = Mathf.Clamp01(value);
+            if (speaker != null) speaker.volume = volume;
+        }
         /// <summary>The guide's answer is being heard.</summary>
         public bool Speaking => speaker != null && speaker.isPlaying;
         /// <summary>The guide is open, the API offers transcription and this device can record.</summary>
@@ -322,6 +331,7 @@ namespace MusiyoBetsknate.Museum
                 speaker.transform.SetParent(transform, false);
                 speaker.playOnAwake = false;
                 speaker.spatialBlend = 0;
+                speaker.volume = volume;
             }
             var point = runtime.GuidePoint;
             if (point != null) speaker.transform.position = point.Anchor.LookTarget.position;

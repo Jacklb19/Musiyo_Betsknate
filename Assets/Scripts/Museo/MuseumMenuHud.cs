@@ -51,6 +51,16 @@ namespace MusiyoBetsknate.Museum
         private TMP_Text headingSound;
         private TMP_Text headingReading;
         private TMP_Text headingControl;
+        private TMP_Text headingComfort;
+        private Slider narrationLevel;
+        private Slider guideLevel;
+        private Slider heightOffset;
+        private Button subtitleSize;
+        private Button readingSize;
+        private Button vignette;
+        private TMP_Text subtitleSizeValue;
+        private TMP_Text readingSizeValue;
+        private TMP_Text vignetteValue;
         private MuseumMenuMotion motion;
         private float openSeconds = OpenSeconds;
         private MenuPage page;
@@ -86,6 +96,16 @@ namespace MusiyoBetsknate.Museum
         public bool Loading => loader != null && loader.State == TourLoadState.Loading;
         /// <summary>Text beside an option that shows its current choice.</summary>
         public TMP_Text SubtitlesValue => subtitlesValue;
+        public TMP_Text SubtitleSizeValue => subtitleSizeValue;
+        public TMP_Text ReadingSizeValue => readingSizeValue;
+        public TMP_Text VignetteValue => vignetteValue;
+        /// <summary>Volumes of each voice under the general one, and the comfort choices of a headset.</summary>
+        public Slider NarrationLevelSlider => narrationLevel;
+        public Slider GuideLevelSlider => guideLevel;
+        public Slider HeightOffsetSlider => heightOffset;
+        public Button SubtitleSizeButton => subtitleSize;
+        public Button ReadingSizeButton => readingSize;
+        public Button VignetteButton => vignette;
         public TMP_Text TurnModeValue => turnModeValue;
         public TMP_Text TurnSpeedValue => turnSpeedValue;
         /// <summary>True where the application can be left from the menu: everywhere but a Web page.</summary>
@@ -137,6 +157,9 @@ namespace MusiyoBetsknate.Museum
                 musicLevel.minValue = 0; musicLevel.maxValue = 1;
                 musicLevel.transform.SetSiblingIndex(volume.transform.GetSiblingIndex() + 1);
             }
+            narrationLevel ??= AddSlider(volume, "NarrationLevel", "narration_level", 0, 1);
+            guideLevel ??= AddSlider(volume, "GuideLevel", "guide_level", 0, 1);
+            heightOffset ??= AddSlider(volume, "HeightOffset", "height_offset", -MuseumComfort.MaxHeightOffset, MuseumComfort.MaxHeightOffset);
             subtitles = view.Settings.Subtitles;
             settingsBack = view.Settings.Back;
             controlsBack = view.Controls.Back;
@@ -146,6 +169,12 @@ namespace MusiyoBetsknate.Museum
                 foreach (var label in subtitles.GetComponentsInChildren<MuseumInterfaceLabel>(true)) label.TextKey = "subtitles_option";
                 subtitlesValue = AddValue(subtitles);
             }
+            subtitleSize ??= AddOption(subtitles, "SubtitleSize", "subtitle_size");
+            subtitleSizeValue ??= AddValue(subtitleSize);
+            readingSize ??= AddOption(subtitleSize, "ReadingSize", "reading_size");
+            readingSizeValue ??= AddValue(readingSize);
+            vignette ??= AddOption(subtitles, "Vignette", "vignette");
+            vignetteValue ??= AddValue(vignette);
             turnMode ??= AddOption(subtitles, "TurnMode", "turn_mode");
             turnModeValue ??= AddValue(turnMode);
             turnSpeed ??= AddOption(turnMode, "TurnSpeed", "turn_speed_option");
@@ -157,9 +186,11 @@ namespace MusiyoBetsknate.Museum
             headingSound ??= AddHeading(volume, "heading_sound");
             headingReading ??= AddHeading(subtitles, "heading_reading");
             headingControl ??= AddHeading(sensitivity, "heading_control");
+            headingComfort ??= AddHeading(vignette, "heading_comfort");
             OrderSettings();
             turnMode.gameObject.SetActive(spatial);
             turnSpeed.gameObject.SetActive(spatial);
+            ShowComfort(spatial);
             motion = view.GetComponent<MuseumMenuMotion>();
             if (motion == null) motion = view.gameObject.AddComponent<MuseumMenuMotion>();
             motion.Configure(view);
@@ -199,9 +230,15 @@ namespace MusiyoBetsknate.Museum
             Listen(settingsBack, OpenHome, MuseumUiSound.Back);
             Listen(controlsBack, OpenHome, MuseumUiSound.Back);
             Listen(view.Controls.RestoreBindings, RestoreBindings);
+            Listen(subtitleSize, NextSubtitleSize, MuseumUiSound.Step);
+            Listen(readingSize, NextReadingSize, MuseumUiSound.Step);
+            Listen(vignette, NextVignette, MuseumUiSound.Step);
             sensitivity.onValueChanged.AddListener(preferences.SetSensitivity);
             volume.onValueChanged.AddListener(preferences.SetVolume);
             musicLevel.onValueChanged.AddListener(preferences.SetMusicLevel);
+            narrationLevel.onValueChanged.AddListener(preferences.SetNarrationLevel);
+            guideLevel.onValueChanged.AddListener(preferences.SetGuideLevel);
+            heightOffset.onValueChanged.AddListener(SetHeightOffset);
             flow.Changed += Refresh;
             interaction.Changed += Refresh;
             loader.Changed += Refresh;
@@ -233,6 +270,39 @@ namespace MusiyoBetsknate.Museum
             if (target == null) return;
             if (Application.isPlaying) Destroy(target); else DestroyImmediate(target);
         }
+        /// <summary>A further slider made from an authored one of the same page, with its own caption and range.</summary>
+        private static Slider AddSlider(Slider template, string name, string textKey, float minimum, float maximum)
+        {
+            var slider = Instantiate(template, template.transform.parent, false);
+            slider.name = name;
+            var label = slider.GetComponentInChildren<MuseumInterfaceLabel>(true);
+            label.TextKey = textKey;
+            label.RefreshText();
+            slider.onValueChanged = new Slider.SliderEvent();
+            slider.minValue = minimum; slider.maxValue = maximum;
+            slider.transform.SetSiblingIndex(template.transform.GetSiblingIndex() + 1);
+            return slider;
+        }
+
+        /// <summary>The height moves in whole steps, so a slider stops at centimetres a visitor can read.</summary>
+        private void SetHeightOffset(float metres)
+        {
+            float stepped = Mathf.Round(metres / MuseumComfort.HeightStep) * MuseumComfort.HeightStep;
+            preferences.SetHeightOffset(stepped);
+        }
+        private void NextSubtitleSize() => preferences.SetSubtitleScale(MuseumComfort.NextScale(MuseumComfort.SubtitleScales, preferences.SubtitleScale));
+        private void NextReadingSize() => preferences.SetReadingScale(MuseumComfort.NextScale(MuseumComfort.ReadingScales, preferences.ReadingScale));
+        private void NextVignette() => preferences.SetVignette(MuseumComfort.NextVignette(preferences.VignetteChoice));
+
+        /// <summary>The comfort of a headset is offered only on a headset; the subtitles of a screen only on a screen.</summary>
+        private void ShowComfort(bool value)
+        {
+            headingComfort.gameObject.SetActive(value);
+            vignette.gameObject.SetActive(value);
+            heightOffset.gameObject.SetActive(value);
+            subtitleSize.gameObject.SetActive(!value);
+        }
+
         /// <summary>A text on the right of an option that says its current choice; the look gives it its colour and size.</summary>
         private static TMP_Text AddValue(Button option)
         {
@@ -276,8 +346,9 @@ namespace MusiyoBetsknate.Museum
         /// <summary>The settings in reading order: sound, reading, control, and the reset last.</summary>
         private void OrderSettings()
         {
-            var order = new Component[] { headingSound, volume, musicLevel, headingReading, subtitles, headingControl, sensitivity,
-                turnMode, turnSpeed, view.Settings.Reset };
+            var order = new Component[] { headingSound, volume, musicLevel, narrationLevel, guideLevel, headingReading, subtitles,
+                subtitleSize, readingSize, headingControl, sensitivity, turnMode, turnSpeed, headingComfort, vignette, heightOffset,
+                view.Settings.Reset };
             int index = view.Settings.Description.transform.GetSiblingIndex() + 1;
             foreach (var item in order)
                 if (item != null && item.transform.parent == view.Settings.Description.transform.parent) item.transform.SetSiblingIndex(index++);
@@ -316,6 +387,7 @@ namespace MusiyoBetsknate.Museum
             view.Controls.RestoreBindings.gameObject.SetActive(!value);
             view.Controls.BindingStatus.gameObject.SetActive(!value);
             turnMode.gameObject.SetActive(value);
+            ShowComfort(value);
             Refresh();
         }
 
@@ -359,6 +431,9 @@ namespace MusiyoBetsknate.Museum
             sensitivity.onValueChanged.RemoveListener(preferences.SetSensitivity);
             volume.onValueChanged.RemoveListener(preferences.SetVolume);
             musicLevel.onValueChanged.RemoveListener(preferences.SetMusicLevel);
+            narrationLevel.onValueChanged.RemoveListener(preferences.SetNarrationLevel);
+            guideLevel.onValueChanged.RemoveListener(preferences.SetGuideLevel);
+            heightOffset.onValueChanged.RemoveListener(SetHeightOffset);
             flow.Changed -= Refresh; interaction.Changed -= Refresh; loader.Changed -= Refresh;
             preferences.Changed -= SyncSettings;
             bound = false;
@@ -412,7 +487,14 @@ namespace MusiyoBetsknate.Museum
             sensitivity.SetValueWithoutNotify(preferences.Sensitivity);
             volume.SetValueWithoutNotify(preferences.Volume);
             musicLevel.SetValueWithoutNotify(preferences.MusicLevel);
-            FindAnyObjectByType<MuseumMusic>()?.SetMusicLevel(preferences.MusicLevel);
+            narrationLevel.SetValueWithoutNotify(preferences.NarrationLevel);
+            guideLevel.SetValueWithoutNotify(preferences.GuideLevel);
+            heightOffset.SetValueWithoutNotify(preferences.HeightOffset);
+            subtitleSizeValue.text = MuseumInterfaceText.Get(MuseumComfort.ScaleKey(MuseumComfort.SubtitleScales, preferences.SubtitleScale));
+            readingSizeValue.text = MuseumInterfaceText.Get(MuseumComfort.ScaleKey(MuseumComfort.ReadingScales, preferences.ReadingScale));
+            vignetteValue.text = MuseumInterfaceText.Get(MuseumComfort.TextKey(preferences.VignetteChoice));
+            var music = FindAnyObjectByType<MuseumMusic>();
+            if (music != null) { music.SetMusicLevel(preferences.MusicLevel); music.SetMasterVolume(preferences.Volume); }
             subtitlesValue.text = MuseumInterfaceText.Get(preferences.Subtitles ? "option_on" : "option_off");
             var xr = MuseumXrConfiguration.Current;
             var turning = preferences.Turn(xr.DefaultTurn);

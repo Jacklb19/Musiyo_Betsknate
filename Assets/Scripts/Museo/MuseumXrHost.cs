@@ -42,8 +42,13 @@ namespace MusiyoBetsknate.Museum
         private MuseumArrival arrival;
         private MuseumWayfinding wayfinding;
         private MuseumXrEntry entry;
+        private MuseumComfortVignette vignette;
         /// <summary>The headset's entry: the scenic set during the entry menu and the veil of the way in.</summary>
         public MuseumXrEntry Entry => entry;
+        /// <summary>The veil that narrows the view while the visitor moves, following their comfort choice.</summary>
+        public MuseumComfortVignette Vignette => vignette;
+        /// <summary>Metres the eyes are raised or lowered by the visitor's choice.</summary>
+        public float HeightOffset => menu.Preferences?.HeightOffset ?? 0;
         /// <summary>True while the shared canvas has something to show: a menu or the arrival card.</summary>
         private bool menuVisible;
         private bool moveArmed;
@@ -139,6 +144,8 @@ namespace MusiyoBetsknate.Museum
             // The entry menu opens in the scenic set, away from the museum, when one is configured.
             entry = gameObject.AddComponent<MuseumXrEntry>();
             entry.Configure(flow, interaction.GetComponent<MuseumEntryBackdrop>(), visitor, head, () => HeadTracked);
+            vignette = gameObject.AddComponent<MuseumComfortVignette>();
+            vignette.Configure(head.transform);
             menuVisible = VisibleMenu;
             if (menuVisible) RequestMenuPlacement();
             else ShowCanvas();
@@ -199,6 +206,8 @@ namespace MusiyoBetsknate.Museum
         private void Update()
         {
             if (!Ready) return;
+            vignette.Intensity = MuseumComfort.Intensity(menu.Preferences?.VignetteChoice ?? MuseumVignette.Soft);
+            vignette.Set(false);
             if (!HeadTracked) { StopWalking(); teleport.Cancel(); return; }
             bool blocked = flow.BlocksInput || interaction.BlocksMovement || interaction.HoldsVisitor
                 || interaction.GetComponent<MuseumWayfinding>()?.MenuOpen == true || input.Context != MuseumInputContext.Visit
@@ -221,6 +230,8 @@ namespace MusiyoBetsknate.Museum
             var move = Vector2.ClampMagnitude(input.Move.ReadValue<Vector2>(), 1);
             if (move.sqrMagnitude < .04f) { moveArmed = true; runRequested = false; }
             if (!moveArmed) move = Vector2.zero;
+            // Walking and continuous turning narrow the view; a step turn is instant and needs no veil.
+            vignette.Set(move.sqrMagnitude >= .04f || degrees != 0 && TurnMode == MuseumTurnMode.Continuous);
             if (input.Sprint.WasPressedThisFrame() && move.sqrMagnitude >= .04f) runRequested = !runRequested;
             Outdoors = runRequested && MuseumOutdoors.Contains(Feet(), rooms, outdoorRooms, outdoorGround, visitor);
             float target = Outdoors ? configuration.RunSpeed : configuration.WalkSpeed;
@@ -276,6 +287,9 @@ namespace MusiyoBetsknate.Museum
         private void LateUpdate()
         {
             if (!Ready) return;
+            // The floor offset follows the visitor's height choice; the tracking keeps it at zero otherwise.
+            var floor = trackingOrigin.localPosition;
+            if (Mathf.Abs(floor.y - HeightOffset) > .0001f) { floor.y = HeightOffset; trackingOrigin.localPosition = floor; }
             bool headTracked = HeadTracked;
             // Being carried into or out of the entry set places an open menu again, in front of the new view.
             if (entry != null && entry.Step() && menuVisible) RequestMenuPlacement();
