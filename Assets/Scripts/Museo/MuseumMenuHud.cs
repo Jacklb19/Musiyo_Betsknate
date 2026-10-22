@@ -13,6 +13,8 @@ namespace MusiyoBetsknate.Museum
         private enum MenuPage { Home, Settings, Controls }
         /// <summary>Seconds over which the title menu rises after the closing credits.</summary>
         public const float AfterEndingFadeSeconds = 1.4f;
+        /// <summary>Seconds over which a menu that opens comes into view.</summary>
+        public const float OpenSeconds = .28f;
         private MuseumVisitFlow flow;
         private MuseumInteraction interaction;
         private TourLoader loader;
@@ -41,6 +43,16 @@ namespace MusiyoBetsknate.Museum
         private Button turnSpeed;
         private Button autoTour;
         private Button orientation;
+        private Button quitMain;
+        private Button quitPause;
+        private TMP_Text subtitlesValue;
+        private TMP_Text turnModeValue;
+        private TMP_Text turnSpeedValue;
+        private TMP_Text headingSound;
+        private TMP_Text headingReading;
+        private TMP_Text headingControl;
+        private MuseumMenuMotion motion;
+        private float openSeconds = OpenSeconds;
         private MenuPage page;
         private bool wasVisible;
         private bool wasEntry;
@@ -65,6 +77,19 @@ namespace MusiyoBetsknate.Museum
         public Button AutoTourButton => autoTour;
         /// <summary>Opens the optional orientation from the pause menu; the visit screen has no permanent button for it.</summary>
         public Button OrientationButton => orientation;
+        /// <summary>Leaves the application, from the title menu and from the pause; a Web visit returns to the catalog instead.</summary>
+        public Button QuitButton => quitPause;
+        public Button QuitMainButton => quitMain;
+        /// <summary>The page motion, so a test can wait for a reveal or end it.</summary>
+        public MuseumMenuMotion Motion => motion;
+        /// <summary>True while the museum's content is on its way and the entry cannot begin yet.</summary>
+        public bool Loading => loader != null && loader.State == TourLoadState.Loading;
+        /// <summary>Text beside an option that shows its current choice.</summary>
+        public TMP_Text SubtitlesValue => subtitlesValue;
+        public TMP_Text TurnModeValue => turnModeValue;
+        public TMP_Text TurnSpeedValue => turnSpeedValue;
+        /// <summary>True where the application can be left from the menu: everywhere but a Web page.</summary>
+        public static bool CanQuit => Application.platform != RuntimePlatform.WebGLPlayer;
 
         public void Configure(MuseumVisitFlow visit, MuseumInteraction state, TourLoader tourLoader,
             MuseumVisitorPreferences visitorPreferences, MuseumMenuView prefab = null)
@@ -115,12 +140,29 @@ namespace MusiyoBetsknate.Museum
             subtitles = view.Settings.Subtitles;
             settingsBack = view.Settings.Back;
             controlsBack = view.Controls.Back;
-            turnMode ??= AddOption(subtitles, "TurnMode", "turn_mode_continuous");
-            turnSpeed ??= AddOption(turnMode, "TurnSpeed", "turn_speed");
+            // The subtitles read as an option with its state beside it, like every other choice of the settings.
+            if (subtitlesValue == null)
+            {
+                foreach (var label in subtitles.GetComponentsInChildren<MuseumInterfaceLabel>(true)) label.TextKey = "subtitles_option";
+                subtitlesValue = AddValue(subtitles);
+            }
+            turnMode ??= AddOption(subtitles, "TurnMode", "turn_mode");
+            turnModeValue ??= AddValue(turnMode);
+            turnSpeed ??= AddOption(turnMode, "TurnSpeed", "turn_speed_option");
+            turnSpeedValue ??= AddValue(turnSpeed);
             autoTour ??= AddOption(view.Pause.Primary, "AutoTour", "auto_tour_start");
             orientation ??= AddOption(autoTour, "Orientation", "wayfinding_open");
+            quitPause ??= AddOption(mainMenu, "Quit", "quit_museum");
+            quitMain ??= AddOption(view.Main.Controls, "Quit", "quit_museum");
+            headingSound ??= AddHeading(volume, "heading_sound");
+            headingReading ??= AddHeading(subtitles, "heading_reading");
+            headingControl ??= AddHeading(sensitivity, "heading_control");
+            OrderSettings();
             turnMode.gameObject.SetActive(spatial);
             turnSpeed.gameObject.SetActive(spatial);
+            motion = view.GetComponent<MuseumMenuMotion>();
+            if (motion == null) motion = view.gameObject.AddComponent<MuseumMenuMotion>();
+            motion.Configure(view);
             sensitivity.minValue = configuration.MinimumSensitivity;
             sensitivity.maxValue = configuration.MaximumSensitivity;
             volume.minValue = 0; volume.maxValue = 1;
@@ -139,6 +181,8 @@ namespace MusiyoBetsknate.Museum
             Listen(begin, BeginVisit);
             Listen(resume, ResumeVisit);
             Listen(mainMenu, flow.ReturnToMenu);
+            Listen(quitPause, Quit);
+            Listen(quitMain, Quit);
             foreach (var homePage in new[] { view.Main, view.Pause })
             {
                 Listen(homePage.Settings, OpenSettings);
@@ -152,8 +196,8 @@ namespace MusiyoBetsknate.Museum
             Listen(autoTour, ToggleAutoTour);
             Listen(orientation, OpenOrientation);
             Listen(view.Settings.Reset, preferences.Reset);
-            Listen(settingsBack, OpenHome);
-            Listen(controlsBack, OpenHome);
+            Listen(settingsBack, OpenHome, MuseumUiSound.Back);
+            Listen(controlsBack, OpenHome, MuseumUiSound.Back);
             Listen(view.Controls.RestoreBindings, RestoreBindings);
             sensitivity.onValueChanged.AddListener(preferences.SetSensitivity);
             volume.onValueChanged.AddListener(preferences.SetVolume);
@@ -181,6 +225,62 @@ namespace MusiyoBetsknate.Museum
             foreach (var label in option.GetComponentsInChildren<MuseumInterfaceLabel>(true)) label.TextKey = textKey;
             option.GetComponentInChildren<TMP_Text>(true).text = MuseumInterfaceText.Get(textKey);
             return option;
+        }
+
+        /// <summary>Removes a component now in the Editor and at the end of the frame in play, as Unity requires.</summary>
+        internal static void Discard(UnityEngine.Object target)
+        {
+            if (target == null) return;
+            if (Application.isPlaying) Destroy(target); else DestroyImmediate(target);
+        }
+        /// <summary>A text on the right of an option that says its current choice; the look gives it its colour and size.</summary>
+        private static TMP_Text AddValue(Button option)
+        {
+            var caption = option.GetComponentInChildren<TMP_Text>(true);
+            var value = Instantiate(caption, caption.transform.parent, false);
+            value.name = "Value";
+            foreach (var label in value.GetComponents<MuseumInterfaceLabel>()) Discard(label);
+            foreach (var binding in value.GetComponents<MuseumMenuThemeBinding>()) Discard(binding);
+            value.alignment = TextAlignmentOptions.MidlineRight;
+            value.raycastTarget = false;
+            value.text = "";
+            var rect = value.rectTransform;
+            rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+            return value;
+        }
+
+        /// <summary>A small heading over a group of options; it takes no focus, so the keyboard passes over it.</summary>
+        private static TMP_Text AddHeading(Selectable before, string textKey)
+        {
+            var description = before.transform.parent.Find("Description");
+            var template = description != null ? description.GetComponent<TMP_Text>() : before.GetComponentInChildren<TMP_Text>(true);
+            var heading = Instantiate(template, before.transform.parent, false);
+            heading.name = "Heading";
+            foreach (var binding in heading.GetComponents<MuseumMenuThemeBinding>()) Discard(binding);
+            var label = heading.GetComponent<MuseumInterfaceLabel>();
+            if (label == null) label = heading.gameObject.AddComponent<MuseumInterfaceLabel>();
+            label.TextKey = textKey;
+            heading.text = MuseumInterfaceText.Get(textKey);
+            heading.alignment = TextAlignmentOptions.BottomLeft;
+            heading.raycastTarget = false;
+            heading.margin = new Vector4(6, 14, 6, 2);
+            var size = heading.GetComponent<LayoutElement>();
+            if (size == null) size = heading.gameObject.AddComponent<LayoutElement>();
+            size.minHeight = size.preferredHeight = 40;
+            size.flexibleHeight = 0;
+            heading.transform.SetSiblingIndex(before.transform.GetSiblingIndex());
+            return heading;
+        }
+
+        /// <summary>The settings in reading order: sound, reading, control, and the reset last.</summary>
+        private void OrderSettings()
+        {
+            var order = new Component[] { headingSound, volume, musicLevel, headingReading, subtitles, headingControl, sensitivity,
+                turnMode, turnSpeed, view.Settings.Reset };
+            int index = view.Settings.Description.transform.GetSiblingIndex() + 1;
+            foreach (var item in order)
+                if (item != null && item.transform.parent == view.Settings.Description.transform.parent) item.transform.SetSiblingIndex(index++);
         }
 
         /// <summary>One row per key the visitor may change, in the order of the binding list; the row layout belongs to its prefab.</summary>
@@ -233,10 +333,21 @@ namespace MusiyoBetsknate.Museum
             Refresh();
         }
 
-        private void Listen(Button button, UnityEngine.Events.UnityAction callback)
+        private void Listen(Button button, UnityEngine.Events.UnityAction callback, MuseumUiSound sound = MuseumUiSound.Confirm)
         {
-            button.onClick.AddListener(callback);
-            removeListeners.Add(() => { if (button != null) button.onClick.RemoveListener(callback); });
+            if (button == null) return;
+            UnityEngine.Events.UnityAction heard = () => { Sound(sound); callback(); };
+            button.onClick.AddListener(heard);
+            removeListeners.Add(() => { if (button != null) button.onClick.RemoveListener(heard); });
+        }
+        private static void Sound(MuseumUiSound sound) { if (Application.isPlaying) MuseumUiSounds.Current.Play(sound); }
+        private static void Quit()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
         }
         private void Unbind()
         {
@@ -302,12 +413,11 @@ namespace MusiyoBetsknate.Museum
             volume.SetValueWithoutNotify(preferences.Volume);
             musicLevel.SetValueWithoutNotify(preferences.MusicLevel);
             FindAnyObjectByType<MuseumMusic>()?.SetMusicLevel(preferences.MusicLevel);
-            subtitles.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Get(preferences.Subtitles ? "hide_subtitles" : "show_subtitles");
+            subtitlesValue.text = MuseumInterfaceText.Get(preferences.Subtitles ? "option_on" : "option_off");
             var xr = MuseumXrConfiguration.Current;
             var turning = preferences.Turn(xr.DefaultTurn);
-            turnMode.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Get(
-                turning == MuseumTurnMode.Continuous ? "turn_mode_continuous" : "turn_mode_snap");
-            turnSpeed.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Format("turn_speed", xr.TurnSpeed(preferences.TurnSpeed));
+            turnModeValue.text = MuseumInterfaceText.Get(turning == MuseumTurnMode.Continuous ? "turn_continuous" : "turn_snap");
+            turnSpeedValue.text = MuseumInterfaceText.Format("turn_speed_value", xr.TurnSpeed(preferences.TurnSpeed));
             // The speed only applies to continuous turning.
             turnSpeed.gameObject.SetActive(spatial && turning == MuseumTurnMode.Continuous);
             var tour = interaction != null ? interaction.GetComponent<MuseumAutoTour>() : null;
@@ -331,7 +441,12 @@ namespace MusiyoBetsknate.Museum
         }
         private GameObject FirstSelectable()
         {
-            if (page == MenuPage.Settings) return spatial ? volume.gameObject : sensitivity.gameObject;
+            if (page == MenuPage.Settings)
+            {
+                foreach (var option in view.Settings.Scroll.content.GetComponentsInChildren<Selectable>(false))
+                    if (option.IsInteractable() && option.gameObject.activeInHierarchy) return option.gameObject;
+                return settingsBack.gameObject;
+            }
             if (page == MenuPage.Controls)
                 return !spatial && rebindRows.Count > 0 && rebindRows[0] != null ? rebindRows[0].gameObject : controlsBack.gameObject;
             if (flow.Phase != VisitPhase.Menu) return resume.gameObject;
@@ -347,14 +462,24 @@ namespace MusiyoBetsknate.Museum
             bool visible = flow.Phase == VisitPhase.Menu || !entering && interaction.State == InteractionState.Paused;
             overlay.SetActive(visible || entering);
             overlayGroup.interactable = overlayGroup.blocksRaycasts = visible;
-            // After the credits the title menu rises gently over the fire; any other opening shows it at once.
-            if (visible && !(flow.AfterEnding && flow.Phase == VisitPhase.Menu)) overlayGroup.alpha = 1;
-            else if (visible && !wasVisible) overlayGroup.alpha = 0;
-            // Over the staged entry the backdrop lets the museum show through; a pause keeps the denser one.
+            // A menu that opens comes into view over a moment; after the credits the title menu rises slowly over the fire.
+            if (visible && !wasVisible)
+            {
+                overlayGroup.alpha = 0;
+                openSeconds = flow.AfterEnding && flow.Phase == VisitPhase.Menu ? AfterEndingFadeSeconds : OpenSeconds;
+                Sound(MuseumUiSound.Open);
+            }
+            else if (wasVisible && !visible) Sound(MuseumUiSound.Close);
+            // Over the staged entry the backdrop lets the museum show through; a pause keeps a light veil, and the dark
+            // behind the column does the rest. In a headset the pages float on their own, without a veil in the world.
             if (overlay.TryGetComponent<MuseumMenuThemeBinding>(out var theme) && theme.ColorToken == MuseumMenuColorToken.Backdrop
                 && overlay.TryGetComponent<Graphic>(out var backdrop))
-                backdrop.color = MuseumExperienceConfiguration.ColorValue(flow.Phase != VisitPhase.Exploring && flow.Entry != null
+            {
+                var veil = MuseumExperienceConfiguration.ColorValue(flow.Phase != VisitPhase.Exploring && flow.Entry != null
                     && flow.Entry.Available ? configuration.EntryBackdropColor : configuration.BackdropColor);
+                if (spatial) veil.a = 0;
+                backdrop.color = veil;
+            }
             fade.gameObject.SetActive(entering && (flow.Transition == EntryTransition.Fade || FromBackdrop) || flow.Phase == VisitPhase.Ending);
             UpdateTransition();
             if (!visible) page = MenuPage.Home;
@@ -378,6 +503,8 @@ namespace MusiyoBetsknate.Museum
             autoTour.gameObject.SetActive(!entry && interaction.GetComponent<MuseumAutoTour>() != null);
             orientation.gameObject.SetActive(!entry && interaction.GetComponent<MuseumWayfinding>() != null);
             mainMenu.gameObject.SetActive(!entry);
+            quitPause.gameObject.SetActive(!entry && CanQuit);
+            quitMain.gameObject.SetActive(entry && CanQuit);
             foreach (var homePage in new[] { view.Main, view.Pause })
             {
                 homePage.Retry.gameObject.SetActive(loader.State == TourLoadState.Unavailable);
@@ -395,6 +522,7 @@ namespace MusiyoBetsknate.Museum
                 : MuseumInterfaceText.Get("menu_description");
             // A page becoming active refreshes its neutral labels; apply preference-dependent text afterwards.
             SyncSettings();
+            if (motion != null) { if (visible) motion.Show(currentPage); else motion.Hide(); }
             if (visible)
             {
                 Cursor.lockState = CursorLockMode.None;
@@ -416,7 +544,7 @@ namespace MusiyoBetsknate.Museum
             if (!bound) return;
             if (flow.Phase == VisitPhase.Entering || flow.Phase == VisitPhase.Ending) UpdateTransition();
             if (overlayGroup.interactable && overlayGroup.alpha < 1)
-                overlayGroup.alpha = Mathf.MoveTowards(overlayGroup.alpha, 1, Time.unscaledDeltaTime / AfterEndingFadeSeconds);
+                overlayGroup.alpha = Mathf.MoveTowards(overlayGroup.alpha, 1, Time.unscaledDeltaTime / Mathf.Max(.01f, openSeconds));
             // The key being chosen for an action, and the one that just was, never also operates the menu.
             if (!overlayGroup.interactable || input.Capturing || input.CaptureEndedThisFrame) { navigationArmed = false; return; }
             if (page != MenuPage.Home && (input.Back.WasPressedThisFrame()
@@ -433,7 +561,10 @@ namespace MusiyoBetsknate.Museum
             if (step != 0) MoveSelection(step);
             var slider = EventSystem.current.currentSelectedGameObject.GetComponent<Slider>();
             if (pressed.x != 0 && slider != null)
+            {
                 slider.value += pressed.x * configuration.SliderStep * (slider.maxValue - slider.minValue);
+                Sound(MuseumUiSound.Step);
+            }
         }
         /// <summary>Directions pressed this frame. Keys already held when the menu opened, such as a walking key at the moment of pausing, do not count.</summary>
         private Vector2Int PressedNavigation()
@@ -459,6 +590,7 @@ namespace MusiyoBetsknate.Museum
             index = index < 0 ? 0 : (index + step + options.Count) % options.Count;
             EventSystem.current.SetSelectedGameObject(options[index].gameObject);
             KeepFocusVisible(options[index].gameObject);
+            Sound(MuseumUiSound.Focus);
         }
         private bool SelectionInsideMenu()
         {
@@ -522,7 +654,7 @@ namespace MusiyoBetsknate.Museum
             if (flow != null && flow.Menu == this) flow.Menu = null;
             if (view != null)
             {
-                if (Application.isPlaying) Destroy(view.gameObject);
+                if (Application.isPlaying) Discard(view.gameObject);
                 else DestroyImmediate(view.gameObject);
             }
         }

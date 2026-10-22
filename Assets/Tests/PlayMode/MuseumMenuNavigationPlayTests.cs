@@ -56,16 +56,17 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(menu.View.Main.Settings.gameObject));
                 yield return Tap(keyboard.enterKey);
                 Assert.That(menu.View.Settings.gameObject.activeSelf, Is.True);
-                float sensitivity = preferences.Sensitivity;
-                yield return Tap(keyboard.rightArrowKey);
-                Assert.That(preferences.Sensitivity, Is.GreaterThan(sensitivity));
-                yield return Tap(keyboard.leftArrowKey);
-                Assert.That(preferences.Sensitivity, Is.EqualTo(sensitivity).Within(.001f));
-                yield return Tap(keyboard.sKey);
+                // The settings open on the sound: the general volume first, then the music.
                 Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(menu.View.Settings.Volume.gameObject));
-                yield return Tap(keyboard.wKey);
-                Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(menu.View.Settings.Sensitivity.gameObject));
+                float general = preferences.Volume;
+                yield return Tap(keyboard.rightArrowKey);
+                Assert.That(preferences.Volume, Is.GreaterThan(general));
+                yield return Tap(keyboard.leftArrowKey);
+                Assert.That(preferences.Volume, Is.EqualTo(general).Within(.001f));
                 yield return Tap(keyboard.sKey);
+                Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(menu.MusicLevelSlider.gameObject));
+                yield return Tap(keyboard.wKey);
+                Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(menu.View.Settings.Volume.gameObject));
                 float narrationVolume = preferences.Volume;
                 yield return Tap(keyboard.sKey);
                 Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(menu.MusicLevelSlider.gameObject));
@@ -76,7 +77,10 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(input.Move.enabled, Is.False);
                 yield return Tap(keyboard.backspaceKey);
                 Assert.That(menu.View.Main.gameObject.activeSelf, Is.True);
+                // Backwards from the first choice wraps to the last: the way out, then the controls.
                 Press(keyboard.leftShiftKey);
+                yield return Tap(keyboard.tabKey);
+                Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(menu.QuitMainButton.gameObject));
                 yield return Tap(keyboard.tabKey);
                 Release(keyboard.leftShiftKey);
                 Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(menu.View.Main.Controls.gameObject));
