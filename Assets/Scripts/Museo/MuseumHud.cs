@@ -76,6 +76,9 @@ namespace MusiyoBetsknate.Museum
         private MuseumModelGrab grab;
         private MuseumAutoTour autoTour;
         private readonly System.Collections.Generic.List<(TMP_Text caption, string textKey)> keyedCaptions = new();
+        private RectTransform focusPill;
+        private RectTransform stationPill;
+        private string shownFocus;
 
         private void Awake()
         {
@@ -162,6 +165,25 @@ namespace MusiyoBetsknate.Museum
             // Menus, point screens and prompts share the typography of the Web.
             MuseumTypography.Apply(transform);
             ApplyPreferences();
+            Skin();
+        }
+
+        /// <summary>The screen of the visit takes the palette and the rounded surfaces of the menus.</summary>
+        private void Skin()
+        {
+            if (panel.TryGetComponent<Image>(out var screen)) MuseumHudSkin.Surface(screen);
+            foreach (var button in panel.GetComponentsInChildren<Button>(true)) MuseumHudSkin.Choice(button, button == detailButton);
+            MuseumHudSkin.Choice(elementTemplate);
+            MuseumHudSkin.Choice(returnButton, true);
+            MuseumHudSkin.Choice(serviceRetryButton);
+            if (panelText != null) panelText.color = MuseumHudSkin.Text;
+            if (subtitleBackground != null) MuseumHudSkin.Pill(subtitleBackground.GetComponent<Image>(), .86f);
+            if (subtitleText != null) subtitleText.color = MuseumHudSkin.Text;
+            focusText.color = MuseumHudSkin.Text;
+            focusPill = MuseumHudSkin.PillBehind(focusText);
+            stationText.color = MuseumHudSkin.Text;
+            stationPill = MuseumHudSkin.PillBehind(stationText);
+            shownFocus = null;
         }
 
         /// <summary>
@@ -336,6 +358,7 @@ namespace MusiyoBetsknate.Museum
                 : grab != null && grab.Hovered ? MuseumInterfaceText.Get("grab_hint")
                 : focus != null && focus.Content != null ? MuseumInterfaceText.Format("focus_point", focus.Content.name)
                 : pointInput.GazeProgress > 0 ? MuseumInterfaceText.Format("gaze_progress", Mathf.RoundToInt(pointInput.GazeProgress * 100)) : ".";
+            if (focusText.text != shownFocus) { shownFocus = focusText.text; MuseumHudSkin.Fit(focusPill, focusText); }
             ScrollPointPanel();
             if (panel.activeSelf && PanelGroup().alpha < 1)
                 panelGroup.alpha = Mathf.MoveTowards(panelGroup.alpha, 1,
@@ -750,6 +773,7 @@ namespace MusiyoBetsknate.Museum
             if (interaction.GetComponent<MuseumWayfinding>()?.MenuOpen == true) prompt = "";
             stationText.text = prompt;
             stationText.gameObject.SetActive(!string.IsNullOrEmpty(prompt));
+            MuseumHudSkin.Fit(stationPill, stationText);
             returnButton.gameObject.SetActive(exploring && !welcome && farewell != null && farewell.AtEnd && farewell.CanReturn);
         }
 
