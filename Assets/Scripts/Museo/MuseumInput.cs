@@ -109,6 +109,8 @@ namespace MusiyoBetsknate.Museum
         /// <summary>The left grip of a headset; either hand takes, hands over and turns the piece.</summary>
         public InputAction GrabLeft { get; }
         public InputAction AutoTour { get; }
+        /// <summary>Asks the companion a spoken question anywhere: X on the left controller, a key on a computer.</summary>
+        public InputAction AskCompanion { get; }
         public bool Spatial { get; private set; }
 
         /// <summary>The instance every museum component shares, created on first use with the visitor's saved keys.</summary>
@@ -174,6 +176,7 @@ namespace MusiyoBetsknate.Museum
             LeftTracked = Find("Tracking/LeftTracked");
             Turn = Find("Locomotion/Turn"); Teleport = Find("Locomotion/Teleport");
             Grab = Find("Visit/Grab"); GrabLeft = Find("Visit/GrabLeft"); AutoTour = Find("Visit/AutoTour");
+            AskCompanion = Find("Visit/AskCompanion");
             foreach (var maps in ContextMaps.Values)
                 foreach (var map in maps) Asset.FindActionMap(map, true);
             Bindings = new MuseumInputBindings(this);

@@ -105,6 +105,35 @@ namespace MusiyoBetsknate.Tests
         }
 
         [Test]
+        public void TheLeftXButtonAsksTheCompanionAndNothingElse()
+        {
+            var (left, right) = AddControllers();
+            input.SetSpatial(true);
+            input.SetContext(MuseumInputContext.Menu);
+            Press(left.primaryButton);
+            Assert.That(input.AskCompanion.WasPressedThisFrame(), Is.False, "A menu never opens the microphone.");
+            Release(left.primaryButton);
+
+            foreach (var context in new[] { MuseumInputContext.Visit, MuseumInputContext.Panel })
+            {
+                input.SetContext(context);
+                Press(left.primaryButton);
+                Assert.That(input.AskCompanion.WasPressedThisFrame(), Is.True, context + ": X asks the companion.");
+                Assert.That(input.Back.IsPressed() || input.Teleport.IsPressed() || input.AutoTour.IsPressed() || input.Click.IsPressed()
+                    || input.Pause.IsPressed() || input.Grab.IsPressed() || input.GrabLeft.IsPressed(), Is.False,
+                    "X does nothing else: going back, jumping, the tour, choosing, pausing and taking stay on their own buttons.");
+                Release(left.primaryButton);
+                Assert.That(input.AskCompanion.WasReleasedThisFrame(), Is.True, "Releasing X ends a held question.");
+            }
+            Press(left.secondaryButton);
+            Press(right.primaryButton);
+            Assert.That(input.AskCompanion.IsPressed(), Is.False, "Y and A never ask the companion.");
+            Release(left.secondaryButton); Release(right.primaryButton);
+            input.SetContext(MuseumInputContext.Typing);
+            Assert.That(input.AskCompanion.enabled, Is.False, "Writing silences it.");
+        }
+
+        [Test]
         public void ControllerTurningGrabbingRunningAndTheTourStaySilentInMenus()
         {
             var (left, right) = AddControllers();

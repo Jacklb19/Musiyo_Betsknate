@@ -28,7 +28,7 @@ namespace MusiyoBetsknate.Tests
         /// <summary>A further route of the synthetic service: method, path, headers and body in, status and JSON out, or null to pass.</summary>
         private delegate (int status, string body)? Route(string method, string path, System.Collections.Specialized.NameValueCollection headers, byte[] body);
 
-        public override void Setup() { base.Setup(); MuseumInput.Replace(MuseumInput.CreateDefault()); }
+        public override void Setup() { base.Setup(); MuseumInput.Replace(MuseumInput.CreateDefault()); GuideVoiceConsent.Forget(); }
         public override void TearDown()
         {
             MuseumInput.Replace(null);
@@ -395,6 +395,122 @@ namespace MusiyoBetsknate.Tests
             Assert.That(recorder.Recording, Is.False, "The microphone stops when the visitor leaves.");
             Assert.That(voice.Stage, Is.EqualTo(GuideVoiceStage.Off));
             Assert.That(voice.Client.Transcript, Is.Null);
+        }
+
+        /// <summary>
+        /// Anywhere in the museum, one button asks the companion: the notice first, then it listens, shows what it understood
+        /// for the visitor to confirm, and answers aloud with the text and its sources on its own screen.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheCompanionAnswersASpokenQuestionAnywhereAfterConsent()
+        {
+            var keyboard = InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Mouse>();
+            string capabilities = File.ReadAllText(Path.Combine(Application.dataPath, "Contracts", "examples", "voice_capabilities_external.json"));
+            string transcription = File.ReadAllText(Path.Combine(Application.dataPath, "Contracts", "examples", "guide_transcription.json"));
+            int transcriptions = 0, spoken = 0;
+            string consent = null, answerConsent = null;
+            var api = StartService((method, path, headers, body) =>
+            {
+                if (method == "GET" && path == "/api/v1/guide/voice-capabilities") return (200, capabilities);
+                if (method == "POST" && path == "/api/v1/guide/transcriptions")
+                {
+                    Interlocked.Increment(ref transcriptions);
+                    consent = headers["X-Musiyo-Voice-Consent"];
+                    return (200, transcription);
+                }
+                if (method == "POST" && path == "/api/v1/guide/voice-answers")
+                {
+                    Interlocked.Increment(ref spoken);
+                    answerConsent = headers["X-Musiyo-Voice-Consent"];
+                    return (200, SpokenAnswer(22050));
+                }
+                return null;
+            });
+            yield return OpenMuseumAtTheGuide(api);
+            var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var runtime = flow.GetComponent<TourRuntime>();
+            var interaction = flow.GetComponent<MuseumInteraction>();
+            var guide = flow.GetComponent<MuseumGuide>();
+            var display = flow.GetComponent<MuseumLecternDisplay>();
+            var companion = UnityEngine.Object.FindAnyObjectByType<MuseumCompanion>();
+            var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
+            yield return Until(() => companion.Voice != null, 3);
+            var voice = companion.Voice;
+            var panel = companion.GetComponent<MuseumCompanionVoicePanel>();
+            var recorder = new ToneRecorder();
+            voice.Recorder = recorder;
+            yield return Until(() => voice.Listens, 10);
+            Assert.That(voice.Listens, Is.True, "The API says the voice is configured and the device records.");
+            yield return null;
+            Assert.That(panel.Inviting && panel.Shown, Is.True, "The first time it can listen, the companion says how to ask.");
+            StringAssert.Contains("V", panel.Body.text);
+            Assert.That(guide.InRange, Is.False, "The visitor is far from the hearth guide.");
+
+            Press(keyboard.vKey);
+            yield return null;
+            Release(keyboard.vKey);
+            yield return null;
+            Assert.That(voice.Stage, Is.EqualTo(CompanionVoiceStage.Notice));
+            StringAssert.Contains("ElevenLabs y Groq", panel.Body.text);
+            StringAssert.Contains("No se guardan ni la grabación ni el texto", panel.Body.text);
+            Assert.That(recorder.Takes, Is.EqualTo(0), "Nothing is recorded before the visitor accepts.");
+            Assert.That(transcriptions + spoken, Is.EqualTo(0));
+            Assert.That(panel.Accept.gameObject.activeInHierarchy && panel.Decline.gameObject.activeInHierarchy, Is.True);
+            yield return null;
+            // The headset ray (or the centre of the view) reaches the companion's screen like any screen in the museum.
+            var rect = (RectTransform)panel.Accept.transform;
+            var spot = rect.TransformPoint(rect.rect.center);
+            display.Aim(new Ray(spot - panel.Surface.forward, panel.Surface.forward));
+            Assert.That(display.Aimed, Is.SameAs(panel.Accept), "The pointer reaches the companion's choices.");
+            Assert.That(display.Press(), Is.True);
+            yield return null;
+            Assert.That(voice.Stage, Is.EqualTo(CompanionVoiceStage.Recording));
+            Assert.That(panel.Chip.text, Is.EqualTo("Te escucho"), "It shows that it is listening.");
+            Assert.That(companion.Figure.Gesture, Is.EqualTo(GuideGesture.Listen));
+
+            Press(keyboard.vKey);
+            yield return null;
+            Release(keyboard.vKey);
+            yield return Until(() => voice.Stage == CompanionVoiceStage.Review, 10);
+            Assert.That(voice.Stage, Is.EqualTo(CompanionVoiceStage.Review));
+            Assert.That(consent, Is.EqualTo("request-only-v1"), "The recording goes with the visitor's consent.");
+            yield return null;
+            StringAssert.Contains("«Pregunta sintética de prueba»", panel.Body.text);
+            Assert.That(spoken, Is.EqualTo(0), "Nothing is asked before the visitor confirms what it understood.");
+
+            Press(keyboard.vKey);
+            yield return null;
+            Release(keyboard.vKey);
+            Assert.That(voice.Stage, Is.EqualTo(CompanionVoiceStage.Thinking));
+            yield return null;
+            Assert.That(panel.Chip.text, Is.EqualTo("Pensando…"), "It shows that it is thinking.");
+            yield return Until(() => voice.Stage == CompanionVoiceStage.Answer, 10);
+            Assert.That(voice.Stage, Is.EqualTo(CompanionVoiceStage.Answer));
+            Assert.That(spoken, Is.EqualTo(1));
+            Assert.That(answerConsent, Is.EqualTo("request-only-v1"));
+            yield return null;
+            StringAssert.Contains("Texto de una ficha sintética de prueba.", panel.Body.text);
+            Assert.That(panel.Sources.gameObject.activeInHierarchy, Is.True, "The answer cites its records.");
+            StringAssert.StartsWith("Fuente: ", panel.Sources.text);
+            Assert.That(voice.Speaking && companion.Speaking, Is.True, "The answer is heard.");
+            Assert.That(companion.Figure.Gesture, Is.EqualTo(GuideGesture.Speak));
+
+            // By the hearth guide the button is silent: the guide's own screen takes the questions there.
+            panel.Close.onClick.Invoke();
+            yield return null;
+            Assert.That(voice.Stage, Is.EqualTo(CompanionVoiceStage.Idle));
+            Assert.That(voice.Speaking, Is.False);
+            Assert.That(visitor.FocusPoint(runtime.GuidePoint.Anchor), Is.True);
+            yield return null;
+            Assert.That(guide.Ask(), Is.True);
+            yield return null;
+            Press(keyboard.vKey);
+            yield return null;
+            Release(keyboard.vKey);
+            yield return null;
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.GuideQuestion));
+            Assert.That(voice.Stage, Is.EqualTo(CompanionVoiceStage.Idle));
         }
 
         [UnityTest]

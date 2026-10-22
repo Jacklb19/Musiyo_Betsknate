@@ -26,7 +26,8 @@ namespace MusiyoBetsknate.Museum
     /// Speaking with the guide by the hearth. It is offered only when the museum API says its voice service is configured
     /// and the device can record (Quest, Windows; not the browser build). Before the first recording, the guide's own
     /// screen shows who processes the voice, as the API reports it, and nothing is sent until the visitor accepts; the
-    /// consent lasts for this run only and is asked again if the providers change. A recording becomes text that the
+    /// consent (<see cref="GuideVoiceConsent"/>, shared with the companion) lasts for this run only and is asked again if
+    /// the providers change. A recording becomes text that the
     /// visitor confirms before it is asked; the answer keeps its text and citations and, when the service sends speech,
     /// is also heard at the guide. Walking away, closing or pausing stops the microphone, abandons any request, silences
     /// the guide and forgets the recording and the transcript. Nothing of either is stored or logged.
@@ -43,7 +44,6 @@ namespace MusiyoBetsknate.Museum
         private float volume = 1;
         private AudioClip spoken;
         private GuideResponseContractV1 heard;
-        private string consentedTo;
         private string problem = "";
         private bool connected;
         private int shownSeconds = -1;
@@ -80,13 +80,10 @@ namespace MusiyoBetsknate.Museum
             }
         }
         /// <summary>The visitor accepted the processing the service reports now.</summary>
-        public bool Consented => consentedTo != null && consentedTo == ProcessingSignature;
+        public bool Consented => GuideVoiceConsent.Covers(client.Capabilities);
         /// <summary>Answers are asked for with speech: the visitor accepted voice and the service speaks.</summary>
         public bool SpeaksAnswers => Consented && client.Capabilities?.Speaks == true;
         public event Action Changed;
-
-        private string ProcessingSignature => client.Capabilities == null ? null
-            : client.Capabilities.processing + ":" + string.Join(",", client.Capabilities.providers.OrderBy(name => name, StringComparer.Ordinal));
 
         /// <summary>The notice before the first recording; providers are named exactly as the service reports them.</summary>
         public string Notice
@@ -227,7 +224,7 @@ namespace MusiyoBetsknate.Museum
         public bool Accept()
         {
             if (Stage != GuideVoiceStage.Notice) return false;
-            consentedTo = ProcessingSignature;
+            GuideVoiceConsent.Accept(client.Capabilities);
             StartRecording();
             return true;
         }

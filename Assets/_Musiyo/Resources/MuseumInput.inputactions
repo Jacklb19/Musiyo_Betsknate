@@ -740,6 +740,15 @@
           "processors": "",
           "interactions": "",
           "initialStateCheck": false
+        },
+        {
+          "name": "AskCompanion",
+          "type": "Button",
+          "id": "ef346d24-63cc-4863-8270-d9fe63673d06",
+          "expectedControlType": "Button",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": false
         }
       ],
       "bindings": [
@@ -1026,6 +1035,28 @@
           "processors": "",
           "groups": "XR",
           "action": "AutoTour",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "9a7c27fc-4e04-4973-ad31-2aa987f9de1d",
+          "path": "<Keyboard>/v",
+          "interactions": "",
+          "processors": "",
+          "groups": "KeyboardMouse",
+          "action": "AskCompanion",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "9270a1c6-4630-45db-a76d-5c1f02b7f46c",
+          "path": "<OculusTouchController>{LeftHand}/primaryButton",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "AskCompanion",
           "isComposite": false,
           "isPartOfComposite": false
         }
