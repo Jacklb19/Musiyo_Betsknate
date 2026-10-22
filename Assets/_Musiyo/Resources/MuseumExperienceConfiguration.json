@@ -45,6 +45,7 @@
   "model_load_frame_budget_ms": 4,
   "model_cache_entries": 2,
   "model_cache_bytes": 20000000,
+  "model_preload": "visit",
   "grab_return_seconds": 0.45,
   "grab_desktop_distance": 0.75,
   "grab_desktop_reach": 3.0,

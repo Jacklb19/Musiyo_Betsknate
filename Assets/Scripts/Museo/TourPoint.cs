@@ -21,6 +21,20 @@ namespace MusiyoBetsknate.Museum
 
         public void Configure(Renderer indicator) => statusRenderer = indicator;
 
+        /// <summary>The state sphere over the pedestal, while it is still drawn.</summary>
+        public Renderer Indicator => statusRenderer;
+
+        /// <summary>
+        /// Stops drawing the coloured state sphere: a steady light on the floor marks the point instead
+        /// (<see cref="MuseumPointGlow"/>). The state still changes; only its sphere is no longer seen.
+        /// </summary>
+        public void HideIndicator()
+        {
+            if (statusRenderer == null) return;
+            if (statusRenderer.gameObject == gameObject) statusRenderer.enabled = false;
+            else statusRenderer.gameObject.SetActive(false);
+        }
+
         public void Bind(PointContractV1 content)
         {
             Content = content;
