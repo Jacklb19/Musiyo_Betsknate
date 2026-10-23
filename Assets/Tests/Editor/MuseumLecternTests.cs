@@ -83,7 +83,7 @@ namespace MusiyoBetsknate.Tests
         [TearDown] public void TearDown() => Object.DestroyImmediate(root);
 
         [Test]
-        public void ThePanelUnfoldsInFrontOfTheStandOfItsPointAndFoldsAway()
+        public void ThePanelUnfoldsOnTheStandOfItsPointAndFoldsAway()
         {
             var settings = MuseumExperienceConfiguration.Current;
             float seconds = settings.LecternUnfoldSeconds;
@@ -99,11 +99,19 @@ namespace MusiyoBetsknate.Tests
             Assert.That(display.Openness, Is.EqualTo(1));
             float width = display.Surface.sizeDelta.x * display.Surface.localScale.x;
             Assert.That(width, Is.EqualTo(settings.LecternScreenWidth).Within(.001f));
-            Assert.That(Vector3.Angle(display.Surface.up, Vector3.up), Is.LessThan(.01f), "The floating screen is upright.");
-            Assert.That(Vector3.Angle(display.Surface.forward, Vector3.forward), Is.LessThan(.01f), "It is read from the visitor's side.");
-            var expected = stand.BoardCentre + Vector3.back * settings.LecternFloatDistance;
-            expected.y = stand.transform.position.y + settings.LecternFloatHeight;
-            Assert.That(Vector3.Distance(display.Surface.position, expected), Is.LessThan(.001f), "It floats in front of the stand.");
+            // It rests on the board: its lower edge on the board's plane at the configured height, centred across the
+            // board, leaning back with it and read from the board's side.
+            var edge = display.Surface.position;
+            Assert.That(edge.y, Is.EqualTo(stand.transform.position.y + settings.LecternScreenBottom).Within(.01f), "Its lower edge is at a comfortable height.");
+            var fromBoard = edge - stand.Board.position;
+            Assert.That(Vector3.Dot(fromBoard, stand.Board.forward), Is.EqualTo(-settings.LecternScreenGap).Within(.001f), "It lies on the board, just in front of it.");
+            Assert.That(Vector3.Dot(fromBoard, stand.Board.right), Is.EqualTo(0).Within(.001f), "It is centred across the board.");
+            float lean = Vector3.Angle(display.Surface.up, Vector3.up);
+            Assert.That(lean, Is.EqualTo(Mathf.Min(25, settings.LecternScreenTilt)).Within(.1f), "It leans back with the board.");
+            var forward = display.Surface.forward;
+            forward.y = 0;
+            Assert.That(Vector3.Angle(forward, -stand.Facing), Is.LessThan(.01f), "It is read from the board's side.");
+            Assert.That(display.Surface.up.z, Is.GreaterThan(0), "Its top leans away from the reader.");
 
             display.Hide();
             Assert.That(panel.gameObject.activeSelf, Is.True, "The folding screen keeps its content until it has closed.");
@@ -113,12 +121,23 @@ namespace MusiyoBetsknate.Tests
         }
 
         [Test]
-        public void TheFloatingScreenKeepsTurningTowardTheVisitor()
+        public void TheScreenOnAStandStaysPutWhileAFloatingOneTurnsTowardTheVisitor()
         {
             var settings = MuseumExperienceConfiguration.Current;
             display.Show(withStand);
             display.Advance(1);
+            var pose = new Pose(display.Surface.position, display.Surface.rotation);
             foreach (var position in new[] { new Vector3(8, 1.65f, 1), new Vector3(5, 1.65f, 4), new Vector3(3, 1.65f, -1) })
+            {
+                eye.position = position;
+                display.Advance(settings.LecternFollowSeconds * 40);
+                Assert.That(Vector3.Distance(display.Surface.position, pose.position), Is.LessThan(.0001f), "The screen on a stand is fixed in the museum.");
+                Assert.That(Quaternion.Angle(display.Surface.rotation, pose.rotation), Is.LessThan(.01f));
+            }
+
+            display.Show(withoutStand);
+            display.Advance(1);
+            foreach (var position in new[] { new Vector3(-1, 1.65f, 1), new Vector3(-4, 1.65f, 5), new Vector3(-7, 1.65f, 0) })
             {
                 eye.position = position;
                 display.Advance(settings.LecternFollowSeconds * .5f);
@@ -126,20 +145,36 @@ namespace MusiyoBetsknate.Tests
                 toVisitor.y = 0;
                 Assert.That(Vector3.Angle(-display.Surface.forward, toVisitor), Is.GreaterThan(1), "It turns smoothly, not in one frame.");
                 display.Advance(settings.LecternFollowSeconds * 40);
-                var axis = stand.BoardCentre;
-                var fromStand = position - axis;
-                fromStand.y = 0;
-                Assert.That(Vector3.Angle(-display.Surface.forward, fromStand), Is.LessThan(.5f), "The screen faces the visitor.");
+                var axis = withoutStand.Anchor.transform.position;
+                var fromAnchor = position - axis;
+                fromAnchor.y = 0;
+                Assert.That(Vector3.Angle(-display.Surface.forward, fromAnchor), Is.LessThan(.5f), "The floating screen faces the visitor.");
                 var offset = display.Surface.position - axis;
                 offset.y = 0;
                 Assert.That(offset.magnitude, Is.EqualTo(settings.LecternFloatDistance).Within(.001f));
-                Assert.That(Vector3.Angle(offset, fromStand), Is.LessThan(.5f), "It stays on the visitor's side of the stand.");
-                Assert.That(Vector3.Angle(display.Surface.up, Vector3.up), Is.LessThan(.01f));
+                Assert.That(Vector3.Angle(display.Surface.up, Vector3.up), Is.LessThan(.01f), "A floating screen is upright.");
             }
-            eye.position = stand.BoardCentre + Vector3.up;
-            var before = display.Surface.rotation;
-            display.Advance(1);
-            Assert.That(Quaternion.Angle(display.Surface.rotation, before), Is.LessThan(.01f), "Right above the stand it keeps its heading.");
+        }
+
+        [Test]
+        public void TheStandsTakeTheirWoodAndBoardFinish()
+        {
+            var settings = MuseumExperienceConfiguration.Current;
+            var source = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
+            var boardSource = new Material(source) { name = MuseumLecternFinish.BoardMaterial };
+            source.name = "Lectern_Stand";
+            var renderer = stand.gameObject.AddComponent<MeshRenderer>();
+            renderer.sharedMaterials = new[] { source, boardSource };
+            MuseumLecternFinish.Apply(stand);
+            var finished = renderer.sharedMaterials;
+            Assert.That(finished[0].name, Is.EqualTo(MuseumLecternFinish.WoodName));
+            Assert.That(finished[1].name, Is.EqualTo(MuseumLecternFinish.BoardName));
+            string Hex(Color colour) => ColorUtility.ToHtmlStringRGB(colour);
+            Assert.That(Hex(finished[0].GetColor("_BaseColor")), Is.EqualTo(Hex(MuseumExperienceConfiguration.ColorValue(settings.LecternWoodColor))));
+            Assert.That(Hex(finished[1].GetColor("_BaseColor")), Is.EqualTo(Hex(MuseumExperienceConfiguration.ColorValue(settings.LecternBoardColor))));
+            Assert.That(finished[0].shader, Is.SameAs(source.shader), "The finish keeps the delivered shader.");
+            MuseumLecternFinish.Apply(stand);
+            Assert.That(renderer.sharedMaterials[0], Is.SameAs(finished[0]), "A finished stand is left as it is.");
         }
 
         private Button AddControl(Transform parent, Vector2 position, Vector2 size)
