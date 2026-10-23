@@ -143,5 +143,44 @@ namespace MusiyoBetsknate.Tests
                 }
             });
         }
+
+        /// <summary>
+        /// Owner, 22/10: the gate «Musiyo» gains presence and finish, without flowers or palm (research A1.5): larger, on
+        /// stone footings, its name in a frame of dark wood, and the path through it as wide as ever.
+        /// </summary>
+        [Test]
+        public void TheGateStandsLargerOnStoneFootingsWithItsNameFramed()
+        {
+            WithWorld((scene, root) =>
+            {
+                Physics.SyncTransforms();
+                var all = Everything(scene);
+                Bounds Of(string name) => all.Single(item => item.name == name).GetComponent<Renderer>().bounds;
+                var structure = Of("Portada_Estructura");
+                Assert.That(structure.size.y, Is.EqualTo(3.48f * 1.2f).Within(.05f), "A fifth taller than delivered.");
+                Assert.That(structure.min.y, Is.EqualTo(0).Within(.02f), "Still standing on the ground.");
+                var gate = root.transform.Find("Gate");
+                Assert.That(gate, Is.Not.Null);
+                var footings = gate.Find("GateFootings").GetComponent<Renderer>().bounds;
+                Assert.That(footings.min.y, Is.InRange(-.08f, .02f), "The stones sit in the earth.");
+                Assert.That(footings.max.y, Is.LessThan(.35f), "A low collar, not a wall.");
+                Assert.That(footings.size.x, Is.GreaterThan(structure.size.x * .6f), "Around both posts.");
+                var board = Of("Portada_Letrero");
+                var frame = gate.Find("GateBoardFrame").GetComponent<Renderer>().bounds;
+                Assert.That(frame.min.x < board.min.x && frame.max.x > board.max.x && frame.min.y < board.min.y && frame.max.y > board.max.y, Is.True,
+                    "The frame surrounds the name board.");
+                Assert.That(Of("Portada_Texto_Nombre").center.y, Is.InRange(frame.min.y, frame.max.y), "The name reads inside its frame.");
+                foreach (Transform piece in gate)
+                    Assert.That(piece.name, Does.Not.Contain("Flor").And.Not.Contain("Flower").And.Not.Contain("Ramo").And.Not.Contain("Palm"));
+                // The opening between the posts is wider than the path, never narrower than before.
+                var hits = Physics.RaycastAll(new Vector3(-4, .8f, structure.center.z), Vector3.right, 8).Where(hit => hit.collider.name == "Portada_Estructura")
+                    .Select(hit => hit.point.x).OrderBy(x => x).ToList();
+                if (hits.Count >= 2)
+                {
+                    float left = hits.Where(x => x < 0).DefaultIfEmpty(-99).Max(), right = hits.Where(x => x > 0).DefaultIfEmpty(99).Min();
+                    Assert.That(right - left, Is.GreaterThan(2.6f), "The way through the gate stays wide.");
+                }
+            });
+        }
     }
 }
