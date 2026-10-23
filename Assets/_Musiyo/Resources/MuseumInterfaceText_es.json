@@ -388,6 +388,8 @@
     "controls_mouse_right": "Clic derecho",
     "controls_mouse_right_action": "Mantenlo sobre una pieza para tomarla y girarla",
     "controls_mouse_wheel": "Rueda",
-    "controls_mouse_wheel_action": "Desplazar listas y fichas"
+    "controls_mouse_wheel_action": "Desplazar listas y fichas",
+    "survey_more": "¿Para qué es esto?",
+    "survey_not_stored_note": "(No pudimos guardar tus respuestas esta vez, pero gracias por contarnos.)"
   }
 }

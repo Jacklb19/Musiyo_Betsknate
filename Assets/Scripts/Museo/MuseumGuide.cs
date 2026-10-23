@@ -146,6 +146,8 @@ namespace MusiyoBetsknate.Museum
             if (GetComponent<MuseumHearthInterviewer>() == null) gameObject.AddComponent<MuseumHearthInterviewer>();
             var closing = GetComponent<MuseumClosingSurvey>();
             if (closing == null) closing = gameObject.AddComponent<MuseumClosingSurvey>();
+            // The opinion questions come from the same API; a test or another source may have been attached already.
+            if (closing.Source == null) closing.Source = new MuseumSurveyClient(ApiBase, () => Time.realtimeSinceStartupAsDouble);
             Attach(closing);
             Bind();
         }
