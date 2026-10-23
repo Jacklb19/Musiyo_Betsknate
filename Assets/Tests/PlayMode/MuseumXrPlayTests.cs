@@ -126,7 +126,8 @@ namespace MusiyoBetsknate.Tests
 
         /// <summary>
         /// The menu page stands to the left of the gaze and is wider than a screen's column, so the fire of the title menu
-        /// stays in view on the right (owner, 22/10).
+        /// stays in view on the right (owner, 22/10); after the headset test of 23/10 it moved partway back towards the
+        /// middle, «un poquito más centrado».
         /// </summary>
         private static void AssertOnTheLeft(Transform eye, RectTransform page)
         {
@@ -135,8 +136,9 @@ namespace MusiyoBetsknate.Tests
             var look = Vector3.ProjectOnPlane(eye.forward, Vector3.up);
             float Side(Vector3 point) => Vector3.SignedAngle(look, Vector3.ProjectOnPlane(point - eye.position, Vector3.up), Vector3.up);
             var middle = (corners[0] + corners[2]) * .5f;
-            Assert.That(Side(middle), Is.LessThan(-10), "The middle of the menu stands to the left of the gaze.");
-            Assert.That(Side(corners[2]), Is.LessThan(2), "The right edge of the menu leaves the right of the view free.");
+            Assert.That(Side(middle), Is.InRange(-16f, -6f), "The middle of the menu stands a little to the left of the gaze.");
+            // The title fire burns about 22 degrees to the right; the menu stops well before it.
+            Assert.That(Side(corners[2]), Is.LessThan(12), "The right edge of the menu leaves the fire on the right in view.");
             Assert.That(Side(corners[0]), Is.GreaterThan(-45), "The menu is read without turning the head far.");
             Assert.That(Vector3.Distance(corners[1], corners[2]), Is.GreaterThan(1.05f), "The page is wider than the old 0.85 m card.");
         }
