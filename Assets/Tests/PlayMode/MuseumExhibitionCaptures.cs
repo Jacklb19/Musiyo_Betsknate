@@ -91,7 +91,8 @@ namespace MusiyoBetsknate.Tests
             settings.ApplyModifiedPropertiesWithoutUndo();
             flow.GetComponent<MuseumEntryView>().HeadsetActive = () => false;
             loader.Reload();
-            yield return Until(() => loader.State == TourLoadState.Ready, 60);
+            // The free hosting may need a minute or two to wake up.
+            yield return Until(() => loader.State == TourLoadState.Ready, 240);
             Assert.That(loader.State, Is.EqualTo(TourLoadState.Ready), loader.Status);
             MuseumAtmosphere.Current.Apply();
             flow.EnterImmediately();
@@ -194,7 +195,9 @@ namespace MusiyoBetsknate.Tests
             var field = maize.Where(item => item.bounds.center.z < -25).OrderByDescending(item => item.bounds.size.x * item.bounds.size.z).FirstOrDefault()
                 ?? maize.OrderByDescending(item => item.bounds.size.x * item.bounds.size.z).FirstOrDefault();
             if (field != null)
-                starts.Add(("maiz", field.bounds.center + Vector3.right * field.bounds.extents.x * .5f, new Color(.95f, .2f, .2f)));
+                // Deep in the maize, toward the garden's far corner, where a straight line to the rooms would cross it.
+                starts.Add(("maiz", field.bounds.center + Vector3.right * field.bounds.extents.x * .75f + Vector3.back * field.bounds.extents.z * .6f,
+                    new Color(.95f, .2f, .2f)));
             var lagoon = renderers.FirstOrDefault(item => item.name.Contains("Laguna") && item.name.Contains("Agua"))
                 ?? renderers.FirstOrDefault(item => item.name.Contains("Laguna"));
             notes.Add("lagoon: " + (lagoon != null ? lagoon.name + " " + F(lagoon.bounds.center) + " " + F(lagoon.bounds.size) : "-"));
