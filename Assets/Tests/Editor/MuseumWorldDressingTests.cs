@@ -129,7 +129,8 @@ namespace MusiyoBetsknate.Tests
             {
                 Physics.SyncTransforms();
                 var benches = root.GetComponentsInChildren<BoxCollider>().Where(collider => collider.name == "Bench").ToList();
-                Assert.That(benches, Has.Count.InRange(10, 13));
+                // Thirteen plank benches at most, and the overlook's bench (research A6.1).
+                Assert.That(benches, Has.Count.InRange(10, 14));
                 var pots = root.GetComponentsInChildren<Transform>().Where(item => item.name == "FloorPot" || item.name == "DoorPot").ToList();
                 Assert.That(pots, Has.Count.GreaterThanOrEqualTo(4));
                 Assert.That(pots.All(pot => pot.GetComponent<CapsuleCollider>() != null), Is.True, "Standing pots block the way.");
