@@ -116,18 +116,17 @@ namespace MusiyoBetsknate.Museum
             }
             mark.SetActive(false);
             root.SetActive(false);
+            // The stands take their finish as the visit starts, so they are finished before anyone reads at them.
+            if (Application.isPlaying)
+                foreach (var stand in FindObjectsByType<PointLectern>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                    MuseumLecternFinish.Apply(stand);
         }
 
         /// <summary>Stand authored beside the point, if the museum has one there.</summary>
         public PointLectern Find(TourPoint point)
         {
             if (point == null) return null;
-            if (stands == null)
-            {
-                stands = FindObjectsByType<PointLectern>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
-                // The stands of the museum take their finish once, when the visit first looks for them.
-                if (Application.isPlaying) foreach (var stand in stands) MuseumLecternFinish.Apply(stand);
-            }
+            stands ??= FindObjectsByType<PointLectern>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
             foreach (var stand in stands)
                 if (stand != null && stand.Point == point.Anchor && stand.Board != null) return stand;
             return null;
