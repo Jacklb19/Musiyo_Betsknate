@@ -27,6 +27,10 @@ namespace MusiyoBetsknate.Museum
         public const int CardRadius = 22;
         /// <summary>Width of the focus mark and how far a focused label slides to the right.</summary>
         public const float MarkWidth = 4, FocusSlide = 8;
+        /// <summary>Room kept at the right of an option for its value, and the gap that always separates name and value.</summary>
+        public const float ValueWidth = 190, ValueGap = 16, ValueRight = 18;
+        /// <summary>Room kept at the right of a slider's caption for its value.</summary>
+        public const float SliderValueWidth = 110;
         private sealed class Look
         {
             public Selectable Choice;
@@ -424,7 +428,11 @@ namespace MusiyoBetsknate.Museum
                 label.characterSpacing = 2;
                 // Every choice reads with the same firm weight, whichever button it was made from.
                 label.fontStyle = (label.fontStyle | FontStyles.Bold) & ~FontStyles.UpperCase;
-                label.margin = new Vector4(26, 0, value != null ? 200 : 0, 0);
+                // The name keeps to the left and the value to the right, a gap always between them; a name too long for
+                // its room is cut short instead of running under the value.
+                label.margin = new Vector4(26, 0, value != null ? ValueRight + ValueWidth + ValueGap : 0, 0);
+                label.textWrappingMode = TextWrappingModes.NoWrap;
+                label.overflowMode = TextOverflowModes.Truncate;
                 look.LabelLeft = 26;
             }
             if (value != null)
@@ -433,7 +441,10 @@ namespace MusiyoBetsknate.Museum
                 value.alignment = TextAlignmentOptions.MidlineRight;
                 value.fontStyle = FontStyles.Normal;
                 value.color = mutedColor;
-                value.margin = new Vector4(0, 0, 18, 0);
+                RightColumn(value.rectTransform, ValueWidth);
+                value.margin = Vector4.zero;
+                value.textWrappingMode = TextWrappingModes.NoWrap;
+                value.overflowMode = TextOverflowModes.Truncate;
             }
             look.Label = label;
             look.Value = value;
@@ -467,6 +478,16 @@ namespace MusiyoBetsknate.Museum
             var look = new Look { Choice = button, Label = row.Action, LabelLeft = row.Action != null ? row.Action.margin.x : 0, Marker = Marker(button.transform) };
             looks.Add(look);
             if (button.GetComponent<MuseumMenuChoice>() == null) button.gameObject.AddComponent<MuseumMenuChoice>();
+        }
+
+        /// <summary>A text kept to a column of the given width at the right end of its row, its middle on the row's middle.</summary>
+        private static void RightColumn(RectTransform rect, float width)
+        {
+            rect.anchorMin = new Vector2(1, 0);
+            rect.anchorMax = new Vector2(1, 1);
+            rect.pivot = new Vector2(1, .5f);
+            rect.sizeDelta = new Vector2(width, 0);
+            rect.anchoredPosition = new Vector2(-ValueRight, 0);
         }
 
         private Image Marker(Transform parent)
@@ -559,6 +580,13 @@ namespace MusiyoBetsknate.Museum
             var source = caption.rectTransform;
             rect.anchorMin = source.anchorMin; rect.anchorMax = source.anchorMax; rect.pivot = source.pivot;
             rect.anchoredPosition = source.anchoredPosition; rect.sizeDelta = source.sizeDelta;
+            // The caption stops short of the value: they never touch, however long either is.
+            var room = caption.margin;
+            room.z = Mathf.Max(room.z, SliderValueWidth + ValueGap);
+            caption.margin = room;
+            caption.textWrappingMode = TextWrappingModes.NoWrap;
+            caption.overflowMode = TextOverflowModes.Truncate;
+            value.textWrappingMode = TextWrappingModes.NoWrap;
             Func<float, string> percent = amount => Mathf.RoundToInt(Mathf.InverseLerp(slider.minValue, slider.maxValue, amount) * 100) + " %";
             if (slider.name == "HeightOffset")
                 percent = amount => MuseumInterfaceText.Format("height_value", MuseumComfort.Centimetres(amount));

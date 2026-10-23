@@ -258,6 +258,14 @@ namespace MusiyoBetsknate.Museum
             var option = Instantiate(template, template.transform.parent, false);
             option.name = name;
             option.onClick = new Button.ButtonClickedEvent();
+            // A copy of an option that already shows its state carries that state's text too; left there it would read
+            // the new option's caption over its value («Texto del atril» on «Texto del atril», «Giro» on «Continuo»).
+            foreach (var copied in option.GetComponentsInChildren<TMP_Text>(true))
+                if (copied.name == "Value")
+                {
+                    copied.transform.SetParent(null, false);
+                    Discard(copied.gameObject);
+                }
             option.transform.SetSiblingIndex(template.transform.GetSiblingIndex() + 1);
             foreach (var label in option.GetComponentsInChildren<MuseumInterfaceLabel>(true)) label.TextKey = textKey;
             option.GetComponentInChildren<TMP_Text>(true).text = MuseumInterfaceText.Get(textKey);
