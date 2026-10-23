@@ -122,6 +122,46 @@ namespace MusiyoBetsknate.Tests
             });
         }
 
+        /// <summary>
+        /// Owner, 22/10: the corridor bench before the doorway to the instruments room was in the way. No seat stands near a
+        /// doorway or passage, no stool stands against a bench, and every seat left can still be sat on.
+        /// </summary>
+        [Test]
+        public void NoSeatStandsInADoorwayOrAgainstABench()
+        {
+            WithWorld((scene, root) =>
+            {
+                Physics.SyncTransforms();
+                var all = Everything(scene);
+                var doorways = all.Where(item => (item.name.StartsWith("Umbral_") || item.name.StartsWith("Pasaje_")) && item.GetComponent<Renderer>() != null)
+                    .Select(item => item.GetComponent<Renderer>().bounds).ToList();
+                Assert.That(doorways, Has.Count.GreaterThanOrEqualTo(4));
+                float Gap(Bounds a, Bounds b)
+                {
+                    float x = Mathf.Max(0, Mathf.Max(a.min.x - b.max.x, b.min.x - a.max.x));
+                    float z = Mathf.Max(0, Mathf.Max(a.min.z - b.max.z, b.min.z - a.max.z));
+                    return Mathf.Sqrt(x * x + z * z);
+                }
+                var benches = root.GetComponentsInChildren<BoxCollider>().Where(collider => collider.name == "Bench").Select(collider => collider.bounds).ToList();
+                foreach (var bench in benches)
+                    Assert.That(doorways.Min(doorway => Gap(doorway, bench)), Is.GreaterThanOrEqualTo(.95f), "Bench at " + bench.center + " leaves the doorway free.");
+                Assert.That(benches.Any(bench => Vector3.Distance(new Vector3(bench.center.x, 0, bench.center.z), new Vector3(12.3f, 0, -5)) < .5f), Is.False,
+                    "The corridor bench before the doorway to the instruments room is gone.");
+                var stools = all.Where(item => item.parent != null && item.parent.name == "MuseumStools").ToList();
+                Assert.That(stools, Is.Not.Empty);
+                foreach (var stool in stools.Where(item => item.gameObject.activeInHierarchy))
+                {
+                    var bounds = stool.GetComponentInChildren<Renderer>().bounds;
+                    Assert.That(benches.All(bench => Gap(bench, bounds) >= .35f), Is.True, stool.name + " leaves room before the benches.");
+                }
+                Assert.That(stools.Any(item => item.name == "Welcome_Banco_Tripode_0" && item.gameObject.activeInHierarchy), Is.False,
+                    "The stool before the welcome room's bench is taken away.");
+                var seats = MuseumSeating.FindSeats();
+                Assert.That(seats.Count(seat => seat.Name == "Bench"), Is.EqualTo(benches.Count), "Every bench left can be sat on.");
+                Assert.That(seats.Count(seat => seat.Name.Contains("_Banco_")), Is.GreaterThanOrEqualTo(stools.Count(item => item.gameObject.activeInHierarchy)));
+            });
+        }
+
         [Test]
         public void BenchesAndPotsStandFreeAndBlockTheWay()
         {

@@ -51,7 +51,48 @@ namespace MusiyoBetsknate.Editor
             BuildGroundBand(parent, footprints);
             BuildForecourt(parent, footprints, random);
             BuildPlanting(parent, footprints, random);
-            BuildBenches(parent, obstacles, random);
+            var benches = BuildBenches(parent, obstacles, Doorways(objects), random);
+            ClearStoolsBefore(benches);
+        }
+
+        /// <summary>A bench keeps this much floor, in metres, between itself and a doorway or passage.</summary>
+        public const float DoorwayClearance = 1.0f;
+        /// <summary>A stool closer than this to a bench stands in the way of whoever sits on the bench.</summary>
+        public const float StoolClearance = .35f;
+        /// <summary>Root of the stools placed in the saved scene (MuseumStoolPlacement).</summary>
+        private const string StoolsRoot = "MuseumStools";
+
+        /// <summary>Thresholds and passages between rooms, which every seat must leave free.</summary>
+        internal static List<Bounds> Doorways(Dictionary<string, Transform> objects)
+            => objects.Where(entry => (entry.Key.StartsWith("Umbral_") || entry.Key.StartsWith("Pasaje_")) && entry.Value.GetComponent<Renderer>() != null)
+                .Select(entry => entry.Value.GetComponent<Renderer>().bounds).ToList();
+
+        /// <summary>Distance on the floor between two boxes, zero when they overlap.</summary>
+        internal static float FloorGap(Bounds a, Bounds b)
+        {
+            float x = Mathf.Max(0, Mathf.Max(a.min.x - b.max.x, b.min.x - a.max.x));
+            float z = Mathf.Max(0, Mathf.Max(a.min.z - b.max.z, b.min.z - a.max.z));
+            return Mathf.Sqrt(x * x + z * z);
+        }
+
+        /// <summary>
+        /// A stool of the saved scene standing against a bench (owner, 22/10: a stool in front of the welcome room's bench)
+        /// is taken away before the scene is merged, so whoever sits on the bench has room for their legs.
+        /// </summary>
+        private static void ClearStoolsBefore(List<Bounds> benches)
+        {
+            var root = Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).FirstOrDefault(item => item.parent == null && item.name == StoolsRoot);
+            if (root == null) return;
+            foreach (Transform stool in root)
+            {
+                var renderers = stool.GetComponentsInChildren<Renderer>();
+                if (renderers.Length == 0) continue;
+                var bounds = renderers[0].bounds;
+                foreach (var renderer in renderers) bounds.Encapsulate(renderer.bounds);
+                if (!benches.Any(bench => FloorGap(bench, bounds) < StoolClearance)) continue;
+                stool.gameObject.SetActive(false);
+                Debug.Log("Museum world: stool " + stool.name + " stood against a bench and was taken away.");
+            }
         }
 
         private static Bounds? Union(Dictionary<string, Transform> objects, System.Func<string, bool> pick)
@@ -304,12 +345,14 @@ namespace MusiyoBetsknate.Editor
 
         /// <summary>
         /// Plain plank benches: two in the forecourt, two in the welcome room facing the tree, along the courtyard
-        /// corridor facing the courtyard, one in the instruments room. A bench is left out where something stands.
+        /// corridor facing the courtyard, one in the instruments room. A bench is left out where something stands or where
+        /// it would stand within <see cref="DoorwayClearance"/> of a doorway; the footprints of those placed are returned.
         /// </summary>
-        private static void BuildBenches(Transform parent, List<Bounds> obstacles, System.Random random)
+        private static List<Bounds> BuildBenches(Transform parent, List<Bounds> obstacles, List<Bounds> doorways, System.Random random)
         {
+            var footprints = new List<Bounds>();
             var wood = Delivered("M_Madera");
-            if (wood == null) return;
+            if (wood == null) return footprints;
             var seats = new List<(Vector3 centre, float facing)>();
             foreach (float side in new[] { -1f, 1f })
             {
@@ -341,11 +384,17 @@ namespace MusiyoBetsknate.Editor
             {
                 var turn = Quaternion.Euler(0, facing, 0);
                 float length = 1.7f;
-                if (!IsFree(obstacles, centre, turn, new Vector3(length + .1f, .8f, .5f)))
+                var footprint = new Bounds(centre + Vector3.up * .23f, Vector3.zero);
+                foreach (var corner in new[] { new Vector3(-1, 0, -1), new Vector3(1, 0, -1), new Vector3(-1, 0, 1), new Vector3(1, 0, 1) })
+                    footprint.Encapsulate(centre + Vector3.up * .23f + turn * Vector3.Scale(corner, new Vector3(length * .5f, 0, .19f)));
+                // Owner, 22/10: the corridor bench before the doorway to the instruments room was in the way.
+                if (!IsFree(obstacles, centre, turn, new Vector3(length + .1f, .8f, .5f))
+                    || doorways.Any(doorway => FloorGap(doorway, footprint) < DoorwayClearance))
                 {
                     refused.Add(centre.ToString("F1"));
                     continue;
                 }
+                footprints.Add(footprint);
                 // Seat plank, two slab legs, a low stretcher.
                 AddBox(positions, uvs, normals, triangles, centre, turn, new Vector3(0, .425f, 0), new Vector3(length, .07f, .38f));
                 foreach (float end in new[] { -1f, 1f })
@@ -359,6 +408,7 @@ namespace MusiyoBetsknate.Editor
             }
             MeshObject(parent, "Benches", Build("Benches", positions, Enumerable.Repeat(Color.white, positions.Count).ToList(), triangles, uvs, normals), wood, true);
             Debug.Log("Museum world benches: " + placed + " of " + seats.Count + "; no room at " + string.Join(" ", refused) + ".");
+            return footprints;
         }
 
         /// <summary>A box with its own faces and texture laid along its length (about a metre per tile).</summary>
