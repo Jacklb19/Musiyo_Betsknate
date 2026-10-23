@@ -27,6 +27,23 @@ namespace MusiyoBetsknate.Tests
 
         private static Vector2 Floor(Transform target) => new Vector2(target.position.x, target.position.z);
 
+        /// <summary>
+        /// Without a local service the loader retries now and then; a press that falls in a retry would not begin the
+        /// visit, so each press waits until the loader has settled.
+        /// </summary>
+        private static IEnumerator Settled(TourLoader loader)
+        {
+            for (float waited = 0; loader.State == TourLoadState.Loading && waited < 20; waited += Time.unscaledDeltaTime) yield return null;
+        }
+
+        /// <summary>A failed check must not leave the museum loaded under the next test.</summary>
+        [UnityTearDown]
+        public IEnumerator UnloadMuseum()
+        {
+            var scene = SceneManager.GetSceneByPath(MuseumScene);
+            if (scene.IsValid() && scene.isLoaded) yield return SceneManager.UnloadSceneAsync(scene);
+        }
+
 #if UNITY_EDITOR
         [UnityTest]
         public IEnumerator SavedMuseumStagesTheEntryGlidesInAndReturns()
@@ -75,6 +92,7 @@ namespace MusiyoBetsknate.Tests
                 Release(keyboard.wKey);
                 yield return null;
                 EventSystem.current.SetSelectedGameObject(menu.Main.Primary.gameObject);
+                yield return Settled(loader);
 
                 Press(keyboard.enterKey);
                 yield return null;
@@ -127,6 +145,7 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(entry.Staged, Is.False);
                 Assert.That(eyes.enabled, Is.True);
                 var pose = eyes.transform.position;
+                yield return Settled(loader);
                 menu.Main.Primary.onClick.Invoke();
                 yield return null;
                 Assert.That(flow.Transition, Is.EqualTo(EntryTransition.Fade));
@@ -141,7 +160,7 @@ namespace MusiyoBetsknate.Tests
                 else PlayerPrefs.DeleteKey(MuseumVisitorPreferences.StorageKey);
                 PlayerPrefs.Save();
             }
-            yield return SceneManager.UnloadSceneAsync(scene);
+            if (scene.isLoaded) yield return SceneManager.UnloadSceneAsync(scene);
         }
 #endif
     }
