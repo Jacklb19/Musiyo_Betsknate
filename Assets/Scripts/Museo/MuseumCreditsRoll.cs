@@ -18,6 +18,12 @@ namespace MusiyoBetsknate.Museum
     {
         /// <summary>Column size in millimetres, and where it stands from the eyes of the set.</summary>
         public const float Width = 1250, Height = 1250, Distance = 3, Side = -.95f;
+        /// <summary>
+        /// In a headset the column stands closer and nearer the middle of the view, so it reads (owner, 22/10): its middle
+        /// at this distance and this far to the left of the gaze, a little under the eyes, drawn at this share of its size.
+        /// Seen from 1.7 m instead of 3 m, its letters look about half as large again as before.
+        /// </summary>
+        public const float HeadsetDistance = 1.7f, HeadsetSide = -.42f, HeadsetScale = .85f, HeadsetBelowEyes = .15f;
         /// <summary>Room under the column for the controls.</summary>
         public const float Footer = 150;
         /// <summary>Height over which the column fades out at its edges.</summary>
@@ -71,8 +77,9 @@ namespace MusiyoBetsknate.Museum
             // window is narrow.
             var eye = new Vector3(pose.position.x, eyes != null ? eyes.position.y : pose.position.y, pose.position.z);
             float ground = set.position.y;
-            float side = Side, scale = 1;
-            if (!MuseumInput.Current.Spatial && eventCamera != null)
+            bool headset = MuseumInput.Current.Spatial;
+            float side = headset ? HeadsetSide : Side, scale = headset ? HeadsetScale : 1, distance = headset ? HeadsetDistance : Distance;
+            if (!headset && eventCamera != null)
             {
                 float halfWidth = Distance * Mathf.Tan(eventCamera.fieldOfView * .5f * Mathf.Deg2Rad) * eventCamera.aspect;
                 float width = Width * MuseumWorldUi.Millimetre;
@@ -81,8 +88,8 @@ namespace MusiyoBetsknate.Museum
             }
             var level = Vector3.ProjectOnPlane(pose.forward, Vector3.up).normalized;
             var right = Vector3.Cross(Vector3.up, level);
-            var position = eye + level * Distance + right * side;
-            position.y = ground + Mathf.Clamp(eye.y - ground - .4f, .85f, 1.35f);
+            var position = eye + level * distance + right * side;
+            position.y = headset ? eye.y - HeadsetBelowEyes : ground + Mathf.Clamp(eye.y - ground - .4f, .85f, 1.35f);
             canvas.transform.SetPositionAndRotation(position, Quaternion.LookRotation(position - eye, Vector3.up));
             canvas.transform.localScale *= scale;
             roll.Build(credits);
