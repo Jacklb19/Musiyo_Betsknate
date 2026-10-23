@@ -165,6 +165,14 @@ namespace MusiyoBetsknate.Museum
             if (!shown) return;
             float time = Time.unscaledTime;
             if (fire != null) FireLevel = fire.Level;
+            if (floorGlow != null)
+            {
+                var tint = FloorGlowTint;
+                tint.a *= .7f + .3f * FireLevel;
+                var block = new MaterialPropertyBlock();
+                block.SetColor("_BaseColor", tint);
+                floorGlow.SetPropertyBlock(block);
+            }
             else if (fireLight != null)
             {
                 float flicker = .6f * Mathf.PerlinNoise(time * 3.1f, .3f) + .25f * Mathf.PerlinNoise(time * 11f, 4.1f);
@@ -196,34 +204,9 @@ namespace MusiyoBetsknate.Museum
 
         private void BuildHearth()
         {
-            var stones = FindMuseumPiece("Fogon_Piedras_Shinyac");
-            if (stones != null) Copy(stones, Focus, .9f);
-            else
-                for (int index = 0; index < 9; index++)
-                {
-                    float angle = index * Mathf.PI * 2 / 9;
-                    var stone = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                    Discard(stone.GetComponent<Collider>());
-                    stone.transform.SetParent(root, false);
-                    stone.transform.localPosition = Focus + new Vector3(Mathf.Cos(angle) * .55f, .06f, Mathf.Sin(angle) * .55f);
-                    stone.transform.localScale = new Vector3(.26f, .16f, .22f);
-                    Paint(stone, "M_Piedra", new Color(.3f, .29f, .27f));
-                }
-            // Logs lean together over the centre of the ring.
-            for (int index = 0; index < 5; index++)
-            {
-                float angle = (index * 72 + 15) * Mathf.Deg2Rad;
-                var foot = Focus + new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle)) * .3f + Vector3.up * .03f;
-                var top = Focus + Vector3.up * .42f;
-                var log = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                log.name = "Log";
-                Discard(log.GetComponent<Collider>());
-                log.transform.SetParent(root, false);
-                log.transform.localPosition = (foot + top) * .5f;
-                log.transform.localRotation = Quaternion.FromToRotation(Vector3.up, top - foot);
-                log.transform.localScale = new Vector3(.065f, (top - foot).magnitude * .5f, .065f);
-                Paint(log, "M_Corteza_Sauce", new Color(.25f, .17f, .11f));
-            }
+            // Stones, ash and logs of its own: a copy of the museum's hearth would bring, on a headset, the museum's
+            // combined mesh with it and stand as a strange shape floating by the fire.
+            MuseumFirePit.Build(root, Focus);
             // The living fire: flames, embers, sparks, smoke and dancing light.
             fire = MuseumFire.Create(root, Focus);
             if (fire == null)
@@ -240,14 +223,18 @@ namespace MusiyoBetsknate.Museum
                 Flames("FlameCore", .08f, new ParticleSystem.MinMaxCurve(.08f, .16f), 70, new Color(1f, .85f, .45f));
                 Motes("Embers", Focus + Vector3.up * .9f, new Vector3(.5f, 1.2f, .5f), 40, new Color(1f, .55f, .2f, .9f), .012f, .03f, .45f);
             }
-            Halo(Focus + new Vector3(0, .55f, .15f), 1.6f, new Color(1f, .45f, .15f, .22f));
-            // Low wooden stools around the fire, as the owner chose for the museum's hearth.
+            // The fire's light lies on the earth around it, never on a card standing in the air.
+            floorGlow = Floor("FloorGlow", Focus + Vector3.up * .006f, 3.2f, GlowMaterial, FloorGlowTint);
+            // Low wooden stools around the fire, as the owner chose for the museum's hearth, standing on the earth.
             Stool("Props/Banco_Tripode", Focus + new Vector3(-1.05f, 0, .55f));
             Stool("Props/Banco_Curvo", Focus + new Vector3(1.0f, 0, .7f));
             Stool("Props/Banco_Tripode", Focus + new Vector3(.25f, 0, 1.25f));
         }
 
-        /// <summary>A stool turned to face the fire; the set simply goes without it when the model is missing.</summary>
+        /// <summary>
+        /// A stool turned to face the fire, its feet on the earth whatever the model's origin, with a soft shadow under it;
+        /// the set simply goes without it when the model is missing.
+        /// </summary>
         private void Stool(string resource, Vector3 spot)
         {
             var model = Resources.Load<GameObject>(resource);
@@ -261,7 +248,48 @@ namespace MusiyoBetsknate.Museum
             stool.transform.localPosition = spot;
             stool.transform.localRotation = turn;
             foreach (var collider in stool.GetComponentsInChildren<Collider>()) Discard(collider);
+            var renderers = stool.GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0) return;
+            var bounds = renderers[0].bounds;
+            foreach (var renderer in renderers) bounds.Encapsulate(renderer.bounds);
+            float floor = root.TransformPoint(spot).y;
+            stool.transform.position += Vector3.up * (floor - bounds.min.y);
+            float reach = Mathf.Max(bounds.extents.x, bounds.extents.z);
+            var shadow = Floor("StoolShadow", spot + Vector3.up * .004f, reach * 2.6f, MuseumFire.SmokeMaterial, StoolShadowTint);
+            shadow.sharedMaterial = ShadowMaterial(shadow.sharedMaterial);
         }
+
+        private static Material shadowMaterial;
+        /// <summary>The soft dark patch is drawn after the fire's light on the earth, so the light does not wash it away.</summary>
+        private static Material ShadowMaterial(Material source)
+        {
+            if (source == null) return null;
+            if (shadowMaterial == null)
+            {
+                shadowMaterial = new Material(source) { name = "EntryStoolShadow" };
+                shadowMaterial.renderQueue = Mathf.Max(source.renderQueue, (int)RenderQueue.Transparent) + 20;
+                // A plain soft disc: darkest under the seat, fading to nothing at its edge.
+                const int size = 64;
+                var blob = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = "EntryStoolShadow", wrapMode = TextureWrapMode.Clamp };
+                for (int y = 0; y < size; y++)
+                    for (int x = 0; x < size; x++)
+                    {
+                        float distance = new Vector2(x + .5f - size / 2f, y + .5f - size / 2f).magnitude / (size / 2f);
+                        blob.SetPixel(x, y, new Color(1, 1, 1, Mathf.SmoothStep(1, 0, Mathf.Clamp01(distance))));
+                    }
+                blob.Apply();
+                shadowMaterial.SetTexture("_BaseMap", blob);
+            }
+            return shadowMaterial;
+        }
+
+        private static readonly Color FloorGlowTint = new Color(1f, .5f, .2f, .34f);
+        private static readonly Color StoolShadowTint = new Color(0, 0, 0, .7f);
+        private MeshRenderer floorGlow;
+
+        /// <summary>A soft round patch lying flat on the earth: the fire's light, or the shadow under a stool.</summary>
+        private MeshRenderer Floor(string name, Vector3 position, float size, string material, Color tint)
+            => MuseumFirePit.Patch(root, name, position, size, Resources.Load<Material>(material), tint);
 
         private void BuildMask(Func<string> apiBase, string element)
         {
@@ -477,28 +505,6 @@ namespace MusiyoBetsknate.Museum
             system.Play();
         }
 
-        /// <summary>A delivered museum piece, found by name, so the set shares the museum's own look.</summary>
-        private static MeshRenderer FindMuseumPiece(string name)
-            => FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None)
-                .FirstOrDefault(renderer => renderer.name == name && renderer.TryGetComponent<MeshFilter>(out var filter) && filter.sharedMesh != null);
-
-        /// <summary>A copy of a museum piece with its centre on the floor at the spot, scaled to fit.</summary>
-        private void Copy(MeshRenderer source, Vector3 spot, float width)
-        {
-            var copy = new GameObject(source.name);
-            copy.transform.SetParent(root, false);
-            copy.AddComponent<MeshFilter>().sharedMesh = source.GetComponent<MeshFilter>().sharedMesh;
-            var renderer = copy.AddComponent<MeshRenderer>();
-            renderer.sharedMaterials = source.sharedMaterials;
-            // The piece keeps the turn the model gives it, so it lies as it does in the museum.
-            copy.transform.rotation = source.transform.rotation;
-            copy.transform.localScale = source.transform.lossyScale;
-            var size = renderer.bounds.size;
-            copy.transform.localScale *= width / Mathf.Max(size.x, size.z, .01f);
-            var bounds = renderer.bounds;
-            copy.transform.position += root.TransformPoint(spot) - new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
-        }
-
         /// <summary>Uses a material of the delivered museum when the scene has it, and a plain one otherwise.</summary>
         private static void Paint(GameObject item, string museumMaterial, Color fallback)
         {
@@ -521,7 +527,7 @@ namespace MusiyoBetsknate.Museum
             maskImport?.Dispose();
             maskImport = null;
             if (root != null) Discard(root.gameObject);
-            root = null; cameraAnchor = null; fireLight = null; fire = null; maskAnchor = null;
+            root = null; cameraAnchor = null; fireLight = null; fire = null; maskAnchor = null; floorGlow = null;
             Kind = EntryBackdropKind.Museum;
             MaskStatus = "";
         }

@@ -227,6 +227,58 @@ namespace MusiyoBetsknate.Tests
             }
         }
 
+        /// <summary>
+        /// Owner, 22/10: on the headset things floated by the title fire. Everything solid in the set now stands on its
+        /// earth, nothing is a copy of a museum mesh (on a headset that mesh is the combined room), and the fire's light lies
+        /// on the ground instead of on a card standing in the air.
+        /// </summary>
+        [Test]
+        public void TheTitleFireStandsOnItsEarthAndBorrowsNoMuseumMesh()
+        {
+            var museumPiece = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            museumPiece.name = "Fogon_Piedras_Shinyac";
+            var backdrop = root.AddComponent<MuseumEntryBackdrop>();
+            try
+            {
+                backdrop.Configure(EntryBackdropKind.Hearth);
+                var set = backdrop.Root;
+                float earth = set.position.y;
+                var museumMesh = museumPiece.GetComponent<MeshFilter>().sharedMesh;
+                foreach (var filter in set.GetComponentsInChildren<MeshFilter>(true))
+                    Assert.That(filter.sharedMesh, Is.Not.SameAs(museumMesh), filter.name + " is a copy of a museum piece.");
+                Assert.That(set.Find("Halo"), Is.Null, "No glowing card stands in the air.");
+                var floorGlow = set.Find("FloorGlow");
+                Assert.That(floorGlow, Is.Not.Null);
+                var glowBounds = floorGlow.GetComponent<Renderer>().bounds;
+                Assert.That(glowBounds.size.y, Is.LessThan(.01f), "The fire's light lies flat on the earth.");
+                Assert.That(glowBounds.min.y, Is.EqualTo(earth).Within(.02f));
+                Assert.That(floorGlow.GetComponent<MeshFilter>().sharedMesh.colors.Length, Is.EqualTo(4),
+                    "The particle shader multiplies by the vertex colour; without it the patch is never drawn.");
+                Assert.That(set.Find("FirePit/" + MuseumFirePit.StonesName), Is.Not.Null);
+                int stools = 0;
+                foreach (var name in new[] { "Banco_Tripode", "Banco_Curvo" })
+                    foreach (Transform child in set)
+                    {
+                        if (child.name != name) continue;
+                        stools++;
+                        var bounds = child.GetComponentInChildren<Renderer>().bounds;
+                        foreach (var renderer in child.GetComponentsInChildren<Renderer>()) bounds.Encapsulate(renderer.bounds);
+                        Assert.That(bounds.min.y, Is.EqualTo(earth).Within(.01f), child.name + " stands on the earth.");
+                    }
+                Assert.That(stools, Is.EqualTo(3));
+                int shadows = 0;
+                foreach (Transform child in set) if (child.name == "StoolShadow") shadows++;
+                Assert.That(shadows, Is.EqualTo(3), "Every stool has its soft shadow on the earth.");
+                foreach (var name in new[] { MuseumFirePit.StonesName, MuseumFirePit.AshName, MuseumFirePit.LogsName })
+                {
+                    var bounds = set.Find("FirePit/" + name).GetComponent<Renderer>().bounds;
+                    Assert.That(bounds.min.y, Is.InRange(earth - .05f, earth + .02f), name + " rests on the earth.");
+                    Assert.That(bounds.max.y, Is.LessThan(earth + .6f), name + " stays low around the fire.");
+                }
+            }
+            finally { Object.DestroyImmediate(museumPiece); }
+        }
+
         [Test]
         public void AHeadsetNeverShowsTheScenicBackdrop()
         {

@@ -118,7 +118,11 @@ namespace MusiyoBetsknate.Museum
             canvas.worldCamera = head;
             var rect = (RectTransform)canvas.transform;
             rect.sizeDelta = new Vector2(1024, 900);
-            rect.localScale = Vector3.one * (configuration.MenuWidth / rect.sizeDelta.x);
+            float unit = configuration.MenuWidth / rect.sizeDelta.x;
+            rect.localScale = Vector3.one * unit;
+            // The menu pages stand to the left of the gaze, wider than on a screen, so the world stays in view on the right.
+            var layout = menu.View != null ? menu.View.GetComponent<MuseumMenuLayout>() : null;
+            if (layout != null) layout.SpatialColumn = new Vector2(configuration.MenuPageWidth / unit, -configuration.MenuSideOffset / unit);
             menuRaycaster = canvas.gameObject.AddComponent<TrackedDeviceRaycaster>();
             menuRaycaster.checkFor3DOcclusion = true;
             menuRaycaster.maxDistance = configuration.RayLength;

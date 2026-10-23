@@ -2,6 +2,8 @@
   "schema_version": 2,
   "menu_distance": 1.8,
   "menu_width": 1.4,
+  "menu_page_width": 1.15,
+  "menu_side_offset": 0.6,
   "menu_settle_seconds": 0.25,
   "menu_settle_turn_speed": 40,
   "menu_placement_timeout": 1.5,
