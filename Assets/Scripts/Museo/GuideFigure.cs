@@ -12,11 +12,24 @@ namespace MusiyoBetsknate.Museum
     [Preserve]
     public sealed class GuideFigureDefinition
     {
+        public const string Yarn = "yarn", Jigra = "jigra", Wood = "wood", Woven = "woven";
+        /// <summary>The floating forms proposed for the guides; the woven figure walks.</summary>
+        public static readonly string[] Floating = { Yarn, Jigra, Wood };
         /// <summary>
         /// Resources path of a model that replaces the woven figure, empty for the woven one. The model stands on its
         /// origin, faces +Z and is scaled to <see cref="Height"/>; nothing of it is read from the museum model.
         /// </summary>
         [JsonProperty("model")] public string Model = "";
+        /// <summary>
+        /// The guide's form. Floating objects, since the owner asked for no human figure (22/10/2026), all opaque and warm:
+        /// <c>yarn</c>, a ball of wool in the sayo's colours or of cabuya (by its colours); <c>jigra</c>, a small cabuya
+        /// bag; <c>wood</c>, a smooth ball of wood with one band of wool. Or <c>woven</c>, the faceless figure in a sayo.
+        /// </summary>
+        [JsonProperty("kind")] public string Kind = GuideFigureDefinition.Yarn;
+        /// <summary>Diameter of the ball of yarn, in metres.</summary>
+        [JsonProperty("diameter_m")] public float Diameter = .26f;
+        /// <summary>Height of the ball's centre above the floor, in metres: about the visitor's shoulder for the companion.</summary>
+        [JsonProperty("float_height_m")] public float FloatHeight = 1.35f;
         [JsonProperty("height_m")] public float Height = 1.6f;
         /// <summary>Seated on a bench (the hearth guide) instead of standing and walking (the companion).</summary>
         [JsonProperty("seated")] public bool Seated;
@@ -69,7 +82,10 @@ namespace MusiyoBetsknate.Museum
             {
                 if (definition == null || !MuseumExperienceConfiguration.Finite(definition.Height) || definition.Height < 1 || definition.Height > 2.2f
                     || definition.StripeCount < 0 || definition.StripeCount > 64 || !MuseumExperienceConfiguration.Finite(definition.StripeWidth)
-                    || definition.StripeWidth < 0 || definition.StripeWidth > .5f)
+                    || definition.StripeWidth < 0 || definition.StripeWidth > .5f
+                    || definition.Kind != GuideFigureDefinition.Woven && Array.IndexOf(GuideFigureDefinition.Floating, definition.Kind) < 0
+                    || !MuseumExperienceConfiguration.Finite(definition.Diameter) || definition.Diameter < .08f || definition.Diameter > 1
+                    || !MuseumExperienceConfiguration.Finite(definition.FloatHeight) || definition.FloatHeight < .2f || definition.FloatHeight > 2)
                     throw new InvalidOperationException("Invalid guide figure.");
                 foreach (var color in new[] { definition.SayoColor, definition.StripeColor, definition.TunicColor, definition.BeltColor, definition.HeadColor })
                     MuseumExperienceConfiguration.ColorValue(color);
@@ -89,7 +105,8 @@ namespace MusiyoBetsknate.Museum
     /// stripes over a plain dark tunic, with a white belt, a garment shared by Kamëntsá and Inga and worn by anyone; the
     /// head is a smooth shape the colour of wood. It is opaque, warm and stands or sits on the ground; it never glows,
     /// floats or fades. It breathes, walks with a step, and turns, tilts or nods its head; it has no gestures of the hands.
-    /// One mesh with a striped texture serves both guides.
+    /// One mesh with a striped texture serves both guides. Since 22/10/2026 the guides are a ball of yarn instead
+    /// (<see cref="GuideFigureDefinition.Kind"/>); the woven figure stays available through the settings.
     /// </summary>
     public sealed class GuideFigure : MonoBehaviour
     {
@@ -100,7 +117,11 @@ namespace MusiyoBetsknate.Museum
         private const int Sides = 20;
         private static readonly Dictionary<string, Mesh> Meshes = new();
         private readonly List<UnityEngine.Object> owned = new();
-        private Transform head, body, leftLeg, rightLeg;
+        private Transform head, body, leftLeg, rightLeg, ball;
+        private Material wool;
+        private Color woolColor;
+        private float floatHeight;
+        private float spin, lean;
         private Quaternion headRest;
         private float unit = 1;
         private float breath;
@@ -110,6 +131,8 @@ namespace MusiyoBetsknate.Museum
         public Renderer[] Renderers { get; private set; } = new Renderer[0];
         /// <summary>The figure is a replacement model rather than the woven one.</summary>
         public bool FromModel { get; private set; }
+        /// <summary>The guide is a floating object (yarn, jigra or wood) rather than a figure.</summary>
+        public bool Floats { get; private set; }
         public bool Seated { get; private set; }
         public Transform Head => head;
         public GuideGesture Gesture { get; set; }
@@ -130,7 +153,8 @@ namespace MusiyoBetsknate.Museum
             float height = definition.Height * Mathf.Max(.1f, scale);
             figure.Seated = definition.Seated;
             if (!string.IsNullOrEmpty(definition.Model) && figure.BuildModel(definition.Model, height)) return figure;
-            figure.BuildWoven(definition, height);
+            if (Array.IndexOf(GuideFigureDefinition.Floating, definition.Kind) >= 0) figure.BuildFloating(definition, scale);
+            else figure.BuildWoven(definition, height);
             return figure;
         }
 
@@ -216,7 +240,197 @@ namespace MusiyoBetsknate.Museum
             Height = Seated ? (1.37f + .23f - drop) * unit : height;
         }
 
+        /// <summary>
+        /// A ball of wool in the sayo's colours, white turning to yellow with thin dark stripes, wound round by two strands
+        /// across it, floating at its height. It is opaque and warm; it never glows, flickers or fades, and it moves
+        /// slowly: a gentle bob and sway, a lean toward where it goes, a slow turn while it thinks and a soft swell of its
+        /// colour while it speaks.
+        /// </summary>
+        private void BuildFloating(GuideFigureDefinition definition, float scale)
+        {
+            Floats = true;
+            float diameter = definition.Diameter * Mathf.Max(.1f, scale);
+            floatHeight = definition.FloatHeight;
+            var authored = Resources.Load<Material>(MaterialResource);
+            var weave = Weave(definition);
+            wool = authored != null ? new Material(authored) : new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            wool.name = "GuideYarn";
+            wool.SetTexture("_BaseMap", weave);
+            // Thread runs around the ball, a few dozen turns from pole to pole; the stripes come with it.
+            wool.SetTextureScale("_BaseMap", definition.Kind == GuideFigureDefinition.Jigra ? new Vector2(6, 4)
+                : definition.Kind == GuideFigureDefinition.Wood ? new Vector2(3, 1) : new Vector2(Mathf.Max(1, definition.StripeCount / 9f), 7));
+            woolColor = Color.white;
+            wool.SetColor("_BaseColor", woolColor);
+            owned.Add(wool);
+            var strand = authored != null ? new Material(authored) : new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            strand.name = "GuideYarnStrand";
+            strand.SetColor("_BaseColor", MuseumExperienceConfiguration.ColorValue(definition.SayoColor) * .93f);
+            owned.Add(strand);
+            ball = new GameObject("Ball").transform;
+            ball.SetParent(transform, false);
+            ball.localPosition = Vector3.up * floatHeight;
+            var parts = new List<Renderer>();
+            Transform Piece(string name, Mesh mesh, Material tone, Quaternion turn, Vector3 size, Vector3 offset = default)
+            {
+                var made = Part(name, mesh, new[] { tone }, Vector3.zero, parts);
+                made.SetParent(ball, false);
+                made.localPosition = offset * diameter;
+                made.localScale = size * diameter;
+                made.localRotation = turn;
+                return made;
+            }
+            switch (definition.Kind)
+            {
+                case GuideFigureDefinition.Jigra:
+                    // A small bag of cabuya, its weave shown by thin lines, hanging from its loop of cord.
+                    Piece("Bag", BagMesh(), wool, Quaternion.identity, Vector3.one);
+                    Piece("Loop", StrandMesh(), strand, Quaternion.Euler(0, 0, 90), new Vector3(.55f, .55f, .55f), Vector3.up * .5f);
+                    break;
+                case GuideFigureDefinition.Wood:
+                    // Smooth wood, as a turned piece left unadorned, bound once with a cord of wool across it.
+                    wool.SetFloat("_Smoothness", .4f);
+                    Piece("Wood", BallMesh(), wool, Quaternion.identity, Vector3.one);
+                    Piece("Band", StrandMesh(), strand, Quaternion.Euler(58, 0, 12), Vector3.one * 1.01f);
+                    break;
+                default:
+                    // A ball of wound thread: the core wound one way, loose turns of the same thread crossing over it.
+                    Piece("Wool", BallMesh(), wool, Quaternion.Euler(0, 0, 90), Vector3.one);
+                    foreach (var (name, turn) in new[] { ("TurnA", Quaternion.Euler(64, 20, 0)), ("TurnB", Quaternion.Euler(-35, 70, 40)),
+                        ("TurnC", Quaternion.Euler(15, -40, 75)), ("TurnD", Quaternion.Euler(-70, 10, -20)), ("TurnE", Quaternion.Euler(30, 110, -55)) })
+                        Piece(name, StrandMesh(), wool, turn, new Vector3(1.005f, .5f, 1.005f));
+                    break;
+            }
+            head = ball;
+            headRest = Quaternion.identity;
+            Renderers = parts.ToArray();
+            Height = floatHeight + diameter * .5f;
+        }
+
+        /// <summary>A soft bag of unit height, round at the bottom and gathered at its mouth, for the jigra.</summary>
+        public static Mesh BagMesh() => Cached("GuideBag", () =>
+        {
+            var profile = new[] { (-.5f, 0f), (-.47f, .2f), (-.35f, .34f), (-.1f, .38f), (.15f, .34f), (.35f, .24f), (.45f, .16f), (.5f, 0f) };
+            return Lathe(new[] { profile }, new[] { .75f }, Vector3.zero);
+        });
+
+        /// <summary>A sphere of unit diameter with its stripes running from pole to pole.</summary>
+        public static Mesh BallMesh() => Cached("GuideBall", () =>
+        {
+            var profile = new List<(float, float)>();
+            for (int index = 0; index <= 14; index++)
+            {
+                float angle = Mathf.PI * index / 14;
+                profile.Add((-.5f * Mathf.Cos(angle), .5f * Mathf.Sin(angle)));
+            }
+            return Lathe(new[] { profile.ToArray() }, new[] { 1f }, Vector3.zero);
+        });
+
+        /// <summary>One strand wound round the ball: a thin ring just outside its surface, for a ball of unit diameter.</summary>
+        public static Mesh StrandMesh() => Cached("GuideStrand", () =>
+        {
+            const int around = 40, across = 6;
+            const float radius = .505f, thickness = .018f;
+            var vertices = new List<Vector3>();
+            var normals = new List<Vector3>();
+            var triangles = new List<int>();
+            for (int step = 0; step <= around; step++)
+            {
+                float angle = 2 * Mathf.PI * step / around;
+                var centre = new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle)) * radius;
+                var outward = centre.normalized;
+                for (int side = 0; side <= across; side++)
+                {
+                    float turn = 2 * Mathf.PI * side / across;
+                    var normal = outward * Mathf.Cos(turn) + Vector3.up * Mathf.Sin(turn);
+                    vertices.Add(centre + normal * thickness);
+                    normals.Add(normal);
+                }
+            }
+            for (int step = 0; step < around; step++)
+                for (int side = 0; side < across; side++)
+                {
+                    int a = step * (across + 1) + side, b = a + 1, c = a + across + 1, d = c + 1;
+                    triangles.Add(a); triangles.Add(b); triangles.Add(c); triangles.Add(b); triangles.Add(d); triangles.Add(c);
+                }
+            var mesh = new Mesh();
+            mesh.SetVertices(vertices);
+            mesh.SetNormals(normals);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateBounds();
+            return mesh;
+        });
+
+        /// <summary>The ball's slow life: bob, sway, lean into its way, turn toward someone, think and speak.</summary>
+        private void UpdateFloating(float delta)
+        {
+            float stride = Mathf.Clamp01(Stride);
+            lean = Mathf.MoveTowards(lean, stride * 8, delta * 10);
+            ball.localPosition = Vector3.up * (floatHeight + Mathf.Sin(breath * 1.3f) * .03f) + Vector3.right * Mathf.Sin(breath * .7f) * .015f;
+            float turning = Gesture == GuideGesture.Think ? 40 : Gesture == GuideGesture.Listen ? 12 : 6 + stride * 20;
+            spin += turning * delta;
+            var facing = Quaternion.identity;
+            if (LookAt.HasValue)
+            {
+                var local = transform.InverseTransformPoint(LookAt.Value) - ball.localPosition;
+                if (new Vector2(local.x, local.z).sqrMagnitude > 1e-4f) facing = Quaternion.Euler(0, Mathf.Atan2(local.x, local.z) * Mathf.Rad2Deg, 0);
+            }
+            var tilt = Gesture == GuideGesture.Listen ? Quaternion.Euler(10, 0, 0) : Quaternion.Euler(lean, 0, 0);
+            var wanted = facing * tilt * Quaternion.Euler(0, spin, 0);
+            ball.localRotation = Quaternion.Slerp(ball.localRotation, wanted, 1 - Mathf.Exp(-delta * 4));
+            // Speaking, the wool swells a little and warms by a shade; it never shines.
+            float swell = Gesture == GuideGesture.Speak ? .5f + .5f * Mathf.Sin(breath * 5) : 0;
+            ball.localScale = Vector3.one * (1 + swell * .035f);
+            if (wool != null) wool.SetColor("_BaseColor", Color.Lerp(woolColor, new Color(1, .93f, .82f), swell * .5f));
+        }
+
         /// <summary>The sayo's stripes: one band of wool with a thin dark stripe, repeated around the garment.</summary>
+        /// <summary>
+        /// The surface of a floating guide, of <paramref name="size"/> pixels square, tiled over it: wound thread (fine threads
+        /// with the sayo's stripes among them), a knotted net of cabuya, or the grain of turned wood.
+        /// </summary>
+        private Texture2D Weave(GuideFigureDefinition definition, int size = 64)
+        {
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, true) { name = "GuideWeave", wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Trilinear };
+            var wool = MuseumExperienceConfiguration.ColorValue(definition.Kind == GuideFigureDefinition.Wood ? definition.HeadColor : definition.SayoColor);
+            var stripe = MuseumExperienceConfiguration.ColorValue(definition.StripeColor);
+            var pixels = new Color[size * size];
+            int dark = Mathf.Max(1, Mathf.RoundToInt(size * definition.StripeWidth * .5f));
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    Color colour;
+                    switch (definition.Kind)
+                    {
+                        case GuideFigureDefinition.Jigra:
+                        {
+                            // Cords running both ways, knotted where they cross, the bag's darker inside showing between.
+                            bool cordU = (x + y / 2) % 16 < 3, cordV = (x - y / 2 + 64) % 16 < 3;
+                            colour = cordU || cordV ? wool * (cordU && cordV ? .85f : 1) : stripe * .75f;
+                            break;
+                        }
+                        case GuideFigureDefinition.Wood:
+                        {
+                            float grain = Mathf.Sin((x + Mathf.Sin(y * .2f) * 3) * .9f) * .5f + .5f;
+                            colour = wool * (.9f + grain * .12f);
+                            break;
+                        }
+                        default:
+                        {
+                            // Threads wound side by side, each a little shaded at its edges; the sayo's dark stripes among them.
+                            float thread = Mathf.Abs(Mathf.Sin(y * Mathf.PI / 3f));
+                            colour = (y % 21) < Mathf.Max(1, dark / 2) ? stripe : wool * (.84f + thread * .16f);
+                            break;
+                        }
+                    }
+                    colour.a = 1;
+                    pixels[y * size + x] = colour;
+                }
+            texture.SetPixels(pixels);
+            texture.Apply(true, true);
+            owned.Add(texture);
+            return texture;
+        }
+
         private Texture2D Stripes(GuideFigureDefinition definition)
         {
             const int width = 64;
@@ -253,6 +467,7 @@ namespace MusiyoBetsknate.Museum
         {
             float delta = Time.deltaTime;
             breath += delta;
+            if (Floats) { UpdateFloating(delta); return; }
             if (body != null) body.localScale = new Vector3(1, 1 + Mathf.Sin(breath * 1.6f) * .005f, 1) * unit;
             float stride = Seated ? 0 : Mathf.Clamp01(Stride);
             step += delta * (4 + 3 * stride) * (stride > .02f ? 1 : 0);

@@ -2,7 +2,10 @@
   "schema_version": 1,
   "figures": {
     "companion": {
+      "kind": "yarn",
       "model": "",
+      "diameter_m": 0.26,
+      "float_height_m": 1.35,
       "height_m": 1.6,
       "seated": false,
       "sayo_color": "#EDE2C3",
@@ -14,13 +17,16 @@
       "head_color": "#9A7048"
     },
     "interviewer": {
+      "kind": "yarn",
       "model": "",
+      "diameter_m": 0.5,
+      "float_height_m": 0.95,
       "height_m": 1.6,
-      "seated": true,
+      "seated": false,
       "sayo_color": "#EDE2C3",
       "stripe_color": "#1F1B17",
-      "stripe_count": 18,
-      "stripe_width": 0.14,
+      "stripe_count": 26,
+      "stripe_width": 0.12,
       "tunic_color": "#2B2622",
       "belt_color": "#F1ECE0",
       "head_color": "#9A7048"
