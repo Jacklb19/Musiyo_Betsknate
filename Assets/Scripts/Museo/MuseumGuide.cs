@@ -128,6 +128,8 @@ namespace MusiyoBetsknate.Museum
             runtime.Changed += Bind;
             interaction.Changed += OnInteractionChanged;
             client.Changed += Notify;
+            // The guide's own figure by the hearth, with its invitation; it opens the conversation when reached.
+            if (GetComponent<MuseumHearthInterviewer>() == null) gameObject.AddComponent<MuseumHearthInterviewer>();
             Bind();
         }
 
@@ -184,11 +186,11 @@ namespace MusiyoBetsknate.Museum
             && (interaction.State == InteractionState.PointFocus || interaction.State == InteractionState.ElementSelected)
             && !interaction.BlocksMovement && !interaction.HoldsVisitor && !PointActivation.IsInRange(interaction.ActivePoint, visitor.position);
 
-        /// <summary>Opens the conversation from free exploration within reach of the guide.</summary>
+        /// <summary>Opens the conversation from free exploration within reach of the guide; true when it is open.</summary>
         public bool Ask()
         {
             Refresh();
-            return Present && InRange && interaction.OpenGuide();
+            return Present && InRange && (Open || interaction.OpenGuide());
         }
 
         /// <summary>Asks the conversation view for the keyboard, as the guide key does while the conversation is open.</summary>

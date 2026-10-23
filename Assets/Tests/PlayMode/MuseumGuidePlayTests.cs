@@ -131,6 +131,8 @@ namespace MusiyoBetsknate.Tests
                 var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
                 var body = visitor.GetComponent<CharacterController>();
                 flow.GetComponent<MuseumEntryView>().HeadsetActive = () => false;
+                // Free questions are tested here; the closing interview has its own test.
+                flow.GetComponent<MuseumHearthInterviewer>().BeginsInterview = false;
                 for (float waited = 0; loader.State == TourLoadState.Loading && waited < 20; waited += Time.unscaledDeltaTime) yield return null;
                 var element = new ElementSummaryContractV1 { slug = "synthetic-item", title = "Ficha sintética de prueba" };
                 Assert.That(runtime.Apply(new TourContractV1
@@ -219,6 +221,7 @@ namespace MusiyoBetsknate.Tests
             yield return null;
             var runtime = flow.GetComponent<TourRuntime>();
             flow.GetComponent<MuseumEntryView>().HeadsetActive = () => false;
+            flow.GetComponent<MuseumHearthInterviewer>().BeginsInterview = false;
             for (float waited = 0; loader.State == TourLoadState.Loading && waited < 20; waited += Time.unscaledDeltaTime) yield return null;
             var element = new ElementSummaryContractV1 { slug = "synthetic-item", title = "Ficha sintética de prueba" };
             Assert.That(runtime.Apply(new TourContractV1
@@ -606,6 +609,82 @@ namespace MusiyoBetsknate.Tests
             Assert.That(view.Field.gameObject.activeInHierarchy, Is.True, "The written question stays as it was.");
         }
 
+        /// <summary>
+        /// The guide waits seated by the hearth with its own figure. From across the room it invites the visitor over and
+        /// turns its head to them; reaching it opens the conversation by itself and the closing interview begins with the
+        /// published questions.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheHearthGuideSitsByTheFireInvitesTheVisitorAndBeginsTheInterview()
+        {
+            InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Mouse>();
+            var api = StartService();
+            yield return OpenMuseumAtTheGuide(api);
+            var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var runtime = flow.GetComponent<TourRuntime>();
+            var interaction = flow.GetComponent<MuseumInteraction>();
+            var guide = flow.GetComponent<MuseumGuide>();
+            var quiz = flow.GetComponent<MuseumHearthQuiz>();
+            var interviewer = flow.GetComponent<MuseumHearthInterviewer>();
+            interviewer.BeginsInterview = true;
+            var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
+            var body = visitor.GetComponent<CharacterController>();
+            yield return Until(() => interviewer.Figure != null, 3);
+            Assert.That(interviewer.Figure, Is.Not.Null, "The guide has a figure of its own by the hearth.");
+            var bounds = interviewer.Figure.WorldBounds();
+            Assert.That(interviewer.Figure.Seated, Is.True, "It waits seated by the fire.");
+            Assert.That(bounds.size.y, Is.InRange(1.05f, 1.4f), "Seated, it is as tall as a seated person: " + bounds.size);
+            Assert.That(interviewer.Bench, Is.Not.Null);
+            Assert.That(MuseumHearthInterviewer.HearthSeats, Does.Contain(interviewer.Bench.name), "It sits on the museum's own bench by the fire.");
+            Assert.That(interviewer.Stand.Find("Jigra") != null && interviewer.Stand.Find("Totuma") != null, Is.True,
+                "A cabuya jigra beside it and an empty totuma on the bench.");
+            Assert.That(bounds.min.y, Is.EqualTo(interviewer.Place.y).Within(.08f), "Its feet rest on the floor; it never floats.");
+            var anchor = runtime.GuidePoint.Anchor;
+            var place = interviewer.Place;
+            Assert.That(Vector3.Distance(new Vector3(place.x, 0, place.z), new Vector3(anchor.transform.position.x, 0, anchor.transform.position.z)),
+                Is.InRange(.4f, anchor.ActivationRadius + 1), "It stands by the place where visitors talk to it, not on it.");
+            Assert.That(UnityEngine.Object.FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .Where(renderer => renderer.name == MuseumCompanion.BodyPiece || renderer.name == MuseumCompanion.HeadPiece)
+                .All(renderer => !renderer.enabled), Is.True, "The museum model's grey placeholder is hidden.");
+            Assert.That(interviewer.Figure.GetComponentsInChildren<Collider>(), Is.Empty);
+
+            // From across the room: the invitation floats above it and it turns to the visitor.
+            var away = anchor.transform.position - place;
+            away.y = 0;
+            body.enabled = false;
+            visitor.transform.position = anchor.transform.position + away.normalized * (anchor.ActivationRadius + 3.5f);
+            body.enabled = true;
+            yield return Until(() => interviewer.Inviting, 3);
+            Assert.That(guide.InRange, Is.False);
+            Assert.That(interviewer.Inviting, Is.True, "Nobody can pass it by without knowing.");
+            Assert.That(interviewer.InvitationText, Is.EqualTo("Acércate a conversar"));
+            Assert.That(interviewer.Figure.LookAt.HasValue, Is.True, "It turns its head to the visitor.");
+
+            // Reaching it opens the conversation without any button, and the interview begins.
+            Assert.That(visitor.FocusPoint(anchor), Is.True);
+            yield return Until(() => interaction.State == InteractionState.GuideQuestion, 2);
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.GuideQuestion), "Reaching the guide opens the conversation.");
+            yield return Until(() => quiz.Active, 10);
+            Assert.That(quiz.Active, Is.True, "The closing interview begins with the published questions.");
+            Assert.That(guide.Message, Does.StartWith("Pregunta 1 de 1"));
+            yield return Until(() => !interviewer.Inviting, 2);
+            Assert.That(interviewer.Inviting, Is.False, "The invitation steps aside once the conversation is open.");
+
+            // Leaving and coming back opens it again; the interview is not forced a second time.
+            body.enabled = false;
+            visitor.transform.position = anchor.transform.position + away.normalized * (anchor.ActivationRadius + 4);
+            body.enabled = true;
+            yield return Until(() => interaction.State != InteractionState.GuideQuestion, 2);
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.Exploration));
+            Assert.That(visitor.FocusPoint(anchor), Is.True);
+            yield return Until(() => interaction.State == InteractionState.GuideQuestion, 2);
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.GuideQuestion));
+            yield return null;
+            Assert.That(quiz.Active, Is.False, "The second time the visitor chooses to begin it.");
+            Assert.That(quiz.Available, Is.True);
+        }
+
         [UnityTest]
         public IEnumerator TheHearthConversationAsksThePublishedQuestionsAndExplainsEachAnswer()
         {
@@ -630,7 +709,7 @@ namespace MusiyoBetsknate.Tests
             Assert.That(visitor.FocusPoint(anchor), Is.True);
             yield return null;
             yield return null;
-            Assert.That(interaction.State, Is.EqualTo(InteractionState.Exploration), "Reaching the guide leaves the exhibit behind.");
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.GuideQuestion), "Reaching the guide leaves the exhibit behind and opens the conversation.");
             Assert.That(guide.Ask(), Is.True);
             yield return Until(() => quiz.Available, 10);
             Assert.That(quiz.Available, Is.True, "Opening the guide reads the hearth questions.");

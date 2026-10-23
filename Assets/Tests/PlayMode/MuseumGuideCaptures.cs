@@ -75,6 +75,8 @@ namespace MusiyoBetsknate.Tests
             settings.ApplyModifiedPropertiesWithoutUndo();
             flow.GetComponent<MuseumEntryView>().HeadsetActive = () => false;
             for (float waited = 0; loader.State == TourLoadState.Loading && waited < 20; waited += Time.unscaledDeltaTime) yield return null;
+            // No retry of the unreachable service may clear the tour applied below while the pictures are taken.
+            loader.enabled = false;
             var runtime = flow.GetComponent<TourRuntime>();
             RoomContractV1 Room(string key, int order) => new RoomContractV1 { key = key, name = key, order = order, points = new PointContractV1[0] };
             Assert.That(runtime.Apply(new TourContractV1
@@ -86,6 +88,55 @@ namespace MusiyoBetsknate.Tests
             }, out var error), Is.True, error);
             flow.EnterImmediately();
             yield return null;
+        }
+
+        /// <summary>
+        /// Every piece within reach of the fire, one per line, for the review of the hearth: its name, centre and size, how
+        /// far its lowest point floats above what lies under it, and the pieces whose volumes cross it. Architecture is left out.
+        /// </summary>
+        private static void WriteHearthInventory(Vector3 fire, float floor)
+        {
+            string[] structure = { "Piso", "Muro", "Techo", "Estructura", "Pilar", "Friso", "Faja", "Fleco", "Umbral", "Pasaje", "Sala_" };
+            var pieces = UnityEngine.Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None)
+                .Where(item => item.enabled && item.gameObject.activeInHierarchy && !(item is ParticleSystemRenderer) && !(item is LineRenderer)
+                    && item.GetComponentInParent<Canvas>() == null && !structure.Any(word => item.name.Contains(word)))
+                .Where(item => new Vector2(item.bounds.center.x - fire.x, item.bounds.center.z - fire.z).magnitude < 6.5f
+                    && item.bounds.center.y < floor + 3.5f && item.bounds.size.magnitude < 8)
+                .OrderBy(item => item.name).ToList();
+            var lines = new System.Collections.Generic.List<string>
+            {
+                "Fogón: piezas a menos de 6,5 m del fuego (sin arquitectura). Distancias en metros; «flota» = hueco bajo su punto más bajo.",
+            };
+            foreach (var item in pieces)
+            {
+                var bounds = item.bounds;
+                float gap = float.NaN;
+                foreach (var hit in Physics.RaycastAll(new Vector3(bounds.center.x, bounds.min.y + .02f, bounds.center.z), Vector3.down, 3,
+                    Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore).OrderBy(hit => hit.distance))
+                {
+                    if (hit.collider.transform.IsChildOf(item.transform)) continue;
+                    gap = hit.distance - .02f;
+                    break;
+                }
+                var crossing = pieces.Where(other => other != item && bounds.Intersects(other.bounds) && Overlap(bounds, other.bounds) > .3f)
+                    .Select(other => other.name).Distinct();
+                lines.Add(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    "{0} | centro ({1:F2}, {2:F2}, {3:F2}) | tamaño ({4:F2} × {5:F2} × {6:F2}) | flota {7} | se cruza con: {8}",
+                    item.name, bounds.center.x - fire.x, bounds.min.y - floor, bounds.center.z - fire.z, bounds.size.x, bounds.size.y, bounds.size.z,
+                    float.IsNaN(gap) ? "sin suelo debajo" : gap.ToString("F2", System.Globalization.CultureInfo.InvariantCulture), string.Join(", ", crossing)));
+            }
+            Directory.CreateDirectory(Folder);
+            File.WriteAllLines(Path.Combine(Folder, "hearth_inventory.txt"), lines, new System.Text.UTF8Encoding(false));
+        }
+
+        /// <summary>Share of the smaller volume that lies inside the other.</summary>
+        private static float Overlap(Bounds first, Bounds second)
+        {
+            var min = Vector3.Max(first.min, second.min);
+            var max = Vector3.Min(first.max, second.max);
+            var size = Vector3.Max(Vector3.zero, max - min);
+            float smaller = Mathf.Min(first.size.x * first.size.y * first.size.z, second.size.x * second.size.y * second.size.z);
+            return smaller > 1e-6f ? size.x * size.y * size.z / smaller : 0;
         }
 
 #if UNITY_EDITOR
@@ -129,6 +180,19 @@ namespace MusiyoBetsknate.Tests
             yield return Shot("hearth_top", new Vector3(fire.x, hearth.y + 6.5f, fire.z) - Vector3.forward * .01f, new Vector3(fire.x, hearth.y, fire.z), 75);
             foreach (var roof in roofs) roof.enabled = true;
             yield return Shot("hearth_arrival", visitor.transform.position + Vector3.up * 1.65f, fire + Vector3.up * .9f, 70);
+            WriteHearthInventory(fire, hearth.y);
+            var interviewer = flow.GetComponent<MuseumHearthInterviewer>();
+            if (interviewer != null && interviewer.Figure != null)
+            {
+                var place = interviewer.Place;
+                var toward = anchor.transform.position - place;
+                toward.y = 0;
+                toward = toward.sqrMagnitude > .01f ? toward.normalized : Vector3.forward;
+                Place(anchor.transform.position + toward * (anchor.ActivationRadius + 3));
+                for (float waited = 0; waited < 1.5f; waited += Time.unscaledDeltaTime) yield return null;
+                yield return Shot("interviewer_invitation", visitor.transform.position + Vector3.up * 1.65f, place + Vector3.up * 1.4f, 70);
+                yield return Shot("interviewer_close", place + toward * 2.2f + Vector3.up * 1.55f, place + Vector3.up * 1.0f, 55);
+            }
             var scene = SceneManager.GetSceneByPath(MuseumScene);
             if (scene.IsValid() && scene.isLoaded) yield return SceneManager.UnloadSceneAsync(scene);
         }

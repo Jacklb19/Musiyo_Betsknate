@@ -160,7 +160,8 @@ namespace MusiyoBetsknate.Tests
             Assert.That(interaction.BlocksMovement, Is.True);
             Assert.That(guide.Open, Is.True);
             Assert.That(guide.Prompt, Is.Empty, "The prompt disappears while the conversation panel is open.");
-            Assert.That(guide.Ask(), Is.False, "Opening twice is not possible.");
+            Assert.That(guide.Ask(), Is.True, "Asking again keeps the one conversation open; it never opens twice.");
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.GuideQuestion));
             interaction.SetPaused(true);
             interaction.SetPaused(false);
             Assert.That(interaction.State, Is.EqualTo(InteractionState.GuideQuestion));
