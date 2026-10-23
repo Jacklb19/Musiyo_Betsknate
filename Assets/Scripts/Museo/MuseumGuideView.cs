@@ -43,6 +43,12 @@ namespace MusiyoBetsknate.Museum
         private Transform quizOptions;
         private readonly List<Button> shownOptions = new List<Button>();
         private QuizQuestionContractV1 optionsFor;
+        private MuseumClosingSurvey survey;
+        private TMP_Text surveyText;
+        private Button surveyAccept, surveyWithout, surveyDecline, surveySkip, surveyFinish, surveyOptionTemplate;
+        private Transform surveyOptions;
+        private readonly List<Button> shownSurveyOptions = new List<Button>();
+        private ClosingSurveyQuestion surveyOptionsFor;
         private MuseumGuideVoice voice;
         private TMP_Text voiceText;
         private Button voiceTalk, voiceStop, voiceDiscard, voiceAccept, voiceDecline, voiceConfirm, voiceStopSpeech;
@@ -72,6 +78,14 @@ namespace MusiyoBetsknate.Museum
         public Button VoiceDecline => voiceDecline;
         public Button VoiceConfirm => voiceConfirm;
         public Button VoiceStopSpeech => voiceStopSpeech;
+        public TMP_Text SurveyText => surveyText;
+        public Button SurveyAccept => surveyAccept;
+        public Button SurveyWithoutStoring => surveyWithout;
+        public Button SurveyDecline => surveyDecline;
+        public Button SurveySkip => surveySkip;
+        public Button SurveyFinish => surveyFinish;
+        /// <summary>The choices of the opinion question on show, in published order.</summary>
+        public IReadOnlyList<Button> SurveyOptions => shownSurveyOptions;
 
         /// <param name="bodyText">Panel body text whose style the conversation reuses.</param>
         /// <param name="content">Layout column of the point panel.</param>
@@ -118,6 +132,8 @@ namespace MusiyoBetsknate.Museum
             sourceButtonTemplate.gameObject.SetActive(false);
             if (voice != null) CreateVoice(bodyText, content, button);
             if (quiz != null) CreateQuiz(bodyText, content, button);
+            survey = guide.GetComponent<MuseumClosingSurvey>();
+            if (survey != null) CreateSurvey(bodyText, content, button);
             guide.Changed += Refresh;
             guide.TypingRequested += BeginTyping;
             interaction.Changed += Refresh;
@@ -130,6 +146,102 @@ namespace MusiyoBetsknate.Museum
             if (interaction != null) interaction.Changed -= Refresh;
             if (quiz != null) quiz.Changed -= Refresh;
             if (voice != null) voice.Changed -= RefreshVoice;
+            if (survey != null) survey.Changed -= Refresh;
+        }
+
+        /// <summary>
+        /// The opinion questions: the notice (worded by the survey service) reads in the screen's column with its three
+        /// large choices, then each question with its options as large choices; nothing else stands on the screen meanwhile.
+        /// </summary>
+        private void CreateSurvey(TMP_Text bodyText, Transform content, Func<string, Transform, UnityAction, Button> button)
+        {
+            surveyText = Text(bodyText, content, "SurveyText");
+            Button Make(string key, string name, UnityAction action)
+            {
+                var made = button(key, content, action);
+                made.name = name;
+                Enlarge(made);
+                return made;
+            }
+            surveyAccept = Make("survey_accept", "SurveyAccept", () => survey.AcceptAndAnswer());
+            surveyWithout = Make("survey_without_storing", "SurveyWithoutStoring", () => survey.AnswerWithoutStoring());
+            surveyDecline = Make("survey_decline", "SurveyDecline", () => survey.Decline());
+            surveySkip = Make("survey_skip", "SurveySkip", () => survey.Skip());
+            surveyFinish = Make("survey_finish", "SurveyFinish", () => survey.Finish());
+            surveyOptionTemplate = Make("survey_skip", "SurveyOption", () => { });
+            surveyOptionTemplate.gameObject.SetActive(false);
+            survey.Changed += Refresh;
+        }
+
+        /// <summary>Large, wrapped captions: these choices are read and aimed at from a headset.</summary>
+        private static void Enlarge(Button choice)
+        {
+            var caption = choice.GetComponentInChildren<TMP_Text>();
+            caption.richText = false;
+            caption.textWrappingMode = TextWrappingModes.Normal;
+            caption.enableAutoSizing = true;
+            caption.fontSizeMin = 20;
+            caption.fontSizeMax = Mathf.Max(caption.fontSize, 28);
+            caption.margin = new Vector4(10, 4, 10, 4);
+            if (choice.TryGetComponent<LayoutElement>(out var layout)) layout.preferredHeight = 84;
+        }
+
+        private bool Surveying => guide != null && guide.Open && survey != null && survey.Stage != ClosingSurveyStage.Off;
+
+        private void RefreshSurvey(bool open)
+        {
+            if (survey == null || surveyText == null) return;
+            var stage = open ? survey.Stage : ClosingSurveyStage.Off;
+            var question = stage == ClosingSurveyStage.Answering ? survey.Current : null;
+            string text = "";
+            if (stage == ClosingSurveyStage.Notice) text = survey.Survey.NoticeText;
+            else if (question != null)
+            {
+                text = question.Text;
+                if (question.Scale && (question.LowLabel.Length > 0 || question.HighLabel.Length > 0))
+                    text += "\n" + MuseumInterfaceText.Format("survey_scale", question.Options[0].Text, question.LowLabel,
+                        question.Options[question.Options.Count - 1].Text, question.HighLabel);
+            }
+            surveyText.text = text;
+            surveyText.gameObject.SetActive(text.Length > 0);
+            surveyAccept.gameObject.SetActive(stage == ClosingSurveyStage.Notice);
+            surveyWithout.gameObject.SetActive(stage == ClosingSurveyStage.Notice);
+            surveyDecline.gameObject.SetActive(stage == ClosingSurveyStage.Notice);
+            surveySkip.gameObject.SetActive(question != null);
+            surveyFinish.gameObject.SetActive(question != null);
+            ShowSurveyOptions(question);
+        }
+
+        private void ShowSurveyOptions(ClosingSurveyQuestion question)
+        {
+            if (question == surveyOptionsFor) return;
+            foreach (var item in shownSurveyOptions) Destroy(item.gameObject);
+            shownSurveyOptions.Clear();
+            surveyOptionsFor = question;
+            if (surveyOptions == null)
+            {
+                var list = new GameObject("SurveyOptions", typeof(RectTransform), typeof(VerticalLayoutGroup));
+                list.transform.SetParent(surveySkip.transform.parent, false);
+                var column = list.GetComponent<VerticalLayoutGroup>();
+                column.spacing = 8;
+                column.childControlWidth = column.childControlHeight = true;
+                column.childForceExpandHeight = false;
+                surveyOptions = list.transform;
+            }
+            surveyOptions.SetSiblingIndex(surveySkip.transform.GetSiblingIndex());
+            surveyOptions.gameObject.SetActive(question != null);
+            if (question == null) return;
+            for (int index = 0; index < question.Options.Count; index++)
+            {
+                int chosen = index;
+                var option = Instantiate(surveyOptionTemplate, surveyOptions);
+                option.name = "SurveyOption";
+                option.onClick.RemoveAllListeners();
+                option.onClick.AddListener(() => survey.Choose(chosen));
+                option.GetComponentInChildren<TMP_Text>().text = question.Options[index].Text;
+                option.gameObject.SetActive(true);
+                shownSurveyOptions.Add(option);
+            }
         }
 
         /// <summary>
@@ -160,7 +272,7 @@ namespace MusiyoBetsknate.Museum
         {
             if (voice == null || voiceText == null || guide == null) return;
             bool open = guide.Open;
-            bool quizzing = open && quiz != null && (quiz.Active || quiz.Done);
+            bool quizzing = open && quiz != null && (quiz.Active || quiz.Done) || Surveying;
             bool here = open && !quizzing;
             var stage = voice.Stage;
             voiceTalk.gameObject.SetActive(here && voice.Offered && (stage == GuideVoiceStage.Ready || stage == GuideVoiceStage.Problem)
@@ -329,10 +441,11 @@ namespace MusiyoBetsknate.Museum
             bool open = guide.Open;
             bool spatial = MuseumInput.Current.Spatial;
             // While the visitor talks about the visit, the questions to the guide step aside.
-            bool quizzing = open && quiz != null && (quiz.Active || quiz.Done);
+            bool quizzing = open && quiz != null && (quiz.Active || quiz.Done) || Surveying;
             bool offered = open && guide.Offered && !quizzing;
             var client = guide.Client;
-            RefreshQuiz(open);
+            RefreshQuiz(open && !Surveying);
+            RefreshSurvey(open);
             RefreshVoice();
             fieldRoot.SetActive(offered && !spatial);
             spatialNote.gameObject.SetActive(offered && spatial);

@@ -486,7 +486,6 @@ namespace MusiyoBetsknate.Tests
             yield return null;
             Release(keyboard.vKey);
             Assert.That(voice.Stage, Is.EqualTo(CompanionVoiceStage.Thinking));
-            yield return null;
             Assert.That(panel.Chip.text, Is.EqualTo("Pensando…"), "It shows that it is thinking.");
             yield return Until(() => voice.Stage == CompanionVoiceStage.Answer, 10);
             Assert.That(voice.Stage, Is.EqualTo(CompanionVoiceStage.Answer));
@@ -683,6 +682,129 @@ namespace MusiyoBetsknate.Tests
             yield return null;
             Assert.That(quiz.Active, Is.False, "The second time the visitor chooses to begin it.");
             Assert.That(quiz.Available, Is.True);
+        }
+
+        /// <summary>A survey service that keeps what it is sent, so no answer leaves the test.</summary>
+        private sealed class KeptSurvey : IClosingSurveySource
+        {
+            public readonly System.Collections.Generic.List<System.Collections.Generic.IReadOnlyList<ClosingSurveyAnswer>> Sent
+                = new System.Collections.Generic.List<System.Collections.Generic.IReadOnlyList<ClosingSurveyAnswer>>();
+            public ClosingSurveyLoad LoadState { get; private set; }
+            public ClosingSurveyDefinition Survey { get; private set; }
+            public ClosingSurveySubmit SubmitState { get; private set; }
+            public event Action Changed;
+            public void Load(string tourKey)
+            {
+                Survey = new ClosingSurveyDefinition
+                {
+                    Key = "synthetic", Version = "1", NoticeTitle = "Aviso sintético", NoticeText = "Texto sintético del aviso de la encuesta.",
+                    Questions = new[]
+                    {
+                        new ClosingSurveyQuestion { Id = "q1", Text = "Pregunta sintética de opción",
+                            Options = new[] { new ClosingSurveyOption { Id = "a", Text = "Opción A" }, new ClosingSurveyOption { Id = "b", Text = "Opción B" } } },
+                        new ClosingSurveyQuestion { Id = "q2", Text = "Pregunta sintética de escala", Scale = true, LowLabel = "poco", HighLabel = "mucho",
+                            Options = Enumerable.Range(1, 5).Select(value => new ClosingSurveyOption { Id = "v" + value, Text = value.ToString(), Value = value }).ToArray() },
+                    }
+                };
+                LoadState = ClosingSurveyLoad.Ready;
+                Changed?.Invoke();
+            }
+            public void Submit(ClosingSurveyDefinition survey, System.Collections.Generic.IReadOnlyList<ClosingSurveyAnswer> answers)
+            {
+                Sent.Add(answers);
+                SubmitState = ClosingSurveySubmit.Stored;
+                Changed?.Invoke();
+            }
+            public void Poll() { }
+            public void Dispose() { }
+        }
+
+        /// <summary>
+        /// After the interview, the opinion questions: the notice first, with answering and storing anonymously, answering
+        /// without storing, or not answering. Without consent nothing is sent; with it, only the questions and choices.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheOpinionQuestionsAskConsentFirstAndSendNothingWithoutIt()
+        {
+            InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Mouse>();
+            var api = StartService();
+            yield return OpenMuseumAtTheGuide(api);
+            var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var runtime = flow.GetComponent<TourRuntime>();
+            var guide = flow.GetComponent<MuseumGuide>();
+            var quiz = flow.GetComponent<MuseumHearthQuiz>();
+            var survey = flow.GetComponent<MuseumClosingSurvey>();
+            var display = flow.GetComponent<MuseumLecternDisplay>();
+            var view = UnityEngine.Object.FindAnyObjectByType<MuseumGuideView>();
+            var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
+            var body = visitor.GetComponent<CharacterController>();
+            Assert.That(survey, Is.Not.Null);
+            var kept = new KeptSurvey();
+            survey.Source = kept;
+            var anchor = runtime.GuidePoint.Anchor;
+            Assert.That(visitor.FocusPoint(anchor), Is.True);
+            yield return null;
+            Assert.That(guide.Ask(), Is.True);
+            yield return Until(() => quiz.Available && survey.Available, 10);
+            yield return Until(() => display.Openness >= 1, 3);
+            Assert.That(survey.Stage, Is.EqualTo(ClosingSurveyStage.Off), "Nothing about it shows before the interview ends.");
+            Assert.That(quiz.Begin(), Is.True);
+            yield return null;
+            quiz.Next();
+            yield return null;
+            Assert.That(quiz.Done, Is.True);
+            Assert.That(survey.Stage, Is.EqualTo(ClosingSurveyStage.Notice), "The notice comes before the first opinion question.");
+            Assert.That(view.SurveyText.text, Is.EqualTo("Texto sintético del aviso de la encuesta."), "The notice is the service's own text.");
+            Assert.That(view.SurveyAccept.gameObject.activeInHierarchy && view.SurveyWithoutStoring.gameObject.activeInHierarchy
+                && view.SurveyDecline.gameObject.activeInHierarchy, Is.True, "Store, answer without storing, or not answer.");
+            Assert.That(view.QuizStart.gameObject.activeInHierarchy || view.Field.gameObject.activeInHierarchy, Is.False, "Nothing else stands on the screen.");
+            yield return null;
+            Assert.That(((RectTransform)view.SurveyAccept.transform).rect.height, Is.GreaterThanOrEqualTo(80), "Large choices for the headset.");
+            var rect = (RectTransform)view.SurveyWithoutStoring.transform;
+            var spot = rect.TransformPoint(rect.rect.center);
+            display.Aim(new Ray(spot - display.Surface.forward, display.Surface.forward));
+            Assert.That(display.Aimed, Is.SameAs(view.SurveyWithoutStoring), "The headset pointer reaches the choices.");
+            Assert.That(display.Press(), Is.True);
+            yield return null;
+            Assert.That(survey.Stage, Is.EqualTo(ClosingSurveyStage.Answering));
+            Assert.That(survey.Storing, Is.False);
+            Assert.That(guide.Message, Is.EqualTo("Tu opinión · pregunta 1 de 2"));
+            Assert.That(view.SurveyOptions.Select(option => option.GetComponentInChildren<TMPro.TMP_Text>().text), Is.EqualTo(new[] { "Opción A", "Opción B" }));
+            view.SurveyOptions[1].onClick.Invoke();
+            yield return null;
+            StringAssert.Contains("1 = poco", view.SurveyText.text);
+            Assert.That(view.SurveyOptions.Count, Is.EqualTo(5));
+            view.SurveyOptions[3].onClick.Invoke();
+            yield return null;
+            Assert.That(survey.Stage, Is.EqualTo(ClosingSurveyStage.Done));
+            Assert.That(kept.Sent, Is.Empty, "Without consent nothing is sent.");
+            Assert.That(guide.Message, Is.EqualTo("Gracias por responder. No se guardó ninguna respuesta."));
+
+            // Leaving forgets the answers. Offered again and accepted, only the question and the choice are sent.
+            body.enabled = false;
+            visitor.transform.position = anchor.transform.position + new Vector3(0, 0, -anchor.ActivationRadius - 4);
+            body.enabled = true;
+            yield return Until(() => survey.Stage == ClosingSurveyStage.Off, 2);
+            Assert.That(survey.Stage, Is.EqualTo(ClosingSurveyStage.Off));
+            Assert.That(survey.Answers, Is.Empty, "Answers are forgotten when the conversation ends.");
+            Assert.That(visitor.FocusPoint(anchor), Is.True);
+            yield return null;
+            Assert.That(guide.Ask(), Is.True);
+            yield return null;
+            Assert.That(survey.Offer(), Is.True);
+            yield return null;
+            view.SurveyAccept.onClick.Invoke();
+            Assert.That(survey.Storing, Is.True);
+            yield return null;
+            view.SurveyOptions[0].onClick.Invoke();
+            yield return null;
+            view.SurveySkip.onClick.Invoke();
+            yield return null;
+            Assert.That(kept.Sent, Has.Count.EqualTo(1));
+            Assert.That(kept.Sent[0].Select(answer => answer.QuestionId + ":" + answer.OptionId), Is.EqualTo(new[] { "q1:a" }),
+                "Only the question and the choice; a passed question is not sent.");
+            Assert.That(guide.Message, Is.EqualTo("Gracias. Tus respuestas se guardaron de forma anónima."));
         }
 
         [UnityTest]

@@ -49,6 +49,7 @@ namespace MusiyoBetsknate.Museum
             get
             {
                 if (Guide == null) return "";
+                if (survey != null && survey.Stage != ClosingSurveyStage.Off) return survey.Message;
                 if (quiz != null && (quiz.Active || quiz.Done)) return quiz.Message;
                 // While the visitor talks, the notice, the recording, the transcript or a problem is the guide's line.
                 if (voice != null && voice.Stage != GuideVoiceStage.Off && voice.Stage != GuideVoiceStage.Ready) return voice.Status;
@@ -90,6 +91,15 @@ namespace MusiyoBetsknate.Museum
         }
         private MuseumHearthQuiz quiz;
         private MuseumGuideVoice voice;
+        private MuseumClosingSurvey survey;
+
+        /// <summary>The opinion questions after the interview share this screen; their changes refresh it.</summary>
+        public void Attach(MuseumClosingSurvey closingSurvey)
+        {
+            if (survey != null) survey.Changed -= Notify;
+            survey = closingSurvey;
+            if (survey != null) survey.Changed += Notify;
+        }
 
         /// <summary>Speaking with the guide shares this screen; its changes refresh it.</summary>
         public void Attach(MuseumGuideVoice guideVoice)
@@ -130,6 +140,9 @@ namespace MusiyoBetsknate.Museum
             client.Changed += Notify;
             // The guide's own figure by the hearth, with its invitation; it opens the conversation when reached.
             if (GetComponent<MuseumHearthInterviewer>() == null) gameObject.AddComponent<MuseumHearthInterviewer>();
+            var closing = GetComponent<MuseumClosingSurvey>();
+            if (closing == null) closing = gameObject.AddComponent<MuseumClosingSurvey>();
+            Attach(closing);
             Bind();
         }
 
