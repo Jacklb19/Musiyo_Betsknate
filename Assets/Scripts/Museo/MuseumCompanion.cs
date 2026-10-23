@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 namespace MusiyoBetsknate.Museum
@@ -11,14 +10,20 @@ namespace MusiyoBetsknate.Museum
     /// The guide's figure walking the visit with the visitor. It keeps a comfortable distance behind, along the way the
     /// visitor actually walked, steps aside instead of blocking, keeps out of the line to the exhibit being read, waits at
     /// its own anchor by the hearth, and is never drawn against the visitor's eyes. It has no collider, never moves the
-    /// visitor or the camera, and answers no questions: the conversation stays with <see cref="MuseumGuide"/> at the
-    /// guide anchor. The figure reuses the neutral placeholder of the museum model; nothing in it represents a person.
+    /// visitor or the camera. The visitor can ask it a spoken question anywhere (<see cref="MuseumCompanionVoice"/>); the
+    /// conversation about the visit stays with <see cref="MuseumGuide"/> at the guide anchor. While the visitor is in the
+    /// hearth, it waits at the door («Aquí te espero») and joins them again, calmly, once they come out. Its speed changes
+    /// slowly, so it never darts after the visitor. The figure is the companion's own neutral figure (<see cref="GuideFigure"/>); nothing in it represents a person.
     /// </summary>
     public sealed class MuseumCompanion : MonoBehaviour
     {
         public const string BodyPiece = "Guia_Provisional_Cuerpo";
         public const string HeadPiece = "Guia_Provisional_Cabeza";
         private const float RetargetSeconds = .2f;
+        /// <summary>Speed changes slowly: the companion eases in and out of its movements instead of darting.</summary>
+        private const float Acceleration = 1.2f, Deceleration = 2f;
+        /// <summary>How long the companion's word at the door stays.</summary>
+        private const float WaitNoticeSeconds = 6;
 
         [SerializeField] private TMP_FontAsset font;
         private MuseumCompanionSettings settings;
@@ -46,16 +51,31 @@ namespace MusiyoBetsknate.Museum
         private float figureHeight = 1.5f;
         private float speed;
 
-        public Transform MaskMount { get; private set; }
+        /// <summary>
+        /// Where a worn mask would go. The guides wear no mask (D5, 22/10/2026), so there is none and the scene's mask
+        /// component is removed when the visit starts.
+        /// </summary>
+        public Transform MaskMount => null;
+        /// <summary>The companion's figure; its look comes from <c>Resources/MuseumGuideFigures.json</c>.</summary>
+        public GuideFigure Figure { get; private set; }
         public bool Placed => placed;
         public bool Visible => figure != null && figure.gameObject.activeSelf && figureRenderers.Any(renderer => renderer.enabled);
         /// <summary>The visitor asked for quiet: no remarks are made.</summary>
         public bool Muted { get; set; }
-        /// <summary>True while the companion's own voice plays. Remarks have no recorded voice yet, so it stays false.</summary>
-        public bool Speaking => false;
+        /// <summary>True while the companion's own voice plays: the spoken answer to a visitor's question.</summary>
+        public bool Speaking => voice != null && voice.Speaking;
+        /// <summary>Spoken questions to the companion, anywhere in the museum.</summary>
+        public MuseumCompanionVoice Voice => voice;
+        private MuseumCompanionVoice voice;
         public string RemarkText => remarks?.Current?.Text ?? "";
         public MuseumCompanionRemarks Remarks => remarks;
         public string Zone { get; private set; }
+        /// <summary>The visitor is in the room where the companion waits outside (the hearth): it stays at the door.</summary>
+        public bool Waiting { get; private set; }
+        /// <summary>Where the companion waits by the door while the visitor is inside.</summary>
+        public Vector3 WaitSpot { get; private set; }
+        private float noticeUntil;
+        private string notice = "";
         public float FigureHeight => figureHeight;
         /// <summary>State of the walk, for diagnostics: points of the visitor's way kept, the one aimed at, current speed.</summary>
         public string WalkState => "trail " + trail.Count + ", target " + target + ", speed " + speed.ToString("F2") + ", zone " + Zone
@@ -66,6 +86,7 @@ namespace MusiyoBetsknate.Museum
 
         private void Awake()
         {
+            if (TryGetComponent<MuseumCompanionMask>(out var mask)) Destroy(mask);
             settings = MuseumCompanionSettings.Current;
             remarks = new MuseumCompanionRemarks(settings);
         }
@@ -81,6 +102,9 @@ namespace MusiyoBetsknate.Museum
             rooms = FindObjectsByType<RoomAnchor>(FindObjectsSortMode.None);
             BuildFigure();
             BuildBubble();
+            voice = GetComponent<MuseumCompanionVoice>();
+            if (voice == null) voice = gameObject.AddComponent<MuseumCompanionVoice>();
+            if (GetComponent<MuseumCompanionVoicePanel>() == null) gameObject.AddComponent<MuseumCompanionVoicePanel>();
             Show(false);
         }
 
@@ -90,46 +114,30 @@ namespace MusiyoBetsknate.Museum
             hiddenOriginals.Clear();
         }
 
-        /// <summary>Copies the neutral guide placeholder of the museum model, standing, and hides the seated original.</summary>
+        /// <summary>
+        /// Builds the companion's own figure (<see cref="GuideFigure"/>) and hides the seated placeholder of the museum model.
+        /// Nothing of the museum's meshes is reused: on the headset, static batching merges them, and a copy of the merged
+        /// mesh showed the whole room as a grey sheet 8 km wide (Quest 3, 22/10/2026).
+        /// </summary>
         private void BuildFigure()
         {
-            figure = new GameObject("Figure").transform;
-            figure.SetParent(transform, false);
-            var all = FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            var body = all.FirstOrDefault(renderer => renderer.name == BodyPiece && renderer.TryGetComponent<MeshFilter>(out _));
-            var top = all.FirstOrDefault(renderer => renderer.name == HeadPiece && renderer.TryGetComponent<MeshFilter>(out _));
-            if (body == null || top == null)
-            {
-                Debug.LogWarning("The museum model has no guide placeholder; the companion is not shown.");
-                enabled = false;
-                return;
-            }
-            var bodyBounds = body.bounds;
-            var foot = new Vector3(bodyBounds.center.x, bodyBounds.min.y, bodyBounds.center.z);
-            var copies = new List<Renderer>();
-            foreach (var source in new[] { body, top })
-            {
-                var copy = new GameObject(source.name == BodyPiece ? "Body" : "Head");
-                copy.transform.SetParent(figure, false);
-                copy.AddComponent<MeshFilter>().sharedMesh = source.GetComponent<MeshFilter>().sharedMesh;
-                var renderer = copy.AddComponent<MeshRenderer>();
-                renderer.sharedMaterials = source.sharedMaterials;
-                renderer.shadowCastingMode = ShadowCastingMode.On;
-                renderer.receiveShadows = true;
-                copy.transform.localRotation = source.transform.rotation;
-                copy.transform.localScale = source.transform.lossyScale * settings.FigureScale;
-                copy.transform.localPosition = (source.transform.position - foot) * settings.FigureScale;
-                copies.Add(renderer);
-                source.enabled = false;
-                hiddenOriginals.Add(source);
-            }
-            figureRenderers = copies.ToArray();
-            var headBounds = top.bounds;
-            figureHeight = (headBounds.max.y - foot.y) * settings.FigureScale;
-            MaskMount = new GameObject("MaskMount").transform;
-            MaskMount.SetParent(figure, false);
-            // In front of the head, at its middle, facing the way the figure faces.
-            MaskMount.localPosition = new Vector3(0, (headBounds.center.y - foot.y) * settings.FigureScale, headBounds.extents.z * settings.FigureScale * .85f);
+            HidePlaceholder(hiddenOriginals);
+            // Its look and height come from the guides' figures alone (MuseumGuideFigures.json).
+            Figure = GuideFigure.Build(transform, GuideFigureSettings.Companion);
+            figure = Figure.transform;
+            figureRenderers = Figure.Renderers;
+            figureHeight = Figure.Height;
+        }
+
+        /// <summary>Hides the provisional guide pieces of the museum model; the guides' own figures stand in for them.</summary>
+        public static void HidePlaceholder(List<Renderer> hidden)
+        {
+            foreach (var renderer in FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if ((renderer.name == BodyPiece || renderer.name == HeadPiece) && renderer.enabled)
+                {
+                    renderer.enabled = false;
+                    hidden.Add(renderer);
+                }
         }
 
         /// <summary>A small panel above the figure for its words; it turns toward the visitor and never takes input.</summary>
@@ -182,13 +190,66 @@ namespace MusiyoBetsknate.Museum
             var floor = new Vector3(eyes.x, visitor.position.y, eyes.z);
             Zone = rooms.FirstOrDefault(room => room != null && room.Contains(floor))?.Key;
             if (!placed) { Arrive(floor, eyes); return; }
-            if (!trail.Record(floor)) rejoinPending = true;
-            if (rejoinPending && Rejoin(floor, eyes)) rejoinPending = false;
-            Move(floor);
+            bool inside = !string.IsNullOrEmpty(settings.WaitOutside) && Zone == settings.WaitOutside;
+            if (inside && !Waiting) BeginWaiting(floor);
+            else if (!inside && Waiting) EndWaiting(floor);
+            if (!Waiting && !trail.Record(floor)) rejoinPending = true;
+            if (!Waiting && rejoinPending && Rejoin(floor, eyes)) rejoinPending = false;
+            if (Waiting) WaitAtDoor();
+            else Move(floor);
             Face(floor);
+            Gesture(eyes);
             float distance = Vector3.Distance(eyes, transform.position + Vector3.up * figureHeight * .7f);
             Show(distance > settings.HideWithin);
             UpdateRemark(exploring, eyes);
+        }
+
+        /// <summary>
+        /// The visitor stepped into the hearth: the companion stays by the door they came through, the newest point of their
+        /// way outside the room, stepped back from the doorway, and says it will wait there.
+        /// </summary>
+        private void BeginWaiting(Vector3 floor)
+        {
+            Waiting = true;
+            var room = rooms.FirstOrDefault(item => item != null && item.Key == settings.WaitOutside);
+            var door = transform.position;
+            for (int index = trail.Count - 1; index >= 0; index--)
+                if (room == null || !room.Contains(trail[index])) { door = trail[index]; break; }
+            var away = room != null ? Flat(door - room.transform.position) : Flat(transform.position - floor);
+            WaitSpot = door;
+            foreach (float back in new[] { 1.2f, .8f, .4f })
+                if (Free(door + away * back, door.y, out var spot)) { WaitSpot = spot; break; }
+            // Outside already, it never walks through a wall to reach the door: it waits where it stands.
+            bool outside = room == null || !room.Contains(transform.position);
+            if (outside && !Clear(transform.position, WaitSpot)) WaitSpot = transform.position;
+            notice = MuseumInterfaceText.Get("companion_wait_here");
+            noticeUntil = Time.unscaledTime + WaitNoticeSeconds;
+        }
+
+        /// <summary>Back out of the hearth, the companion joins the visitor again, calmly, from where they are now.</summary>
+        private void EndWaiting(Vector3 floor)
+        {
+            Waiting = false;
+            trail.Clear();
+            trail.Record(transform.position);
+            trail.Record(floor);
+            target = -1;
+            noticeUntil = 0;
+        }
+
+        /// <summary>Walks to its place by the door at an ordinary pace and stays there, facing the visitor.</summary>
+        private void WaitAtDoor()
+        {
+            var position = transform.position;
+            var step = WaitSpot - position;
+            step.y = 0;
+            float wanted = step.magnitude > .05f ? settings.WalkSpeed : 0;
+            speed = Mathf.MoveTowards(speed, wanted, Time.deltaTime * (wanted > speed ? Acceleration : Deceleration));
+            float travel = Mathf.Min(step.magnitude, speed * Time.deltaTime);
+            if (step.sqrMagnitude > 1e-6f) position += step.normalized * travel;
+            position.y = Mathf.Lerp(position.y, WaitSpot.y, Time.deltaTime * 6);
+            transform.position = position;
+            Figure.Stride = travel / Mathf.Max(Time.deltaTime, 1e-4f) / settings.WalkSpeed;
         }
 
         /// <summary>At the start of the visit the companion stands a little ahead and aside, facing the visitor.</summary>
@@ -243,14 +304,14 @@ namespace MusiyoBetsknate.Museum
                 if (along <= wanted)
                 {
                     goal = Settle(position, floor);
-                    speed = Mathf.MoveTowards(speed, 0, Time.deltaTime * 3);
+                    speed = Mathf.MoveTowards(speed, 0, Time.deltaTime * Deceleration);
                 }
                 else
                 {
                     if (target > 0) trail.DropBefore(target);
                     if (target > 0) target = 0;
                     float top = along > settings.CatchUpBeyond ? settings.CatchUpSpeed : settings.WalkSpeed;
-                    speed = Mathf.MoveTowards(speed, top, Time.deltaTime * 3);
+                    speed = Mathf.MoveTowards(speed, top, Time.deltaTime * (top > speed ? Acceleration : Deceleration));
                 }
             }
             var step = goal - position;
@@ -265,6 +326,7 @@ namespace MusiyoBetsknate.Museum
             transform.position = position;
             // A slight step, not a bounce.
             figure.localPosition = Vector3.up * (Mathf.Abs(Mathf.Sin(walkPhase)) * .015f * Mathf.Clamp01(speed));
+            Figure.Stride = travel / Mathf.Max(Time.deltaTime, 1e-4f) / settings.WalkSpeed;
         }
 
         /// <summary>
@@ -325,14 +387,28 @@ namespace MusiyoBetsknate.Museum
                 settings.TurnSpeed * Time.deltaTime);
         }
 
+        /// <summary>While the visitor asks it something, the figure looks at them, listens, thinks and speaks.</summary>
+        private void Gesture(Vector3 eyes)
+        {
+            if (Figure == null) return;
+            bool talking = voice != null && voice.Conversing;
+            Figure.LookAt = talking ? eyes : (Vector3?)null;
+            Figure.Gesture = !talking ? GuideGesture.Idle
+                : voice.Stage == CompanionVoiceStage.Recording || voice.Stage == CompanionVoiceStage.Review ? GuideGesture.Listen
+                : voice.Stage == CompanionVoiceStage.Transcribing || voice.Stage == CompanionVoiceStage.Thinking ? GuideGesture.Think
+                : voice.Speaking ? GuideGesture.Speak : GuideGesture.Idle;
+        }
+
         private void UpdateRemark(bool exploring, Vector3 eyes)
         {
-            bool busy = interaction.State != InteractionState.Exploration
+            bool busy = (voice != null && voice.Conversing) || interaction.State != InteractionState.Exploration
                 || (narration ??= FindAnyObjectByType<MuseumNarration>()) != null && narration.State == NarrationState.Playing;
             var remark = remarks.Tick(new CompanionMoment(Time.unscaledTimeAsDouble, Zone, exploring && interaction.State != InteractionState.Paused,
-                busy, Muted));
-            if (remark != null) bubbleText.text = remark.Text;
-            float wanted = remark != null && Visible ? 1 : 0;
+                busy || Waiting, Muted));
+            bool waitingWord = Waiting && Time.unscaledTime < noticeUntil;
+            if (waitingWord) bubbleText.text = notice;
+            else if (remark != null) bubbleText.text = remark.Text;
+            float wanted = (remark != null || waitingWord) && Visible ? 1 : 0;
             bubbleGroup.alpha = Mathf.MoveTowards(bubbleGroup.alpha, wanted, Time.unscaledDeltaTime * 4);
             bubble.gameObject.SetActive(bubbleGroup.alpha > 0);
             var toEyes = Flat(eyes - bubble.position);
@@ -342,7 +418,6 @@ namespace MusiyoBetsknate.Museum
         private void Show(bool visible)
         {
             foreach (var renderer in figureRenderers) if (renderer != null) renderer.enabled = visible && placed;
-            if (MaskMount != null) MaskMount.gameObject.SetActive(visible && placed);
             if (!visible && bubble != null && !placed) bubble.gameObject.SetActive(false);
         }
 

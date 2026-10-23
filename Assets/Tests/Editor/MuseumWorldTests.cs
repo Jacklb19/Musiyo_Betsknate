@@ -181,7 +181,7 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(companions[0].GetComponentsInChildren<Collider>(true), Is.Empty, "The companion never blocks the visitor.");
                 var placeholder = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<MeshRenderer>(true))
                     .Where(renderer => renderer.name == MuseumCompanion.BodyPiece || renderer.name == MuseumCompanion.HeadPiece).ToList();
-                Assert.That(placeholder, Has.Count.EqualTo(2), "The figure is taken from the museum model's guide placeholder.");
+                Assert.That(placeholder, Has.Count.EqualTo(2), "The museum model's seated guide placeholder is there, to be hidden by the guides' own figures.");
             }
             finally { EditorSceneManager.CloseScene(scene, true); }
         }

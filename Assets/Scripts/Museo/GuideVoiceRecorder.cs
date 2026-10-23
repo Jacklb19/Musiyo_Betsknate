@@ -11,7 +11,7 @@ namespace MusiyoBetsknate.Museum
     /// <summary>Records one spoken question. Tests replace the microphone with their own samples.</summary>
     public interface IGuideVoiceRecorder : IDisposable
     {
-        /// <summary>This device can record here; a browser cannot (its page records instead).</summary>
+        /// <summary>This device can record here: a headset, a computer with a microphone, a browser that allows it.</summary>
         bool Available { get; }
         bool Recording { get; }
         /// <summary>Seconds recorded so far.</summary>
@@ -28,20 +28,22 @@ namespace MusiyoBetsknate.Museum
 
     /// <summary>
     /// The device microphone through Unity's Microphone (Quest and Windows). On Android the RECORD_AUDIO permission is
-    /// asked for the first time it is used. The browser build has no Unity microphone, so voice is not offered there.
-    /// Samples stay in memory until the recording is sent or dropped; nothing is written or logged.
+    /// asked for the first time it is used. The browser build has no Unity microphone; there the page records
+    /// (<see cref="WebVoiceRecorder"/>). Samples stay in memory until the recording is sent or dropped; nothing is written
+    /// or logged.
     /// </summary>
     public sealed class MicrophoneVoiceRecorder : IGuideVoiceRecorder
     {
 #if UNITY_WEBGL && !UNITY_EDITOR
-        public bool Available => false;
-        public bool Recording => false;
-        public float Elapsed => 0;
-        public bool AwaitingPermission => false;
-        public GuideRecorderStart Begin(int maxSeconds) => GuideRecorderStart.Unavailable;
-        public byte[] End() => null;
-        public void Discard() { }
-        public void Dispose() { }
+        private readonly WebVoiceRecorder page = new WebVoiceRecorder();
+        public bool Available => page.Available;
+        public bool Recording => page.Recording;
+        public float Elapsed => page.Elapsed;
+        public bool AwaitingPermission => page.AwaitingPermission;
+        public GuideRecorderStart Begin(int maxSeconds) => page.Begin(maxSeconds);
+        public byte[] End() => page.End();
+        public void Discard() => page.Discard();
+        public void Dispose() => page.Dispose();
 #else
         private const float MinimumSeconds = .1f;
         private AudioClip clip;
@@ -142,5 +144,84 @@ namespace MusiyoBetsknate.Museum
 
         public void Dispose() => Discard();
 #endif
+    }
+
+    /// <summary>
+    /// The browser's microphone, through the page (<c>Plugins/WebGL/MusiyoVoice.jslib</c>). The browser asks the visitor
+    /// for the microphone the first time; the stream is released after every take, so the browser's recording mark goes
+    /// out as soon as the visitor stops talking. Outside a browser build nothing is available.
+    /// </summary>
+    public sealed class WebVoiceRecorder : IGuideVoiceRecorder
+    {
+        private const int Idle = 0, Waiting = 1, Ready = 2, Taking = 3, Refused = 4, Missing = 5;
+        private float startedAt;
+        private int limit;
+        private bool asked;
+        private bool recording;
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [System.Runtime.InteropServices.DllImport("__Internal")] private static extern int MusiyoVoiceAvailable();
+        [System.Runtime.InteropServices.DllImport("__Internal")] private static extern int MusiyoVoiceState();
+        [System.Runtime.InteropServices.DllImport("__Internal")] private static extern void MusiyoVoiceRequest();
+        [System.Runtime.InteropServices.DllImport("__Internal")] private static extern int MusiyoVoiceStart(int maxSeconds);
+        [System.Runtime.InteropServices.DllImport("__Internal")] private static extern int MusiyoVoiceRecording();
+        [System.Runtime.InteropServices.DllImport("__Internal")] private static extern int MusiyoVoiceStop();
+        [System.Runtime.InteropServices.DllImport("__Internal")] private static extern int MusiyoVoiceTake(byte[] buffer, int length);
+        [System.Runtime.InteropServices.DllImport("__Internal")] private static extern void MusiyoVoiceDiscard();
+#else
+        private static int MusiyoVoiceAvailable() => 0;
+        private static int MusiyoVoiceState() => Missing;
+        private static void MusiyoVoiceRequest() { }
+        private static int MusiyoVoiceStart(int maxSeconds) => 0;
+        private static int MusiyoVoiceRecording() => 0;
+        private static int MusiyoVoiceStop() => 0;
+        private static int MusiyoVoiceTake(byte[] buffer, int length) => 0;
+        private static void MusiyoVoiceDiscard() { }
+#endif
+
+        public bool Available => MusiyoVoiceAvailable() == 1;
+        public bool Recording => recording && MusiyoVoiceRecording() == 1;
+        public float Elapsed => recording ? Mathf.Min(Time.realtimeSinceStartup - startedAt, limit) : 0;
+        public bool AwaitingPermission => asked && MusiyoVoiceState() == Waiting;
+
+        public GuideRecorderStart Begin(int maxSeconds)
+        {
+            // A granted stream waits for this call; only a take in progress is dropped.
+            if (recording) Discard();
+            switch (MusiyoVoiceState())
+            {
+                case Refused: return GuideRecorderStart.Denied;
+                case Missing: return GuideRecorderStart.Unavailable;
+                case Ready:
+                    limit = Mathf.Clamp(maxSeconds, 1, 30);
+                    if (MusiyoVoiceStart(limit) != 1) return GuideRecorderStart.Unavailable;
+                    asked = false;
+                    recording = true;
+                    startedAt = Time.realtimeSinceStartup;
+                    return GuideRecorderStart.Started;
+                default:
+                    asked = true;
+                    MusiyoVoiceRequest();
+                    return MusiyoVoiceState() == Refused ? GuideRecorderStart.Denied : GuideRecorderStart.PermissionPending;
+            }
+        }
+
+        public byte[] End()
+        {
+            if (!recording) return null;
+            recording = false;
+            int size = MusiyoVoiceStop();
+            if (size <= 0) return null;
+            var wav = new byte[size];
+            return MusiyoVoiceTake(wav, size) == size ? wav : null;
+        }
+
+        public void Discard()
+        {
+            recording = false;
+            MusiyoVoiceDiscard();
+        }
+
+        public void Dispose() => Discard();
     }
 }

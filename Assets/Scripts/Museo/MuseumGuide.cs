@@ -49,6 +49,7 @@ namespace MusiyoBetsknate.Museum
             get
             {
                 if (Guide == null) return "";
+                if (survey != null && survey.Stage != ClosingSurveyStage.Off) return survey.Message;
                 if (quiz != null && (quiz.Active || quiz.Done)) return quiz.Message;
                 // While the visitor talks, the notice, the recording, the transcript or a problem is the guide's line.
                 if (voice != null && voice.Stage != GuideVoiceStage.Off && voice.Stage != GuideVoiceStage.Ready) return voice.Status;
@@ -76,6 +77,8 @@ namespace MusiyoBetsknate.Museum
             }
         }
         public event Action Changed;
+        /// <summary>Keeps the guide within reach beyond its radius, as while the visitor sits on a bench of the hearth.</summary>
+        public Func<bool> KeepsInRange { get; set; }
         /// <summary>Raised when the visitor asks to write, so the conversation view can take the keyboard.</summary>
         public event Action TypingRequested;
 
@@ -90,6 +93,15 @@ namespace MusiyoBetsknate.Museum
         }
         private MuseumHearthQuiz quiz;
         private MuseumGuideVoice voice;
+        private MuseumClosingSurvey survey;
+
+        /// <summary>The opinion questions after the interview share this screen; their changes refresh it.</summary>
+        public void Attach(MuseumClosingSurvey closingSurvey)
+        {
+            if (survey != null) survey.Changed -= Notify;
+            survey = closingSurvey;
+            if (survey != null) survey.Changed += Notify;
+        }
 
         /// <summary>Speaking with the guide shares this screen; its changes refresh it.</summary>
         public void Attach(MuseumGuideVoice guideVoice)
@@ -128,6 +140,13 @@ namespace MusiyoBetsknate.Museum
             runtime.Changed += Bind;
             interaction.Changed += OnInteractionChanged;
             client.Changed += Notify;
+            // The guide's own figure by the hearth, with its invitation; it opens the conversation when reached.
+            // Seats anywhere in the museum, and the hearth guide whose conversation begins on its benches.
+            if (GetComponent<MuseumSeating>() == null) gameObject.AddComponent<MuseumSeating>();
+            if (GetComponent<MuseumHearthInterviewer>() == null) gameObject.AddComponent<MuseumHearthInterviewer>();
+            var closing = GetComponent<MuseumClosingSurvey>();
+            if (closing == null) closing = gameObject.AddComponent<MuseumClosingSurvey>();
+            Attach(closing);
             Bind();
         }
 
@@ -167,7 +186,7 @@ namespace MusiyoBetsknate.Museum
                 var offset = anchor.transform.position - visitor.position;
                 offset.y = 0;
                 float radius = anchor.ActivationRadius + (Open ? MuseumExperienceConfiguration.Current.PointLeaveMargin : 0);
-                inRange = offset.sqrMagnitude <= radius * radius;
+                inRange = offset.sqrMagnitude <= radius * radius || KeepsInRange?.Invoke() == true;
             }
             if (inRange == InRange) return;
             InRange = inRange;
@@ -184,11 +203,11 @@ namespace MusiyoBetsknate.Museum
             && (interaction.State == InteractionState.PointFocus || interaction.State == InteractionState.ElementSelected)
             && !interaction.BlocksMovement && !interaction.HoldsVisitor && !PointActivation.IsInRange(interaction.ActivePoint, visitor.position);
 
-        /// <summary>Opens the conversation from free exploration within reach of the guide.</summary>
+        /// <summary>Opens the conversation from free exploration within reach of the guide; true when it is open.</summary>
         public bool Ask()
         {
             Refresh();
-            return Present && InRange && interaction.OpenGuide();
+            return Present && InRange && (Open || interaction.OpenGuide());
         }
 
         /// <summary>Asks the conversation view for the keyboard, as the guide key does while the conversation is open.</summary>

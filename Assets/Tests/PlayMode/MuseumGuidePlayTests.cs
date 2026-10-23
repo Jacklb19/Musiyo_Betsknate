@@ -28,7 +28,7 @@ namespace MusiyoBetsknate.Tests
         /// <summary>A further route of the synthetic service: method, path, headers and body in, status and JSON out, or null to pass.</summary>
         private delegate (int status, string body)? Route(string method, string path, System.Collections.Specialized.NameValueCollection headers, byte[] body);
 
-        public override void Setup() { base.Setup(); MuseumInput.Replace(MuseumInput.CreateDefault()); }
+        public override void Setup() { base.Setup(); MuseumInput.Replace(MuseumInput.CreateDefault()); GuideVoiceConsent.Forget(); }
         public override void TearDown()
         {
             MuseumInput.Replace(null);
@@ -131,6 +131,8 @@ namespace MusiyoBetsknate.Tests
                 var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
                 var body = visitor.GetComponent<CharacterController>();
                 flow.GetComponent<MuseumEntryView>().HeadsetActive = () => false;
+                // Free questions are tested here; the closing interview has its own test.
+                flow.GetComponent<MuseumHearthInterviewer>().BeginsInterview = false;
                 for (float waited = 0; loader.State == TourLoadState.Loading && waited < 20; waited += Time.unscaledDeltaTime) yield return null;
                 var element = new ElementSummaryContractV1 { slug = "synthetic-item", title = "Ficha sintética de prueba" };
                 Assert.That(runtime.Apply(new TourContractV1
@@ -219,6 +221,7 @@ namespace MusiyoBetsknate.Tests
             yield return null;
             var runtime = flow.GetComponent<TourRuntime>();
             flow.GetComponent<MuseumEntryView>().HeadsetActive = () => false;
+            flow.GetComponent<MuseumHearthInterviewer>().BeginsInterview = false;
             for (float waited = 0; loader.State == TourLoadState.Loading && waited < 20; waited += Time.unscaledDeltaTime) yield return null;
             var element = new ElementSummaryContractV1 { slug = "synthetic-item", title = "Ficha sintética de prueba" };
             Assert.That(runtime.Apply(new TourContractV1
@@ -397,6 +400,121 @@ namespace MusiyoBetsknate.Tests
             Assert.That(voice.Client.Transcript, Is.Null);
         }
 
+        /// <summary>
+        /// Anywhere in the museum, one button asks the companion: the notice first, then it listens, shows what it understood
+        /// for the visitor to confirm, and answers aloud with the text and its sources on its own screen.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheCompanionAnswersASpokenQuestionAnywhereAfterConsent()
+        {
+            var keyboard = InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Mouse>();
+            string capabilities = File.ReadAllText(Path.Combine(Application.dataPath, "Contracts", "examples", "voice_capabilities_external.json"));
+            string transcription = File.ReadAllText(Path.Combine(Application.dataPath, "Contracts", "examples", "guide_transcription.json"));
+            int transcriptions = 0, spoken = 0;
+            string consent = null, answerConsent = null;
+            var api = StartService((method, path, headers, body) =>
+            {
+                if (method == "GET" && path == "/api/v1/guide/voice-capabilities") return (200, capabilities);
+                if (method == "POST" && path == "/api/v1/guide/transcriptions")
+                {
+                    Interlocked.Increment(ref transcriptions);
+                    consent = headers["X-Musiyo-Voice-Consent"];
+                    return (200, transcription);
+                }
+                if (method == "POST" && path == "/api/v1/guide/voice-answers")
+                {
+                    Interlocked.Increment(ref spoken);
+                    answerConsent = headers["X-Musiyo-Voice-Consent"];
+                    return (200, SpokenAnswer(22050));
+                }
+                return null;
+            });
+            yield return OpenMuseumAtTheGuide(api);
+            var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var runtime = flow.GetComponent<TourRuntime>();
+            var interaction = flow.GetComponent<MuseumInteraction>();
+            var guide = flow.GetComponent<MuseumGuide>();
+            var display = flow.GetComponent<MuseumLecternDisplay>();
+            var companion = UnityEngine.Object.FindAnyObjectByType<MuseumCompanion>();
+            var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
+            yield return Until(() => companion.Voice != null, 3);
+            var voice = companion.Voice;
+            var panel = companion.GetComponent<MuseumCompanionVoicePanel>();
+            var recorder = new ToneRecorder();
+            voice.Recorder = recorder;
+            yield return Until(() => voice.Listens, 10);
+            Assert.That(voice.Listens, Is.True, "The API says the voice is configured and the device records.");
+            yield return null;
+            Assert.That(panel.Inviting && panel.Shown, Is.True, "The first time it can listen, the companion says how to ask.");
+            StringAssert.Contains("V", panel.Body.text);
+            Assert.That(guide.InRange, Is.False, "The visitor is far from the hearth guide.");
+
+            Press(keyboard.vKey);
+            yield return null;
+            Release(keyboard.vKey);
+            yield return null;
+            Assert.That(voice.Stage, Is.EqualTo(CompanionVoiceStage.Notice));
+            StringAssert.Contains("ElevenLabs y Groq", panel.Body.text);
+            StringAssert.Contains("No se guardan ni la grabación ni el texto", panel.Body.text);
+            Assert.That(recorder.Takes, Is.EqualTo(0), "Nothing is recorded before the visitor accepts.");
+            Assert.That(transcriptions + spoken, Is.EqualTo(0));
+            Assert.That(panel.Accept.gameObject.activeInHierarchy && panel.Decline.gameObject.activeInHierarchy, Is.True);
+            yield return null;
+            // The headset ray (or the centre of the view) reaches the companion's screen like any screen in the museum.
+            var rect = (RectTransform)panel.Accept.transform;
+            var spot = rect.TransformPoint(rect.rect.center);
+            display.Aim(new Ray(spot - panel.Surface.forward, panel.Surface.forward));
+            Assert.That(display.Aimed, Is.SameAs(panel.Accept), "The pointer reaches the companion's choices.");
+            Assert.That(display.Press(), Is.True);
+            yield return null;
+            Assert.That(voice.Stage, Is.EqualTo(CompanionVoiceStage.Recording));
+            Assert.That(panel.Chip.text, Is.EqualTo("Te escucho"), "It shows that it is listening.");
+            Assert.That(companion.Figure.Gesture, Is.EqualTo(GuideGesture.Listen));
+
+            Press(keyboard.vKey);
+            yield return null;
+            Release(keyboard.vKey);
+            yield return Until(() => voice.Stage == CompanionVoiceStage.Review, 10);
+            Assert.That(voice.Stage, Is.EqualTo(CompanionVoiceStage.Review));
+            Assert.That(consent, Is.EqualTo("request-only-v1"), "The recording goes with the visitor's consent.");
+            yield return null;
+            StringAssert.Contains("«Pregunta sintética de prueba»", panel.Body.text);
+            Assert.That(spoken, Is.EqualTo(0), "Nothing is asked before the visitor confirms what it understood.");
+
+            Press(keyboard.vKey);
+            yield return null;
+            Release(keyboard.vKey);
+            Assert.That(voice.Stage, Is.EqualTo(CompanionVoiceStage.Thinking));
+            Assert.That(panel.Chip.text, Is.EqualTo("Pensando…"), "It shows that it is thinking.");
+            yield return Until(() => voice.Stage == CompanionVoiceStage.Answer, 10);
+            Assert.That(voice.Stage, Is.EqualTo(CompanionVoiceStage.Answer));
+            Assert.That(spoken, Is.EqualTo(1));
+            Assert.That(answerConsent, Is.EqualTo("request-only-v1"));
+            yield return null;
+            StringAssert.Contains("Texto de una ficha sintética de prueba.", panel.Body.text);
+            Assert.That(panel.Sources.gameObject.activeInHierarchy, Is.True, "The answer cites its records.");
+            StringAssert.StartsWith("Fuente: ", panel.Sources.text);
+            Assert.That(voice.Speaking && companion.Speaking, Is.True, "The answer is heard.");
+            Assert.That(companion.Figure.Gesture, Is.EqualTo(GuideGesture.Speak));
+
+            // By the hearth guide the button is silent: the guide's own screen takes the questions there.
+            panel.Close.onClick.Invoke();
+            yield return null;
+            Assert.That(voice.Stage, Is.EqualTo(CompanionVoiceStage.Idle));
+            Assert.That(voice.Speaking, Is.False);
+            Assert.That(visitor.FocusPoint(runtime.GuidePoint.Anchor), Is.True);
+            yield return null;
+            Assert.That(guide.Ask(), Is.True);
+            yield return null;
+            Press(keyboard.vKey);
+            yield return null;
+            Release(keyboard.vKey);
+            yield return null;
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.GuideQuestion));
+            Assert.That(voice.Stage, Is.EqualTo(CompanionVoiceStage.Idle));
+        }
+
         [UnityTest]
         public IEnumerator ALateTranscriptIsDiscardedAndAVoiceThatCannotSpeakLeavesTheText()
         {
@@ -488,6 +606,256 @@ namespace MusiyoBetsknate.Tests
             Assert.That(voice.Talk(), Is.False);
             Assert.That(view.VoiceTalk.gameObject.activeInHierarchy || view.VoiceText.gameObject.activeInHierarchy, Is.False);
             Assert.That(view.Field.gameObject.activeInHierarchy, Is.True, "The written question stays as it was.");
+        }
+
+        /// <summary>
+        /// The hearth guide is a large ball of yarn floating gently by the fire. From across the room it invites the visitor
+        /// and turns to them; sitting down on a bench of the hearth opens the conversation and begins the interview. Seated,
+        /// the visitor's view is lower and walking is held; the sit control stands them up where they were.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheHearthGuideIsTheOvillitoAndTheInterviewBeginsOnSittingDown()
+        {
+            var keyboard = InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Mouse>();
+            var api = StartService();
+            yield return OpenMuseumAtTheGuide(api);
+            var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var runtime = flow.GetComponent<TourRuntime>();
+            var interaction = flow.GetComponent<MuseumInteraction>();
+            var guide = flow.GetComponent<MuseumGuide>();
+            var quiz = flow.GetComponent<MuseumHearthQuiz>();
+            var seating = flow.GetComponent<MuseumSeating>();
+            var interviewer = flow.GetComponent<MuseumHearthInterviewer>();
+            interviewer.BeginsInterview = true;
+            var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
+            var body = visitor.GetComponent<CharacterController>();
+            var eye = visitor.GetComponentInChildren<Camera>().transform;
+            yield return Until(() => interviewer.Figure != null, 3);
+            Assert.That(interviewer.Figure, Is.Not.Null);
+            Assert.That(interviewer.Figure.FromModel && interviewer.Rests, Is.True, "No human figure: the ovillito, resting on the bench.");
+            var bounds = interviewer.Figure.WorldBounds();
+            Assert.That(Mathf.Max(bounds.size.x, bounds.size.y, bounds.size.z), Is.InRange(.35f, .6f), "A large ovillito: " + bounds.size);
+            var blanket = UnityEngine.Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None).First(piece => piece.name == "Fogon_Manta_Norte");
+            Assert.That(bounds.min.y - blanket.bounds.max.y, Is.EqualTo(0).Within(.03f), "It rests on the north bench, by the fire.");
+            Assert.That(blanket.bounds.Contains(new Vector3(bounds.center.x, blanket.bounds.center.y, bounds.center.z)), Is.True, "On the bench, not beside it.");
+            Assert.That(interviewer.Figure.GetComponentsInChildren<Collider>(), Is.Empty);
+            Assert.That(UnityEngine.Object.FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .Where(renderer => renderer.name == MuseumCompanion.BodyPiece || renderer.name == MuseumCompanion.HeadPiece)
+                .All(renderer => !renderer.enabled), Is.True, "The museum model's grey placeholder is hidden.");
+
+            // From across the room: the invitation, and the ball turns to the visitor; coming close opens nothing yet.
+            var anchor = runtime.GuidePoint.Anchor;
+            var away = anchor.transform.position - interviewer.Place;
+            away.y = 0;
+            body.enabled = false;
+            visitor.transform.position = anchor.transform.position + away.normalized * (anchor.ActivationRadius + 3.5f);
+            body.enabled = true;
+            yield return Until(() => interviewer.Inviting, 3);
+            Assert.That(interviewer.Inviting, Is.True, "Nobody can pass it by without knowing.");
+            Assert.That(interviewer.InvitationText, Is.EqualTo("Acércate a conversar"));
+            Assert.That(interviewer.Figure.LookAt.HasValue, Is.True, "It turns to the visitor.");
+            Assert.That(visitor.FocusPoint(anchor), Is.True);
+            for (int frame = 0; frame < 5; frame++) yield return null;
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.Exploration), "Coming close opens nothing: sitting down does.");
+
+            // A bench of the hearth: «Sentarte» near it, and sitting down opens the conversation and the interview.
+            var bench = seating.Seats.Where(seat => seat.Hearth && seat.Along.sqrMagnitude > .1f).OrderBy(seat => Vector3.Distance(seat.Top, visitor.transform.position)).First();
+            var front = bench.Nearest(visitor.transform.position) + bench.Facing * .7f;
+            body.enabled = false;
+            visitor.transform.position = new Vector3(front.x, visitor.transform.position.y, front.z);
+            body.enabled = true;
+            for (int frame = 0; frame < 5; frame++) yield return null;
+            Assert.That(seating.Offered, Is.Not.Null, "A seat is offered nearby.");
+            Assert.That(seating.PromptShown, Is.True);
+            Assert.That(seating.SitButton.GetComponentInChildren<TMPro.TMP_Text>().text, Is.EqualTo("Sentarte"));
+            float standingEyes = eye.position.y;
+            var standing = visitor.transform.position;
+            Press(keyboard.cKey);
+            yield return null;
+            Release(keyboard.cKey);
+            yield return null;
+            Assert.That(seating.Seated, Is.True, "The sit key sits the visitor down.");
+            Assert.That(seating.Current.Hearth, Is.True);
+            Assert.That(Vector3.Distance(new Vector3(seating.SeatPoint.x, 0, seating.SeatPoint.z), new Vector3(interviewer.Place.x, 0, interviewer.Place.z)),
+                Is.GreaterThan(.5f), "The visitor sits beside the ovillito, never on it.");
+            Assert.That(standingEyes - eye.position.y, Is.GreaterThan(.3f), "The view goes down to a seated person's eyes.");
+            Assert.That(eye.position.y - seating.SeatPoint.y, Is.EqualTo(MuseumSeating.SeatedEyes).Within(.05f));
+            yield return Until(() => interaction.State == InteractionState.GuideQuestion, 2);
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.GuideQuestion), "Sitting down opens the conversation.");
+            yield return Until(() => quiz.Active, 10);
+            Assert.That(quiz.Active, Is.True, "The interview begins with the published questions.");
+            yield return Until(() => !interviewer.Inviting, 2);
+            Assert.That(interviewer.Inviting, Is.False, "Seated, the invitation fades away.");
+
+            // Seated, walking is held; the conversation stays open.
+            var seated = visitor.transform.position;
+            Press(keyboard.dKey);
+            for (float waited = 0; waited < .4f; waited += Time.deltaTime) yield return null;
+            Release(keyboard.dKey);
+            yield return null;
+            Assert.That(seating.Seated, Is.False, "Moving stands the visitor up.");
+            Assert.That(Vector3.Distance(new Vector3(visitor.transform.position.x, 0, visitor.transform.position.z),
+                new Vector3(standing.x, 0, standing.z)), Is.LessThan(.6f), "They stand where they stood.");
+            // Measured from the feet: walking on after standing up may climb a low step.
+            Assert.That(eye.position.y - visitor.transform.position.y, Is.EqualTo(standingEyes - standing.y).Within(.05f), "The view is back at its height.");
+        }
+
+        /// <summary>Any stool or bench outside the hearth can be sat on, and the sit key stands the visitor up.</summary>
+        [UnityTest]
+        public IEnumerator AnySeatOfTheMuseumCanBeSatOnAndLeft()
+        {
+            var keyboard = InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Mouse>();
+            var api = StartService();
+            yield return OpenMuseumAtTheGuide(api);
+            var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var seating = flow.GetComponent<MuseumSeating>();
+            var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
+            var body = visitor.GetComponent<CharacterController>();
+            yield return Until(() => seating.Seats.Count > 0, 6);
+            Assert.That(seating.Seats.Count(seat => !seat.Hearth), Is.GreaterThan(3), "Benches and stools of the museum are found while it runs.");
+            var stool = seating.Seats.First(seat => !seat.Hearth && seat.Along.sqrMagnitude < 1e-4f);
+            var front = stool.Top + stool.Facing * .7f;
+            body.enabled = false;
+            visitor.transform.position = new Vector3(front.x, stool.Top.y - .35f, front.z);
+            body.enabled = true;
+            for (float waited = 0; waited < .5f; waited += Time.deltaTime) yield return null;
+            Assert.That(seating.Offered, Is.Not.Null);
+            Assert.That(seating.Sit(seating.Offered), Is.True);
+            yield return null;
+            Assert.That(visitor.Seated, Is.True);
+            Assert.That(body.enabled, Is.False, "Seated, the body does not walk.");
+            for (float waited = 0; waited < .4f; waited += Time.unscaledDeltaTime) yield return null;
+            Press(keyboard.cKey);
+            for (int frame = 0; frame < 3; frame++) yield return null;
+            Release(keyboard.cKey);
+            yield return null;
+            Assert.That(seating.Seated, Is.False, "The sit key stands the visitor up.");
+            Assert.That(body.enabled && !visitor.Seated, Is.True);
+        }
+
+        /// <summary>A survey service that keeps what it is sent, so no answer leaves the test.</summary>
+        private sealed class KeptSurvey : IClosingSurveySource
+        {
+            public readonly System.Collections.Generic.List<System.Collections.Generic.IReadOnlyList<ClosingSurveyAnswer>> Sent
+                = new System.Collections.Generic.List<System.Collections.Generic.IReadOnlyList<ClosingSurveyAnswer>>();
+            public ClosingSurveyLoad LoadState { get; private set; }
+            public ClosingSurveyDefinition Survey { get; private set; }
+            public ClosingSurveySubmit SubmitState { get; private set; }
+            public event Action Changed;
+            public void Load(string tourKey)
+            {
+                Survey = new ClosingSurveyDefinition
+                {
+                    Key = "synthetic", Version = "1", NoticeTitle = "Aviso sintético", NoticeText = "Texto sintético del aviso de la encuesta.",
+                    Questions = new[]
+                    {
+                        new ClosingSurveyQuestion { Id = "q1", Text = "Pregunta sintética de opción",
+                            Options = new[] { new ClosingSurveyOption { Id = "a", Text = "Opción A" }, new ClosingSurveyOption { Id = "b", Text = "Opción B" } } },
+                        new ClosingSurveyQuestion { Id = "q2", Text = "Pregunta sintética de escala", Scale = true, LowLabel = "poco", HighLabel = "mucho",
+                            Options = Enumerable.Range(1, 5).Select(value => new ClosingSurveyOption { Id = "v" + value, Text = value.ToString(), Value = value }).ToArray() },
+                    }
+                };
+                LoadState = ClosingSurveyLoad.Ready;
+                Changed?.Invoke();
+            }
+            public void Submit(ClosingSurveyDefinition survey, System.Collections.Generic.IReadOnlyList<ClosingSurveyAnswer> answers)
+            {
+                Sent.Add(answers);
+                SubmitState = ClosingSurveySubmit.Stored;
+                Changed?.Invoke();
+            }
+            public void Poll() { }
+            public void Dispose() { }
+        }
+
+        /// <summary>
+        /// After the interview, the opinion questions: the notice first, with answering and storing anonymously, answering
+        /// without storing, or not answering. Without consent nothing is sent; with it, only the questions and choices.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheOpinionQuestionsAskConsentFirstAndSendNothingWithoutIt()
+        {
+            InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Mouse>();
+            var api = StartService();
+            yield return OpenMuseumAtTheGuide(api);
+            var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var runtime = flow.GetComponent<TourRuntime>();
+            var guide = flow.GetComponent<MuseumGuide>();
+            var quiz = flow.GetComponent<MuseumHearthQuiz>();
+            var survey = flow.GetComponent<MuseumClosingSurvey>();
+            var display = flow.GetComponent<MuseumLecternDisplay>();
+            var view = UnityEngine.Object.FindAnyObjectByType<MuseumGuideView>();
+            var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
+            var body = visitor.GetComponent<CharacterController>();
+            Assert.That(survey, Is.Not.Null);
+            var kept = new KeptSurvey();
+            survey.Source = kept;
+            var anchor = runtime.GuidePoint.Anchor;
+            Assert.That(visitor.FocusPoint(anchor), Is.True);
+            yield return null;
+            Assert.That(guide.Ask(), Is.True);
+            yield return Until(() => quiz.Available && survey.Available, 10);
+            yield return Until(() => display.Openness >= 1, 3);
+            Assert.That(survey.Stage, Is.EqualTo(ClosingSurveyStage.Off), "Nothing about it shows before the interview ends.");
+            Assert.That(quiz.Begin(), Is.True);
+            yield return null;
+            quiz.Next();
+            yield return null;
+            Assert.That(quiz.Done, Is.True);
+            Assert.That(survey.Stage, Is.EqualTo(ClosingSurveyStage.Notice), "The notice comes before the first opinion question.");
+            Assert.That(view.SurveyText.text, Is.EqualTo("Texto sintético del aviso de la encuesta."), "The notice is the service's own text.");
+            Assert.That(view.SurveyAccept.gameObject.activeInHierarchy && view.SurveyWithoutStoring.gameObject.activeInHierarchy
+                && view.SurveyDecline.gameObject.activeInHierarchy, Is.True, "Store, answer without storing, or not answer.");
+            Assert.That(view.QuizStart.gameObject.activeInHierarchy || view.Field.gameObject.activeInHierarchy, Is.False, "Nothing else stands on the screen.");
+            yield return null;
+            Assert.That(((RectTransform)view.SurveyAccept.transform).rect.height, Is.GreaterThanOrEqualTo(80), "Large choices for the headset.");
+            var rect = (RectTransform)view.SurveyWithoutStoring.transform;
+            var spot = rect.TransformPoint(rect.rect.center);
+            display.Aim(new Ray(spot - display.Surface.forward, display.Surface.forward));
+            Assert.That(display.Aimed, Is.SameAs(view.SurveyWithoutStoring), "The headset pointer reaches the choices.");
+            Assert.That(display.Press(), Is.True);
+            yield return null;
+            Assert.That(survey.Stage, Is.EqualTo(ClosingSurveyStage.Answering));
+            Assert.That(survey.Storing, Is.False);
+            Assert.That(guide.Message, Is.EqualTo("Tu opinión · pregunta 1 de 2"));
+            Assert.That(view.SurveyOptions.Select(option => option.GetComponentInChildren<TMPro.TMP_Text>().text), Is.EqualTo(new[] { "Opción A", "Opción B" }));
+            view.SurveyOptions[1].onClick.Invoke();
+            yield return null;
+            StringAssert.Contains("1 = poco", view.SurveyText.text);
+            Assert.That(view.SurveyOptions.Count, Is.EqualTo(5));
+            view.SurveyOptions[3].onClick.Invoke();
+            yield return null;
+            Assert.That(survey.Stage, Is.EqualTo(ClosingSurveyStage.Done));
+            Assert.That(kept.Sent, Is.Empty, "Without consent nothing is sent.");
+            Assert.That(guide.Message, Is.EqualTo("Gracias por responder. No se guardó ninguna respuesta."));
+
+            // Leaving forgets the answers. Offered again and accepted, only the question and the choice are sent.
+            body.enabled = false;
+            visitor.transform.position = anchor.transform.position + new Vector3(0, 0, -anchor.ActivationRadius - 4);
+            body.enabled = true;
+            yield return Until(() => survey.Stage == ClosingSurveyStage.Off, 2);
+            Assert.That(survey.Stage, Is.EqualTo(ClosingSurveyStage.Off));
+            Assert.That(survey.Answers, Is.Empty, "Answers are forgotten when the conversation ends.");
+            Assert.That(visitor.FocusPoint(anchor), Is.True);
+            yield return null;
+            Assert.That(guide.Ask(), Is.True);
+            yield return null;
+            Assert.That(survey.Offer(), Is.True);
+            yield return null;
+            view.SurveyAccept.onClick.Invoke();
+            Assert.That(survey.Storing, Is.True);
+            yield return null;
+            view.SurveyOptions[0].onClick.Invoke();
+            yield return null;
+            view.SurveySkip.onClick.Invoke();
+            yield return null;
+            Assert.That(kept.Sent, Has.Count.EqualTo(1));
+            Assert.That(kept.Sent[0].Select(answer => answer.QuestionId + ":" + answer.OptionId), Is.EqualTo(new[] { "q1:a" }),
+                "Only the question and the choice; a passed question is not sent.");
+            Assert.That(guide.Message, Is.EqualTo("Gracias. Tus respuestas se guardaron de forma anónima."));
         }
 
         [UnityTest]

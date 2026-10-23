@@ -56,6 +56,8 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("figure_scale")] public float FigureScale;
         /// <summary>Room whose guide anchor is the companion's own place; there it waits by the anchor.</summary>
         [JsonProperty("home_room")] public string HomeRoom;
+        /// <summary>Room the companion does not enter: it waits at its door while the visitor is inside; empty for none.</summary>
+        [JsonProperty("wait_outside_room")] public string WaitOutside = "";
         [JsonProperty("welcome_text")] public string WelcomeText;
         [JsonProperty("welcome_delay_seconds")] public float WelcomeDelay;
         [JsonProperty("remark_seconds")] public float RemarkSeconds;
@@ -96,6 +98,7 @@ namespace MusiyoBetsknate.Museum
                 || string.IsNullOrWhiteSpace(remark.Text)) || result.Remarks.Select(remark => remark.Id).Distinct().Count() != result.Remarks.Count)
                 throw new InvalidOperationException("Invalid companion remark.");
             result.MaskElement ??= "";
+            result.WaitOutside ??= "";
             result.InterfaceRemarks ??= new();
             if (result.InterfaceRemarks.Any(remark => remark == null || string.IsNullOrWhiteSpace(remark.Id)
                 || string.IsNullOrWhiteSpace(remark.Zone) || string.IsNullOrWhiteSpace(remark.TextKey)

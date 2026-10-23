@@ -55,6 +55,8 @@ namespace MusiyoBetsknate.Museum
         private bool runRequested;
         private float verticalSpeed;
         public XROrigin Origin { get; private set; }
+        /// <summary>How far the view is lowered while the visitor sits on a seat (<see cref="MuseumSeating"/>); it never turns.</summary>
+        public float SeatDrop { get; set; }
         public Transform TrackingOrigin => trackingOrigin;
         public bool Ready => Origin != null;
         /// <summary>True while a menu waits for a valid, steady head before it is placed in front of it.</summary>
@@ -213,7 +215,10 @@ namespace MusiyoBetsknate.Museum
                 || interaction.GetComponent<MuseumWayfinding>()?.MenuOpen == true || input.Context != MuseumInputContext.Visit
                 || flow.InputConsumedThisFrame;
             if (blocked) { StopWalking(); teleport.Cancel(); return; }
-            Teleport();
+            // Seated, the visitor may turn but neither walks nor jumps; the stick stands them up (MuseumSeating).
+            bool seated = interaction.GetComponent<MuseumSeating>()?.Seated == true;
+            if (seated) teleport.Cancel();
+            else Teleport();
             var stick = input.Turn.ReadValue<Vector2>();
             // Pushing the stick up or down scrolls an open screen; its slight sideways drift must not turn the visitor.
             if (MuseumPanelScroll.Engaged && Mathf.Abs(stick.y) > Mathf.Abs(stick.x)) stick.x = 0;
@@ -229,6 +234,12 @@ namespace MusiyoBetsknate.Museum
             }
             // The play area turns around the head, so the view turns in place and head tracking is untouched.
             if (degrees != 0) visitor.RotateAround(head.transform.position, Vector3.up, degrees);
+            if (seated)
+            {
+                vignette.Set(degrees != 0 && TurnMode == MuseumTurnMode.Continuous);
+                verticalSpeed = 0;
+                return;
+            }
             var move = Vector2.ClampMagnitude(input.Move.ReadValue<Vector2>(), 1);
             if (move.sqrMagnitude < .04f) { moveArmed = true; runRequested = false; }
             if (!moveArmed) move = Vector2.zero;
@@ -291,7 +302,7 @@ namespace MusiyoBetsknate.Museum
             if (!Ready) return;
             // The floor offset follows the visitor's height choice; the tracking keeps it at zero otherwise.
             var floor = trackingOrigin.localPosition;
-            if (Mathf.Abs(floor.y - HeightOffset) > .0001f) { floor.y = HeightOffset; trackingOrigin.localPosition = floor; }
+            if (Mathf.Abs(floor.y - (HeightOffset - SeatDrop)) > .0001f) { floor.y = HeightOffset - SeatDrop; trackingOrigin.localPosition = floor; }
             bool headTracked = HeadTracked;
             // Being carried into or out of the entry set places an open menu again, in front of the new view.
             if (entry != null && entry.Step() && menuVisible) RequestMenuPlacement();
