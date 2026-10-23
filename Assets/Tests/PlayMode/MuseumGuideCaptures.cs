@@ -265,6 +265,48 @@ namespace MusiyoBetsknate.Tests
                 yield return Shot("interviewer_invitation", visitor.transform.position + Vector3.up * 1.65f, place + Vector3.up * 1.4f, 70);
                 yield return Shot("interviewer_close", place + toward * 2.2f + Vector3.up * 1.55f, place + Vector3.up * 1.0f, 55);
             }
+            // The companion waits at the hearth's door while the visitor is inside.
+            Assert.That(visitor.FocusPoint(anchor), Is.True);
+            for (float waited = 0; waited < 4; waited += Time.unscaledDeltaTime) yield return null;
+            var eyes = visitor.GetComponentInChildren<Camera>().transform;
+            if (companion.Waiting)
+            {
+                var ball = companion.Figure.Head.position;
+                var facing = companion.transform.forward;
+                yield return Shot("companion_waits_at_door", ball + facing * 2.2f + Vector3.up * .2f, ball, 60);
+            }
+
+            // Sitting down: on a bench of the hearth, facing the fire and its guide, and on a stool elsewhere.
+            var seating = flow.GetComponent<MuseumSeating>();
+            for (float waited = 0; seating.Seats.Count == 0 && waited < 6; waited += Time.unscaledDeltaTime) yield return null;
+            var bench = seating.Seats.FirstOrDefault(seat => seat.Hearth && seat.Along.sqrMagnitude > .1f);
+            if (bench != null)
+            {
+                var front = bench.Nearest(visitor.transform.position) + bench.Facing * .7f;
+                Place(new Vector3(front.x, visitor.transform.position.y, front.z));
+                for (float waited = 0; waited < .6f; waited += Time.unscaledDeltaTime) yield return null;
+                yield return Shot("sit_prompt_hearth", eyes.position, seating.PromptShown ? seating.PromptSurface.position : bench.Nearest(front) + Vector3.up * .45f, 65);
+                if (seating.Offered != null && seating.Sit(seating.Offered))
+                {
+                    for (float waited = 0; waited < 1.5f; waited += Time.unscaledDeltaTime) yield return null;
+                    yield return Shot("sit_hearth_view", eyes.position, eyes.position + eyes.forward * 3, 75);
+                    seating.Stand();
+                }
+            }
+            var stool = seating.Seats.FirstOrDefault(seat => !seat.Hearth && seat.Along.sqrMagnitude < 1e-4f);
+            if (stool != null)
+            {
+                var front = stool.Top + stool.Facing * .7f;
+                Place(new Vector3(front.x, stool.Top.y - .3f, front.z));
+                for (float waited = 0; waited < .6f; waited += Time.unscaledDeltaTime) yield return null;
+                yield return Shot("sit_prompt_stool", eyes.position, seating.PromptShown ? seating.PromptSurface.position : stool.Top + Vector3.up * .45f, 65);
+                if (seating.Offered != null && seating.Sit(seating.Offered))
+                {
+                    for (float waited = 0; waited < .6f; waited += Time.unscaledDeltaTime) yield return null;
+                    yield return Shot("sit_stool_view", eyes.position, eyes.position + eyes.forward * 3, 75);
+                    seating.Stand();
+                }
+            }
             var scene = SceneManager.GetSceneByPath(MuseumScene);
             if (scene.IsValid() && scene.isLoaded) yield return SceneManager.UnloadSceneAsync(scene);
         }

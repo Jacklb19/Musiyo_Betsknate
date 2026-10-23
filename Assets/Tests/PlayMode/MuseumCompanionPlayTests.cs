@@ -57,7 +57,7 @@ namespace MusiyoBetsknate.Tests
             Assert.That(Object.FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None)
                 .Where(renderer => renderer.name == MuseumCompanion.BodyPiece).All(renderer => !renderer.enabled),
                 "The seated placeholder is replaced by the walking figure.");
-            AssertHumanSized(companion);
+            AssertBallShape(companion);
 
             bool welcomed = false;
             var log = new System.Text.StringBuilder();
@@ -123,19 +123,64 @@ namespace MusiyoBetsknate.Tests
             Place(body, new Vector3(0, .05f, -56));
             for (int frame = 0; frame < 10; frame++) yield return null;
             Assert.That(companion.Placed, Is.True);
-            AssertHumanSized(companion);
+            AssertBallShape(companion);
             Assert.That(companion.Figure.Renderers.Select(renderer => renderer.GetComponent<MeshFilter>()?.sharedMesh)
                 .All(mesh => mesh != null && !mesh.name.StartsWith("Combined")), Is.True, "The figure never shows a merged museum mesh.");
         }
 
-        private static void AssertHumanSized(MuseumCompanion companion)
+        /// <summary>The companion is a ball of yarn floating at about shoulder height where the companion stands.</summary>
+        private static void AssertBallShape(MuseumCompanion companion)
         {
             Assert.That(companion.Figure, Is.Not.Null);
+            Assert.That(companion.Figure.Floats, Is.True, "No human figure: a ball of yarn (owner, 22/10/2026).");
             var bounds = companion.Figure.WorldBounds();
-            Assert.That(bounds.size.y, Is.InRange(1.3f, 2.1f), "The figure stands as tall as a person: " + bounds.size);
-            Assert.That(Mathf.Max(bounds.size.x, bounds.size.z), Is.InRange(.3f, 1.4f), "The figure is as wide as a person: " + bounds.size);
+            Assert.That(Mathf.Max(bounds.size.x, bounds.size.y, bounds.size.z), Is.InRange(.15f, .45f), "As big as a ball of yarn: " + bounds.size);
+            float above = bounds.center.y - companion.transform.position.y;
+            Assert.That(above, Is.InRange(1.1f, 1.6f), "It floats at about shoulder height: " + above);
             Assert.That(Vector3.Distance(new Vector3(bounds.center.x, 0, bounds.center.z),
-                new Vector3(companion.transform.position.x, 0, companion.transform.position.z)), Is.LessThan(.5f), "The figure stands where the companion is.");
+                new Vector3(companion.transform.position.x, 0, companion.transform.position.z)), Is.LessThan(.3f), "It floats where the companion is.");
+        }
+
+        /// <summary>
+        /// In the hearth the companion stays at the door and says it waits there; the X button is the hearth guide's.
+        /// Coming out, it joins the visitor again.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheCompanionWaitsAtTheHearthDoorAndComesBackAfterwards()
+        {
+            yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(MuseumScene,
+                new LoadSceneParameters(LoadSceneMode.Additive));
+            var flow = Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var settings = new UnityEditor.SerializedObject(flow.GetComponent<TourLoader>());
+            settings.FindProperty("apiBase").stringValue = "http://127.0.0.1:9/api/v1";
+            settings.ApplyModifiedPropertiesWithoutUndo();
+            flow.GetComponent<MuseumEntryView>().HeadsetActive = () => false;
+            var companion = Object.FindAnyObjectByType<MuseumCompanion>();
+            var body = Object.FindAnyObjectByType<DesktopVisitorController>().GetComponent<CharacterController>();
+            var hearth = Object.FindObjectsByType<RoomAnchor>(FindObjectsSortMode.None).First(room => room.Key == "room.hearth");
+            yield return null;
+            flow.EnterImmediately();
+            // From the courtyard into the hearth, by the guide's place.
+            var outside = new Vector3(0, .05f, -6);
+            Place(body, outside);
+            for (float waited = 0; waited < 3; waited += Time.deltaTime) yield return null;
+            Assert.That(companion.Placed, Is.True);
+            var guidePlace = Object.FindObjectsByType<PointAnchor>(FindObjectsSortMode.None).First(anchor => anchor.Key == "guia.principal");
+            Assert.That(Object.FindAnyObjectByType<DesktopVisitorController>().FocusPoint(guidePlace), Is.True);
+            Assert.That(hearth.Contains(body.transform.position), Is.True, "The visitor is in the hearth.");
+            for (float waited = 0; waited < 4; waited += Time.deltaTime) yield return null;
+            Assert.That(companion.Waiting, Is.True, "Inside the hearth the companion waits.");
+            Assert.That(hearth.Contains(companion.transform.position), Is.False, "It waits outside, by the door: " + companion.transform.position);
+            Assert.That(Vector3.Distance(companion.transform.position, companion.WaitSpot), Is.LessThan(.3f));
+            Assert.That(companion.Voice.CanAsk, Is.False, "In the hearth the X button belongs to the hearth guide.");
+
+            // Out again, it walks back to the visitor.
+            Place(body, outside);
+            for (float waited = 0; waited < 5; waited += Time.deltaTime) yield return null;
+            Assert.That(companion.Waiting, Is.False);
+            var rest = companion.transform.position - body.transform.position;
+            rest.y = 0;
+            Assert.That(rest.magnitude, Is.LessThan(MuseumCompanionSettings.Current.FollowDistance + 2), "It joined the visitor again.");
         }
 #endif
     }

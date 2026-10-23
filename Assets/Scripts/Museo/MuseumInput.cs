@@ -111,6 +111,8 @@ namespace MusiyoBetsknate.Museum
         public InputAction AutoTour { get; }
         /// <summary>Asks the companion a spoken question anywhere: X on the left controller, a key on a computer.</summary>
         public InputAction AskCompanion { get; }
+        /// <summary>Sits on the seat offered nearby, or stands up: the right stick's press on a headset, a key on a computer.</summary>
+        public InputAction Sit { get; }
         public bool Spatial { get; private set; }
 
         /// <summary>The instance every museum component shares, created on first use with the visitor's saved keys.</summary>
@@ -177,6 +179,7 @@ namespace MusiyoBetsknate.Museum
             Turn = Find("Locomotion/Turn"); Teleport = Find("Locomotion/Teleport");
             Grab = Find("Visit/Grab"); GrabLeft = Find("Visit/GrabLeft"); AutoTour = Find("Visit/AutoTour");
             AskCompanion = Find("Visit/AskCompanion");
+            Sit = Find("Visit/Sit");
             foreach (var maps in ContextMaps.Values)
                 foreach (var map in maps) Asset.FindActionMap(map, true);
             Bindings = new MuseumInputBindings(this);

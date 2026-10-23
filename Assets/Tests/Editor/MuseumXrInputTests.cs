@@ -134,6 +134,23 @@ namespace MusiyoBetsknate.Tests
         }
 
         [Test]
+        public void TheRightStickPressSitsAndStandsAndNothingElse()
+        {
+            var (left, right) = AddControllers();
+            input.SetSpatial(true);
+            input.SetContext(MuseumInputContext.Visit);
+            Press(right.thumbstickClicked);
+            Assert.That(input.Sit.WasPressedThisFrame(), Is.True);
+            Assert.That(input.AskCompanion.IsPressed() || input.Teleport.IsPressed() || input.AutoTour.IsPressed() || input.Click.IsPressed()
+                || input.Back.IsPressed() || input.Grab.IsPressed() || input.Sprint.IsPressed(), Is.False, "The press does nothing else.");
+            Release(right.thumbstickClicked);
+            input.SetContext(MuseumInputContext.Menu);
+            Press(right.thumbstickClicked);
+            Assert.That(input.Sit.WasPressedThisFrame(), Is.False, "A menu never sits the visitor down.");
+            Release(right.thumbstickClicked);
+        }
+
+        [Test]
         public void ControllerTurningGrabbingRunningAndTheTourStaySilentInMenus()
         {
             var (left, right) = AddControllers();

@@ -20,6 +20,8 @@ namespace MusiyoBetsknate.Museum
         public float LookSensitivity => lookSensitivity;
         /// <summary>While a held piece takes the mouse and look keys to turn, the view stays still.</summary>
         public bool LookSuspended { get; set; }
+        /// <summary>Seated on a bench (<see cref="MuseumSeating"/>): the visitor looks around but does not walk.</summary>
+        public bool Seated { get; set; }
         public Vector3 PlanarVelocity => planarVelocity;
         /// <summary>Unscaled time of the last pause caused by the browser releasing the pointer.</summary>
         public float PointerReleasePauseTime { get; private set; } = float.NegativeInfinity;
@@ -152,6 +154,12 @@ namespace MusiyoBetsknate.Museum
                 transform.Rotate(Vector3.up, delta.x, Space.World);
                 pitch = Mathf.Clamp(pitch - delta.y, -configuration.MaximumPitch, configuration.MaximumPitch);
                 viewCamera.transform.localRotation = Quaternion.Euler(pitch, 0, 0);
+            }
+            if (Seated)
+            {
+                planarVelocity = Vector3.zero;
+                verticalSpeed = 0;
+                return;
             }
             if (blocked || choosing) planarVelocity = Vector3.zero; // Menus, on-screen panels and pauses stop at once.
             else

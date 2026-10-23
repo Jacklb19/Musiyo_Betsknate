@@ -609,14 +609,14 @@ namespace MusiyoBetsknate.Tests
         }
 
         /// <summary>
-        /// The guide waits seated by the hearth with its own figure. From across the room it invites the visitor over and
-        /// turns its head to them; reaching it opens the conversation by itself and the closing interview begins with the
-        /// published questions.
+        /// The hearth guide is a large ball of yarn floating gently by the fire. From across the room it invites the visitor
+        /// and turns to them; sitting down on a bench of the hearth opens the conversation and begins the interview. Seated,
+        /// the visitor's view is lower and walking is held; the sit control stands them up where they were.
         /// </summary>
         [UnityTest]
-        public IEnumerator TheHearthGuideSitsByTheFireInvitesTheVisitorAndBeginsTheInterview()
+        public IEnumerator TheHearthGuideIsABallOfYarnAndTheInterviewBeginsOnSittingDown()
         {
-            InputSystem.AddDevice<Keyboard>();
+            var keyboard = InputSystem.AddDevice<Keyboard>();
             InputSystem.AddDevice<Mouse>();
             var api = StartService();
             yield return OpenMuseumAtTheGuide(api);
@@ -625,63 +625,108 @@ namespace MusiyoBetsknate.Tests
             var interaction = flow.GetComponent<MuseumInteraction>();
             var guide = flow.GetComponent<MuseumGuide>();
             var quiz = flow.GetComponent<MuseumHearthQuiz>();
+            var seating = flow.GetComponent<MuseumSeating>();
             var interviewer = flow.GetComponent<MuseumHearthInterviewer>();
             interviewer.BeginsInterview = true;
             var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
             var body = visitor.GetComponent<CharacterController>();
+            var eye = visitor.GetComponentInChildren<Camera>().transform;
             yield return Until(() => interviewer.Figure != null, 3);
-            Assert.That(interviewer.Figure, Is.Not.Null, "The guide has a figure of its own by the hearth.");
+            Assert.That(interviewer.Figure, Is.Not.Null);
+            Assert.That(interviewer.Figure.Floats, Is.True, "No human figure: a large ball of yarn.");
             var bounds = interviewer.Figure.WorldBounds();
-            Assert.That(interviewer.Figure.Seated, Is.True, "It waits seated by the fire.");
-            Assert.That(bounds.size.y, Is.InRange(1.05f, 1.4f), "Seated, it is as tall as a seated person: " + bounds.size);
-            Assert.That(interviewer.Bench, Is.Not.Null);
-            Assert.That(MuseumHearthInterviewer.HearthSeats, Does.Contain(interviewer.Bench.name), "It sits on the museum's own bench by the fire.");
-            Assert.That(interviewer.Stand.Find("Jigra") != null && interviewer.Stand.Find("Totuma") != null, Is.True,
-                "A cabuya jigra beside it and an empty totuma on the bench.");
-            Assert.That(bounds.min.y, Is.EqualTo(interviewer.Place.y).Within(.08f), "Its feet rest on the floor; it never floats.");
-            var anchor = runtime.GuidePoint.Anchor;
-            var place = interviewer.Place;
-            Assert.That(Vector3.Distance(new Vector3(place.x, 0, place.z), new Vector3(anchor.transform.position.x, 0, anchor.transform.position.z)),
-                Is.InRange(.4f, anchor.ActivationRadius + 1), "It stands by the place where visitors talk to it, not on it.");
+            Assert.That(Mathf.Max(bounds.size.x, bounds.size.y, bounds.size.z), Is.InRange(.35f, .7f), "A large ball: " + bounds.size);
+            Assert.That(bounds.min.y - interviewer.Place.y, Is.InRange(.4f, 1f), "It floats gently above the bench, by the fire.");
+            Assert.That(interviewer.Figure.GetComponentsInChildren<Collider>(), Is.Empty);
             Assert.That(UnityEngine.Object.FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None)
                 .Where(renderer => renderer.name == MuseumCompanion.BodyPiece || renderer.name == MuseumCompanion.HeadPiece)
                 .All(renderer => !renderer.enabled), Is.True, "The museum model's grey placeholder is hidden.");
-            Assert.That(interviewer.Figure.GetComponentsInChildren<Collider>(), Is.Empty);
 
-            // From across the room: the invitation floats above it and it turns to the visitor.
-            var away = anchor.transform.position - place;
+            // From across the room: the invitation, and the ball turns to the visitor; coming close opens nothing yet.
+            var anchor = runtime.GuidePoint.Anchor;
+            var away = anchor.transform.position - interviewer.Place;
             away.y = 0;
             body.enabled = false;
             visitor.transform.position = anchor.transform.position + away.normalized * (anchor.ActivationRadius + 3.5f);
             body.enabled = true;
             yield return Until(() => interviewer.Inviting, 3);
-            Assert.That(guide.InRange, Is.False);
             Assert.That(interviewer.Inviting, Is.True, "Nobody can pass it by without knowing.");
             Assert.That(interviewer.InvitationText, Is.EqualTo("Acércate a conversar"));
-            Assert.That(interviewer.Figure.LookAt.HasValue, Is.True, "It turns its head to the visitor.");
-
-            // Reaching it opens the conversation without any button, and the interview begins.
+            Assert.That(interviewer.Figure.LookAt.HasValue, Is.True, "It turns to the visitor.");
             Assert.That(visitor.FocusPoint(anchor), Is.True);
-            yield return Until(() => interaction.State == InteractionState.GuideQuestion, 2);
-            Assert.That(interaction.State, Is.EqualTo(InteractionState.GuideQuestion), "Reaching the guide opens the conversation.");
-            yield return Until(() => quiz.Active, 10);
-            Assert.That(quiz.Active, Is.True, "The closing interview begins with the published questions.");
-            Assert.That(guide.Message, Does.StartWith("Pregunta 1 de 1"));
-            yield return Until(() => !interviewer.Inviting, 2);
-            Assert.That(interviewer.Inviting, Is.False, "The invitation steps aside once the conversation is open.");
+            for (int frame = 0; frame < 5; frame++) yield return null;
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.Exploration), "Coming close opens nothing: sitting down does.");
 
-            // Leaving and coming back opens it again; the interview is not forced a second time.
+            // A bench of the hearth: «Sentarte» near it, and sitting down opens the conversation and the interview.
+            var bench = seating.Seats.Where(seat => seat.Hearth && seat.Along.sqrMagnitude > .1f).OrderBy(seat => Vector3.Distance(seat.Top, visitor.transform.position)).First();
+            var front = bench.Nearest(visitor.transform.position) + bench.Facing * .7f;
             body.enabled = false;
-            visitor.transform.position = anchor.transform.position + away.normalized * (anchor.ActivationRadius + 4);
+            visitor.transform.position = new Vector3(front.x, visitor.transform.position.y, front.z);
             body.enabled = true;
-            yield return Until(() => interaction.State != InteractionState.GuideQuestion, 2);
-            Assert.That(interaction.State, Is.EqualTo(InteractionState.Exploration));
-            Assert.That(visitor.FocusPoint(anchor), Is.True);
-            yield return Until(() => interaction.State == InteractionState.GuideQuestion, 2);
-            Assert.That(interaction.State, Is.EqualTo(InteractionState.GuideQuestion));
+            for (int frame = 0; frame < 5; frame++) yield return null;
+            Assert.That(seating.Offered, Is.Not.Null, "A seat is offered nearby.");
+            Assert.That(seating.PromptShown, Is.True);
+            Assert.That(seating.SitButton.GetComponentInChildren<TMPro.TMP_Text>().text, Is.EqualTo("Sentarte"));
+            float standingEyes = eye.position.y;
+            var standing = visitor.transform.position;
+            Press(keyboard.cKey);
             yield return null;
-            Assert.That(quiz.Active, Is.False, "The second time the visitor chooses to begin it.");
-            Assert.That(quiz.Available, Is.True);
+            Release(keyboard.cKey);
+            yield return null;
+            Assert.That(seating.Seated, Is.True, "The sit key sits the visitor down.");
+            Assert.That(seating.Current.Hearth, Is.True);
+            Assert.That(standingEyes - eye.position.y, Is.GreaterThan(.3f), "The view goes down to a seated person's eyes.");
+            Assert.That(eye.position.y - seating.SeatPoint.y, Is.EqualTo(MuseumSeating.SeatedEyes).Within(.05f));
+            yield return Until(() => interaction.State == InteractionState.GuideQuestion, 2);
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.GuideQuestion), "Sitting down opens the conversation.");
+            yield return Until(() => quiz.Active, 10);
+            Assert.That(quiz.Active, Is.True, "The interview begins with the published questions.");
+            Assert.That(interviewer.Inviting, Is.False);
+
+            // Seated, walking is held; the conversation stays open.
+            var seated = visitor.transform.position;
+            Press(keyboard.dKey);
+            for (float waited = 0; waited < .4f; waited += Time.deltaTime) yield return null;
+            Release(keyboard.dKey);
+            yield return null;
+            Assert.That(seating.Seated, Is.False, "Moving stands the visitor up.");
+            Assert.That(Vector3.Distance(new Vector3(visitor.transform.position.x, 0, visitor.transform.position.z),
+                new Vector3(standing.x, 0, standing.z)), Is.LessThan(.6f), "They stand where they stood.");
+            Assert.That(eye.position.y, Is.EqualTo(standingEyes).Within(.05f), "The view is back at its height.");
+        }
+
+        /// <summary>Any stool or bench outside the hearth can be sat on, and the sit key stands the visitor up.</summary>
+        [UnityTest]
+        public IEnumerator AnySeatOfTheMuseumCanBeSatOnAndLeft()
+        {
+            var keyboard = InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Mouse>();
+            var api = StartService();
+            yield return OpenMuseumAtTheGuide(api);
+            var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var seating = flow.GetComponent<MuseumSeating>();
+            var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
+            var body = visitor.GetComponent<CharacterController>();
+            yield return Until(() => seating.Seats.Count > 0, 6);
+            Assert.That(seating.Seats.Count(seat => !seat.Hearth), Is.GreaterThan(3), "Benches and stools of the museum are found while it runs.");
+            var stool = seating.Seats.First(seat => !seat.Hearth && seat.Along.sqrMagnitude < 1e-4f);
+            var front = stool.Top + stool.Facing * .7f;
+            body.enabled = false;
+            visitor.transform.position = new Vector3(front.x, stool.Top.y - .35f, front.z);
+            body.enabled = true;
+            for (float waited = 0; waited < .5f; waited += Time.deltaTime) yield return null;
+            Assert.That(seating.Offered, Is.Not.Null);
+            Assert.That(seating.Sit(seating.Offered), Is.True);
+            yield return null;
+            Assert.That(visitor.Seated, Is.True);
+            Assert.That(body.enabled, Is.False, "Seated, the body does not walk.");
+            for (float waited = 0; waited < .4f; waited += Time.unscaledDeltaTime) yield return null;
+            Press(keyboard.cKey);
+            for (int frame = 0; frame < 3; frame++) yield return null;
+            Release(keyboard.cKey);
+            yield return null;
+            Assert.That(seating.Seated, Is.False, "The sit key stands the visitor up.");
+            Assert.That(body.enabled && !visitor.Seated, Is.True);
         }
 
         /// <summary>A survey service that keeps what it is sent, so no answer leaves the test.</summary>
@@ -831,7 +876,7 @@ namespace MusiyoBetsknate.Tests
             Assert.That(visitor.FocusPoint(anchor), Is.True);
             yield return null;
             yield return null;
-            Assert.That(interaction.State, Is.EqualTo(InteractionState.GuideQuestion), "Reaching the guide leaves the exhibit behind and opens the conversation.");
+            Assert.That(interaction.State, Is.EqualTo(InteractionState.Exploration), "Reaching the guide leaves the exhibit behind.");
             Assert.That(guide.Ask(), Is.True);
             yield return Until(() => quiz.Available, 10);
             Assert.That(quiz.Available, Is.True, "Opening the guide reads the hearth questions.");

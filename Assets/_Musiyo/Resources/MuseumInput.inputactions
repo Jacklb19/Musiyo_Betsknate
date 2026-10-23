@@ -749,6 +749,15 @@
           "processors": "",
           "interactions": "",
           "initialStateCheck": false
+        },
+        {
+          "name": "Sit",
+          "type": "Button",
+          "id": "fd058f14-ad1a-4cf7-add3-fe8529342e81",
+          "expectedControlType": "Button",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": false
         }
       ],
       "bindings": [
@@ -1057,6 +1066,28 @@
           "processors": "",
           "groups": "XR",
           "action": "AskCompanion",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "aed5c70e-3f6c-4365-a0b8-81e00997bf70",
+          "path": "<Keyboard>/c",
+          "interactions": "",
+          "processors": "",
+          "groups": "KeyboardMouse",
+          "action": "Sit",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "248677b6-b382-4041-ade1-07924a4ccfff",
+          "path": "<OculusTouchController>{RightHand}/thumbstickClicked",
+          "interactions": "",
+          "processors": "",
+          "groups": "XR",
+          "action": "Sit",
           "isComposite": false,
           "isPartOfComposite": false
         }

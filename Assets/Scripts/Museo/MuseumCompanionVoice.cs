@@ -31,8 +31,8 @@ namespace MusiyoBetsknate.Museum
     /// text with the cited records and, when the service speaks, aloud. The same voice service and the same consent as the
     /// hearth guide are used: the notice comes first and nothing is recorded or sent before it is accepted
     /// (<see cref="GuideVoiceConsent"/>). A narration playing when the visitor starts talking is paused, the panel says so,
-    /// and it goes on when the conversation ends. By the hearth guide the button is silent, since the guide's own screen
-    /// takes the questions there. Recordings, transcripts and answers live in memory only; nothing is stored or logged.
+    /// and it goes on when the conversation ends. In the hearth, where the companion waits at the door, the button is
+    /// silent: the hearth guide takes the questions there. Recordings, transcripts and answers live in memory only; nothing is stored or logged.
     /// </summary>
     public sealed class MuseumCompanionVoice : MonoBehaviour
     {
@@ -44,6 +44,7 @@ namespace MusiyoBetsknate.Museum
         public const float AnswerLingerSeconds = 8;
 
         private MuseumInteraction interaction;
+        private MuseumCompanion companion;
         private MuseumVisitFlow flow;
         private TourRuntime runtime;
         private TourLoader loader;
@@ -86,6 +87,7 @@ namespace MusiyoBetsknate.Museum
         public bool Listens => voice != null && voice.CapabilityState == VoiceCapabilityState.Ready && voice.Capabilities.Listens && Recorder.Available;
         /// <summary>The visit is in free exploration, not in a menu, paused, at the hearth guide or examining a piece.</summary>
         public bool CanAsk => interaction != null && (flow == null || flow.Phase == VisitPhase.Exploring && !flow.BlocksInput)
+            && (companion == null || !companion.Waiting)
             && interaction.State != InteractionState.Paused && interaction.State != InteractionState.GuideQuestion
             && interaction.State != InteractionState.ModelExamination && interaction.State != InteractionState.Reading;
         public event Action Changed;
@@ -98,6 +100,7 @@ namespace MusiyoBetsknate.Museum
             interaction = FindAnyObjectByType<MuseumInteraction>();
             if (interaction == null) return;
             connected = true;
+            companion = GetComponent<MuseumCompanion>();
             flow = interaction.GetComponent<MuseumVisitFlow>();
             runtime = interaction.GetComponent<TourRuntime>();
             loader = interaction.GetComponent<TourLoader>();
@@ -148,6 +151,8 @@ namespace MusiyoBetsknate.Museum
             question.Poll();
             if (voice.CapabilityState == VoiceCapabilityState.Unknown && QuestionsOffered && flow != null && flow.Phase == VisitPhase.Exploring)
                 voice.LoadCapabilities();
+            // Walking into the hearth, where the companion waits outside, ends a conversation with it.
+            if (Conversing && !CanAsk) End();
             ReadButton();
             if (Stage == CompanionVoiceStage.Permission && !Recorder.AwaitingPermission) StartRecording();
             // Reaching the longest allowed question ends the recording by itself, and it is sent as when stopped.

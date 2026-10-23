@@ -50,6 +50,7 @@ namespace MusiyoBetsknate.Museum
             ("narration_pause", "Visit/NarrationPause", null, true), ("narration_repeat", "Visit/NarrationRepeat", null, true),
             ("narration_mute", "Visit/NarrationMute", null, true), ("auto_tour", "Visit/AutoTour", null, true),
             ("ask_companion", "Visit/AskCompanion", null, true),
+            ("sit", "Visit/Sit", null, true),
             ("pause", "Common/Pause", null, true),
             ("back", "Common/Back", null, true), ("confirm", "Common/Confirm", null, false), ("next", "Common/Next", null, false)
         };

@@ -77,6 +77,8 @@ namespace MusiyoBetsknate.Museum
             }
         }
         public event Action Changed;
+        /// <summary>Keeps the guide within reach beyond its radius, as while the visitor sits on a bench of the hearth.</summary>
+        public Func<bool> KeepsInRange { get; set; }
         /// <summary>Raised when the visitor asks to write, so the conversation view can take the keyboard.</summary>
         public event Action TypingRequested;
 
@@ -139,6 +141,8 @@ namespace MusiyoBetsknate.Museum
             interaction.Changed += OnInteractionChanged;
             client.Changed += Notify;
             // The guide's own figure by the hearth, with its invitation; it opens the conversation when reached.
+            // Seats anywhere in the museum, and the hearth guide whose conversation begins on its benches.
+            if (GetComponent<MuseumSeating>() == null) gameObject.AddComponent<MuseumSeating>();
             if (GetComponent<MuseumHearthInterviewer>() == null) gameObject.AddComponent<MuseumHearthInterviewer>();
             var closing = GetComponent<MuseumClosingSurvey>();
             if (closing == null) closing = gameObject.AddComponent<MuseumClosingSurvey>();
@@ -182,7 +186,7 @@ namespace MusiyoBetsknate.Museum
                 var offset = anchor.transform.position - visitor.position;
                 offset.y = 0;
                 float radius = anchor.ActivationRadius + (Open ? MuseumExperienceConfiguration.Current.PointLeaveMargin : 0);
-                inRange = offset.sqrMagnitude <= radius * radius;
+                inRange = offset.sqrMagnitude <= radius * radius || KeepsInRange?.Invoke() == true;
             }
             if (inRange == InRange) return;
             InRange = inRange;
