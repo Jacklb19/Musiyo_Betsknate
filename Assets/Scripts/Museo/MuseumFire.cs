@@ -5,7 +5,7 @@ using UnityEngine.Rendering;
 namespace MusiyoBetsknate.Museum
 {
     /// <summary>
-    /// A living fire built in layers at its own position: a bed of glowing embers, animated flame tongues that tear into
+    /// A living fire built in layers at its own position: glowing coals in the ash, animated flame tongues that tear into
     /// wisps, a brighter core, sparks carried up on the heat and thin smoke, lit by a steady fire light and a smaller one
     /// that dances above the flames. Used by the hearth of the entry set and by the museum's own hearth. Its particle
     /// materials are built from noise by the editor (MuseumFireAssets); without them it builds nothing.
@@ -15,6 +15,10 @@ namespace MusiyoBetsknate.Museum
         public const string FlameMaterial = "EntryFireFlame", SmokeMaterial = "EntryFireSmoke", SparkMaterial = "EntryFireSpark";
         /// <summary>Delivered placeholder of the museum's hearth fire, replaced by a living fire at runtime.</summary>
         public const string MuseumPlaceholder = "Fogon_Fuego_Provisional";
+        /// <summary>Coals: dark with a deep orange glow that breathes with the flames, never white.</summary>
+        private static readonly Color CoalColor = new Color(.16f, .05f, .02f), CoalGlow = new Color(1.5f, .36f, .05f);
+        private MeshRenderer coals;
+        private MaterialPropertyBlock coalBlock;
         private Light steady;
         private Light dancing;
         private float seed;
@@ -58,14 +62,16 @@ namespace MusiyoBetsknate.Museum
         private void Build(float range)
         {
             seed = Random.value * 100;
-            var embers = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            embers.name = "EmberBed";
-            var solid = embers.GetComponent<Collider>();
-            if (Application.isPlaying) Destroy(solid); else DestroyImmediate(solid);
+            // Glowing coals lying in the ash under the flames, and their light on the ash around them.
+            var embers = new GameObject("EmberBed", typeof(MeshFilter), typeof(MeshRenderer));
             embers.transform.SetParent(transform, false);
-            embers.transform.localPosition = Vector3.up * .03f;
-            embers.transform.localScale = new Vector3(.5f, .07f, .5f);
-            Paint(embers.GetComponent<MeshRenderer>(), "M_Fuego", new Color(1f, .35f, .08f));
+            embers.GetComponent<MeshFilter>().sharedMesh = MuseumFirePit.Embers(new System.Random(7));
+            coals = embers.GetComponent<MeshRenderer>();
+            coals.sharedMaterial = PlainMaterial();
+            Paint(coals, "M_Fuego", new Color(1f, .35f, .08f));
+            Glow(.5f);
+            MuseumFirePit.Patch(transform, "EmberGlow", Vector3.up * .014f, .75f, Resources.Load<Material>(MuseumEntryBackdrop.GlowMaterial),
+                new Color(1f, .42f, .12f, .55f));
             steady = Light("FireLight", new Color(1f, .58f, .28f), range, 1.6f, Vector3.up * .75f);
             dancing = Light("FireFlicker", new Color(1f, .76f, .42f), range * .5f, .8f, Vector3.up * .6f);
             Tongues("Flames", .17f, new ParticleSystem.MinMaxCurve(.75f, 1.15f), 34, new Color(1f, .58f, .2f), .7f, 1.1f);
@@ -81,10 +87,20 @@ namespace MusiyoBetsknate.Museum
             float flicker = .6f * Mathf.PerlinNoise(time * 3.1f, .3f) + .25f * Mathf.PerlinNoise(time * 11f, 4.1f);
             steady.intensity = 1.3f + flicker;
             Level = Mathf.Clamp01(flicker / .85f);
+            Glow(Level);
             // The smaller light dances above the flames, so the light seems to move as fire does.
             dancing.intensity = .5f + .7f * Mathf.PerlinNoise(time * 7.3f, 9.2f);
             dancing.transform.localPosition = new Vector3((Mathf.PerlinNoise(time * 2.3f, 1) - .5f) * .25f,
                 .55f + Mathf.PerlinNoise(time * 3.7f, 2) * .25f, (Mathf.PerlinNoise(time * 2.9f, 3) - .5f) * .25f);
+        }
+
+        private void Glow(float level)
+        {
+            if (coals == null || coals.sharedMaterial == null || !coals.sharedMaterial.HasProperty("_EmissionColor")) return;
+            coalBlock ??= new MaterialPropertyBlock();
+            coalBlock.SetColor("_BaseColor", CoalColor);
+            coalBlock.SetColor("_EmissionColor", CoalGlow * (.75f + .35f * level));
+            coals.SetPropertyBlock(coalBlock);
         }
 
         private Light Light(string name, Color color, float range, float intensity, Vector3 offset)
@@ -172,8 +188,9 @@ namespace MusiyoBetsknate.Museum
             main.loop = true;
             main.prewarm = true;
             main.useUnscaledTime = true;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(1.2f, 2.6f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(.5f, 1.2f);
+            // Short flights: a spark cools within a metre or so of the flames instead of hanging high in the dark.
+            main.startLifetime = new ParticleSystem.MinMaxCurve(.7f, 1.6f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(.45f, 1f);
             main.startSize = new ParticleSystem.MinMaxCurve(.012f, .028f);
             main.startColor = new Color(1f, .7f, .3f);
             main.simulationSpace = ParticleSystemSimulationSpace.Local;
@@ -241,6 +258,15 @@ namespace MusiyoBetsknate.Museum
             noise.frequency = .5f;
             noise.scrollSpeed = .3f;
             system.Play();
+        }
+
+        /// <summary>The render pipeline's default material, the one a primitive gets, for meshes built here.</summary>
+        private static Material PlainMaterial()
+        {
+            var probe = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            var material = probe.GetComponent<MeshRenderer>().sharedMaterial;
+            if (Application.isPlaying) Destroy(probe); else DestroyImmediate(probe);
+            return material;
         }
 
         /// <summary>Uses a material of the delivered museum when the scene has it, and a plain one otherwise.</summary>
