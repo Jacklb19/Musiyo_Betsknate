@@ -96,6 +96,13 @@ namespace MusiyoBetsknate.Museum
             model = interaction.GetComponent<MuseumModelPresenter>();
             if (model == null) model = interaction.gameObject.AddComponent<MuseumModelPresenter>();
             if (visitor != null) model.Configure(visitor.GetComponentInChildren<Camera>(), visitor.transform);
+            // The masks and the Castle stand on their pedestals from the start of the visit (owner, 22/10/2026).
+            model.PreloadMode = MuseumExperienceConfiguration.Current.ModelPreload;
+            // A steady light on the floor marks each point, instead of the coloured spheres over the pedestals.
+            if (interaction.GetComponent<MuseumPointGlow>() == null) interaction.gameObject.AddComponent<MuseumPointGlow>();
+            var frames = interaction.GetComponent<MuseumFrameLog>();
+            if (frames == null) frames = interaction.gameObject.AddComponent<MuseumFrameLog>();
+            frames.Configure(visitor != null ? visitor.transform : null);
             // The texts made from the panel text below share its larger reading size.
             panelText.fontSize = MuseumLecternDisplay.TextSize;
             CreateModelInterface();

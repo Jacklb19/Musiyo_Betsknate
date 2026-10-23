@@ -72,6 +72,12 @@ namespace MusiyoBetsknate.Museum
         /// <summary>Downloaded pieces kept in memory, so switching between two pieces does not download them again.</summary>
         [JsonProperty("model_cache_entries")] public int ModelCacheEntries;
         [JsonProperty("model_cache_bytes")] public int ModelCacheBytes;
+        /// <summary>
+        /// When the pieces of the points are brought: "visit" all at the start of the visit, "room" those of each room as
+        /// the visitor enters it (the fallback if the headset cannot hold its frame rate with all of them), "off" only
+        /// the piece of the record being read.
+        /// </summary>
+        [JsonProperty("model_preload")] public string ModelPreload;
         /// <summary>Seconds a released piece takes to glide back to its exhibition pose.</summary>
         [JsonProperty("grab_return_seconds")] public float GrabReturnSeconds;
         /// <summary>On a desktop, how far in front of the eyes a held piece floats, in metres.</summary>
@@ -139,6 +145,7 @@ namespace MusiyoBetsknate.Museum
                 || Array.Exists(result.ServiceRetrySeconds, wait => !Finite(wait) || wait < 1 || wait > 600)
                 || !Positive(result.ModelLoadFrameBudgetMs) || result.ModelLoadFrameBudgetMs > 20
                 || result.ModelCacheEntries < 0 || result.ModelCacheEntries > 4 || result.ModelCacheBytes < 0
+                || result.ModelPreload != "visit" && result.ModelPreload != "room" && result.ModelPreload != "off"
                 || !Positive(result.GrabReturnSeconds) || result.GrabReturnSeconds > 3
                 || !Positive(result.GrabDesktopDistance) || !Positive(result.GrabDesktopReach)
                 || result.GrabDesktopReach < result.GrabDesktopDistance || !Positive(result.GrabDesktopRotation)

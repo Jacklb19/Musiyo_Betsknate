@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +15,14 @@ namespace MusiyoBetsknate.Museum
 {
     public enum ModelLoadState { Idle, Loading, Ready, Unavailable }
 
+    /// <summary>
+    /// Brings the published pieces into the museum. From the start of the visit each point's first piece (the masks, the
+    /// Castle) stands on its pedestal, loaded one after another within a small share of each frame (owner, 22/10/2026):
+    /// these are the resident pieces. The piece of the record being read is the one on show; it is the resident piece
+    /// of its point when it is that one, and otherwise it is brought on demand and stands in the resident's place
+    /// meanwhile. Pieces without a natural size turn their face toward the visitor at their point, and toward their
+    /// reading stand otherwise.
+    /// </summary>
     [RequireComponent(typeof(MuseumInteraction), typeof(TourLoader))]
     public sealed class MuseumModelPresenter : MonoBehaviour
     {
@@ -43,8 +52,18 @@ namespace MusiyoBetsknate.Museum
             /// <summary>When to ask the service again for access, before it runs out while the piece is on show.</summary>
             public DateTimeOffset RenewAt;
             public bool Renewing;
+            /// <summary>Stands on its pedestal for the whole visit, whether or not it is the piece being read.</summary>
+            public bool Resident;
+            /// <summary>Description of the piece for those who cannot see it, from its resource.</summary>
+            public string Alternative;
+            /// <summary>Compass angle the piece's face is turned to, once known.</summary>
+            public float Yaw;
+            public bool YawSet;
+            private bool cancelled;
             public void Cancel()
             {
+                if (cancelled) return;
+                cancelled = true;
                 Cancellation.Cancel();
                 Request?.Abort();
                 if (Pivot != null)
@@ -74,6 +93,34 @@ namespace MusiyoBetsknate.Museum
         private ModelByteCache cache;
         private ModelLoadTimeline observed;
         private float observeUntil;
+        private readonly Dictionary<string, LoadSession> residents = new Dictionary<string, LoadSession>();
+        private readonly List<(TourPoint point, string slug)> preloadQueue = new List<(TourPoint, string)>();
+        private LoadSession preloading;
+        private RoomAnchor preloadedRoom;
+        private bool preloadPlanned, preloadReported;
+        private PointLectern[] stands;
+        /// <summary>Seconds a piece takes to turn its face toward the visitor.</summary>
+        public const float FacingSeconds = .8f;
+        /// <summary>Beyond the point's radius, how far away the visitor is still looked at, in metres.</summary>
+        public const float FacingReach = 2.5f;
+        /// <summary>
+        /// When the pieces of the points are brought: "visit" all at the start of the visit, "room" those of the room the
+        /// visitor enters, "off" only the piece being read. The museum sets it from its configuration.
+        /// </summary>
+        public string PreloadMode { get; set; } = "off";
+        /// <summary>Resident pieces standing ready on their pedestals.</summary>
+        public int ResidentCount => residents.Values.Count(resident => resident.Ready);
+        /// <summary>Whether the resident piece of a point is ready, and which one it is.</summary>
+        public bool TryResident(TourPoint point, out string slug, out Transform model)
+        {
+            slug = null; model = null;
+            if (point == null || !residents.TryGetValue(point.Anchor.Key, out var resident) || !resident.Ready || resident.Pivot == null) return false;
+            slug = resident.Slug;
+            model = resident.Pivot.transform;
+            return true;
+        }
+        /// <summary>Loads of the resident pieces, measured on this device: bytes, triangles, memory and longest frame.</summary>
+        public IReadOnlyList<ModelLoadTimeline> ResidentTimelines => residents.Values.Select(resident => resident.Timeline).ToList();
         /// <summary>Changing piece within the same point waits this long before asking for the model, so quick changes never pile up requests.</summary>
         public const float SwitchSettleSeconds = .25f;
         /// <summary>A model that appears grows in from slightly smaller over this time.</summary>
@@ -147,12 +194,24 @@ namespace MusiyoBetsknate.Museum
             interaction.Changed -= OnInteractionChanged;
             interaction.Runtime.Changed -= OnTourChanged;
             Release();
+            DropResidents();
             attemptedKey = null;
         }
 
-        private void OnTourChanged() { Release(); attemptedKey = null; }
+        private void OnTourChanged()
+        {
+            Release();
+            DropResidents();
+            attemptedKey = null;
+            preloadPlanned = preloadReported = false;
+            preloadedRoom = null;
+        }
         private void OnInteractionChanged()
         {
+            // Once the visitor leaves the point's records, a piece brought for one of them gives the pedestal back to the
+            // point's resident piece.
+            if (interaction.State == InteractionState.Exploration && session != null && !session.Resident && session.Point != null
+                && residents.ContainsKey(session.Point.Anchor.Key)) { Release(); attemptedKey = null; }
             var selected = interaction.SelectedElement;
             if (selected != null && interaction.State != InteractionState.Paused)
             {
@@ -213,6 +272,12 @@ namespace MusiyoBetsknate.Museum
                 }
             }
             var currentRoom = visitor != null ? roomAnchors.FirstOrDefault(room => room.Contains(visitor.position)) : null;
+            Preload(currentRoom);
+            // The frames while a resident piece loads are measured, as those of the piece on show are.
+            preloading?.Timeline.ObserveFrame(Time.unscaledDeltaTime);
+            KeepResidents();
+            foreach (var resident in residents.Values) if (resident != session) Face(resident, Time.unscaledDeltaTime, false);
+            if (session != null && interaction.State != InteractionState.ModelExamination) Face(session, Time.unscaledDeltaTime, true);
             if (switchSlug != null && Time.realtimeSinceStartup >= switchAt)
             {
                 var settled = switchSlug;
@@ -297,34 +362,165 @@ namespace MusiyoBetsknate.Museum
             var parent = mount != null ? mount.transform : session.Point.Anchor.LookTarget;
             var fit = mount != null ? mount.ScaleFor(session.Size, session.NaturalScale) : Vector3.one;
             position = parent.TransformPoint(mount != null ? Vector3.up * (session.Size.y * fit.y * .5f) : Vector3.zero);
-            rotation = parent.rotation;
+            rotation = Turns(session, mount) ? Quaternion.Euler(0, session.Yaw, 0) : parent.rotation;
             localScale = fit;
             return true;
         }
 
-        private void UpdatePose()
+        /// <summary>A piece turns to the visitor unless it stands at its natural size, like the Castle built into the courtyard.</summary>
+        private static bool Turns(LoadSession piece, PointExhibitMount mount) => piece.YawSet && (mount == null || !mount.KeepNaturalScale);
+
+        /// <summary>
+        /// Turns a piece's face toward the visitor at its point, and toward the reading spot of its stand otherwise. The
+        /// face of an imported piece is its -Z side: the side the examination shows to the camera.
+        /// </summary>
+        private void Face(LoadSession piece, float elapsed, bool active)
         {
-            if (session?.Pivot == null || !session.Ready) return;
-            var pivot = session.Pivot.transform;
-            bool examining = interaction.State == InteractionState.ModelExamination;
-            if (studyLight != null) studyLight.enabled = examining;
+            if (piece?.Pivot == null || !piece.Ready || piece.Point == null) return;
+            var anchor = piece.Point.Anchor;
+            var centre = anchor.LookTarget.position;
+            var eye = viewCamera != null ? viewCamera.transform.position : visitor != null ? visitor.position : centre;
+            Vector3 toward;
+            if ((viewCamera != null || visitor != null) && anchor.DistanceTo(eye) <= anchor.ActivationRadius + FacingReach) toward = eye - centre;
+            else
+            {
+                stands ??= FindObjectsByType<PointLectern>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+                var stand = stands.FirstOrDefault(candidate => candidate != null && candidate.Point == anchor);
+                if (stand == null) return;
+                toward = stand.ViewingSpot(1.5f) - centre;
+            }
+            toward.y = 0;
+            if (toward.sqrMagnitude < .0001f) return;
+            float target = Mathf.Atan2(-toward.x, -toward.z) * Mathf.Rad2Deg;
+            piece.Yaw = piece.YawSet ? Mathf.LerpAngle(piece.Yaw, target, 1 - Mathf.Exp(-Mathf.Max(0, elapsed) / FacingSeconds)) : target;
+            piece.YawSet = true;
+            Place(piece, active);
+        }
+
+        private void UpdatePose() => Place(session, true);
+
+        /// <summary>
+        /// Places a piece: in the visitor's view while it is examined, otherwise standing on its pedestal's mount or
+        /// floating at its point, turned as <see cref="Face"/> decided. Only the piece being read can be examined or held.
+        /// </summary>
+        private void Place(LoadSession piece, bool active)
+        {
+            if (piece?.Pivot == null || !piece.Ready) return;
+            var pivot = piece.Pivot.transform;
+            bool examining = active && interaction.State == InteractionState.ModelExamination;
+            if (active && studyLight != null) studyLight.enabled = examining;
             // Pause keeps the model at its last examination pose.
-            if (interaction.State == InteractionState.Paused) return;
+            if (active && interaction.State == InteractionState.Paused) return;
             // A piece in the visitor's hand, or on its way back, is placed by whoever holds it.
-            if (PoseHeld && !examining) return;
+            if (active && PoseHeld && !examining) return;
             // A pedestal with a mount carries the model standing on it; elsewhere it floats at the point.
-            var mount = examining ? null : session.Point.Anchor.GetComponentInChildren<PointExhibitMount>();
-            var parent = examining ? viewCamera.transform : mount != null ? mount.transform : session.Point.Anchor.LookTarget;
+            var mount = examining ? null : piece.Point.Anchor.GetComponentInChildren<PointExhibitMount>();
+            var parent = examining ? viewCamera.transform : mount != null ? mount.transform : piece.Point.Anchor.LookTarget;
             if (pivot.parent != parent) pivot.SetParent(parent, false);
-            float reveal = Mathf.SmoothStep(.85f, 1, Mathf.Clamp01((Time.realtimeSinceStartup - session.ReadyAt) / RevealSeconds));
-            var fit = mount != null ? mount.ScaleFor(session.Size, session.NaturalScale) : Vector3.one;
+            float reveal = Mathf.SmoothStep(.85f, 1, Mathf.Clamp01((Time.realtimeSinceStartup - piece.ReadyAt) / RevealSeconds));
+            var fit = mount != null ? mount.ScaleFor(piece.Size, piece.NaturalScale) : Vector3.one;
             pivot.localPosition = examining ? Vector3.forward * pose.Distance
-                : mount != null ? Vector3.up * (session.Size.y * fit.y * reveal * .5f) : Vector3.zero;
+                : mount != null ? Vector3.up * (piece.Size.y * fit.y * reveal * .5f) : Vector3.zero;
             pivot.localRotation = examining ? pose.Rotation : Quaternion.identity;
-            pivot.localScale = examining ? Vector3.one * session.ExaminationScale : fit * reveal;
-            int examinationLayer = LayerMask.NameToLayer("ModelExamination");
-            foreach (var item in session.Nodes)
-                item.gameObject.layer = examining && examinationLayer >= 0 ? examinationLayer : 0;
+            if (!examining && Turns(piece, mount)) pivot.rotation = Quaternion.Euler(0, piece.Yaw, 0);
+            pivot.localScale = examining ? Vector3.one * piece.ExaminationScale : fit * reveal;
+            int layer = examining ? LayerMask.NameToLayer("ModelExamination") : 0;
+            if (layer < 0) layer = 0;
+            if (piece.Nodes != null && piece.Nodes.Length > 0 && piece.Nodes[0] != null && piece.Nodes[0].gameObject.layer == layer
+                && piece.Nodes[piece.Nodes.Length - 1] != null && piece.Nodes[piece.Nodes.Length - 1].gameObject.layer == layer) return;
+            foreach (var item in piece.Nodes) item.gameObject.layer = layer;
+        }
+
+        /// <summary>
+        /// Plans and starts the loads of the resident pieces, one at a time: all of them at the start of the visit, or
+        /// those of each room as the visitor enters it.
+        /// </summary>
+        private void Preload(RoomAnchor currentRoom)
+        {
+            if (PreloadMode != "visit" && PreloadMode != "room" || interaction.Runtime.Contract == null || !isActiveAndEnabled) return;
+            if (!preloadPlanned || PreloadMode == "room" && currentRoom != null && currentRoom != preloadedRoom)
+            {
+                preloadPlanned = true;
+                preloadedRoom = currentRoom;
+                foreach (var point in interaction.Runtime.OrderedPoints)
+                {
+                    var piece = FirstPiece(point);
+                    if (piece == null || residents.ContainsKey(point.Anchor.Key) || preloadQueue.Any(item => item.point == point)) continue;
+                    if (PreloadMode == "room" && (currentRoom == null || point.GetComponentInParent<RoomAnchor>() != currentRoom)) continue;
+                    preloadQueue.Add((point, piece.slug));
+                }
+                // A piece built into the room at its natural size, like the Castle, comes first: it is what the visitor
+                // sees on entering the room, and it is light.
+                var first = preloadQueue.Where(item => item.point != null && item.point.Anchor.GetComponentInChildren<PointExhibitMount>() is PointExhibitMount mount
+                    && mount.KeepNaturalScale).ToList();
+                preloadQueue.RemoveAll(item => first.Contains(item));
+                preloadQueue.InsertRange(0, first);
+            }
+            if (preloading != null) return;
+            while (preloadQueue.Count > 0)
+            {
+                var (point, slug) = preloadQueue[0];
+                preloadQueue.RemoveAt(0);
+                if (point == null || residents.ContainsKey(point.Anchor.Key)) continue;
+                // The piece of the point being read is brought for the visitor right now; it is not loaded twice.
+                if (session != null && session.Point == point && session.Slug == slug) continue;
+                var pending = new LoadSession { Point = point, Slug = slug, Resident = true, Deadline = Time.realtimeSinceStartup + 90,
+                    Timeline = new ModelLoadTimeline(slug, Profile) };
+                pending.Timeline.MemoryBefore = UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong();
+                residents[point.Anchor.Key] = pending;
+                preloading = pending;
+                RequestCount++;
+                Load(pending);
+                return;
+            }
+            if (!preloadReported && residents.Count > 0 && residents.Values.All(resident => resident.Ready))
+            {
+                preloadReported = true;
+                Debug.Log(ResidentSummary());
+            }
+        }
+
+        /// <summary>One line on the resident pieces for the device log: how many, their bytes, triangles and memory.</summary>
+        public string ResidentSummary()
+        {
+            var ready = residents.Values.Where(resident => resident.Ready).ToList();
+            return System.FormattableString.Invariant($"Resident pieces on {Profile}: {ready.Count} ({string.Join(", ", ready.Select(resident => resident.Slug))}), ")
+                + System.FormattableString.Invariant($"{ready.Sum(resident => resident.Timeline.Bytes) / 1048576.0:F1} MB downloaded, {ready.Sum(resident => resident.Timeline.Triangles)} triangles, ")
+                + System.FormattableString.Invariant($"memory +{ready.Sum(resident => Math.Max(0, resident.Timeline.MemoryAfter - resident.Timeline.MemoryBefore)) / 1048576.0:F1} MB, ")
+                + System.FormattableString.Invariant($"longest load frame {ready.Max(resident => resident.Timeline.WorstFrameMilliseconds):F1} ms.");
+        }
+
+        /// <summary>Asks again for access to the resident pieces before it runs out, and takes away those that ran out.</summary>
+        private void KeepResidents()
+        {
+            var now = DateTimeOffset.UtcNow;
+            foreach (var resident in residents.Values.ToList())
+            {
+                if (resident == session || !resident.Ready) continue;
+                if (now >= resident.Expiration) DropResident(resident);
+                else if (!resident.Renewing && now >= resident.RenewAt) Renew(resident);
+            }
+        }
+
+        /// <summary>Whether a load or a renewal still concerns a piece in use.</summary>
+        private bool Live(LoadSession piece)
+            => piece != null && (session == piece || piece.Resident && residents.TryGetValue(piece.Point.Anchor.Key, out var resident) && resident == piece);
+
+        private void DropResident(LoadSession resident)
+        {
+            if (resident == null) return;
+            if (residents.TryGetValue(resident.Point.Anchor.Key, out var current) && current == resident) residents.Remove(resident.Point.Anchor.Key);
+            if (preloading == resident) preloading = null;
+            if (session == resident) { session = null; attemptedKey = null; }
+            resident.Cancel();
+        }
+
+        private void DropResidents()
+        {
+            foreach (var resident in residents.Values.ToList()) DropResident(resident);
+            residents.Clear();
+            preloadQueue.Clear();
+            preloading = null;
         }
 
         private void RequestModel(TourPoint point, string slug)
@@ -334,6 +530,24 @@ namespace MusiyoBetsknate.Museum
             if (attemptedKey == key) return;
             Release();
             attemptedKey = key;
+            if (residents.TryGetValue(point.Anchor.Key, out var resident))
+            {
+                if (resident.Slug == slug)
+                {
+                    // The point's resident piece is already on its pedestal, or on its way: it becomes the piece on show.
+                    session = resident;
+                    resident.VisitorRoom = visitor != null ? roomAnchors.FirstOrDefault(room => room.Contains(visitor.position)) : null;
+                    if (resident.Pivot != null) resident.Pivot.SetActive(true);
+                    if (!resident.Ready) { SetState(ModelLoadState.Loading, MuseumInterfaceText.Get("model_loading")); return; }
+                    Progress = 1;
+                    Attribution = resident.Alternative ?? "";
+                    UpdatePose();
+                    SetState(ModelLoadState.Ready, MuseumInterfaceText.Get("model_ready"));
+                    return;
+                }
+                // Another piece of the point is brought; the resident one steps aside meanwhile.
+                if (resident.Pivot != null) resident.Pivot.SetActive(false);
+            }
             var pending = new LoadSession { Point = point, Slug = slug, Deadline = Time.realtimeSinceStartup + 60,
                 VisitorRoom = visitor != null ? roomAnchors.FirstOrDefault(room => room.Contains(visitor.position)) : null,
                 Timeline = new ModelLoadTimeline(slug, Profile) };
@@ -416,7 +630,7 @@ namespace MusiyoBetsknate.Museum
                 timeline.Triangles = triangles;
                 timeline.End();
                 pending.Cancellation.Token.ThrowIfCancellationRequested();
-                if (session != pending || this == null || !isActiveAndEnabled) return;
+                if (this == null || !isActiveAndEnabled || !Live(pending)) return;
                 pending.Expiration = DateTimeOffset.Parse(access.expires_at, System.Globalization.CultureInfo.InvariantCulture);
                 pending.ResourceId = id;
                 pending.Sha256 = access.sha256;
@@ -430,13 +644,24 @@ namespace MusiyoBetsknate.Museum
                 pending.NaturalScale = 1 / content.transform.localScale.x;
                 pending.ReadyAt = Time.realtimeSinceStartup;
                 pending.Ready = retained = true;
-                Progress = 1;
-                Attribution = string.Join("\n", new[] { resource.alternative_text,
-                    string.IsNullOrEmpty(resource.credit) ? null : MuseumInterfaceText.Format("narration_credit", resource.credit),
-                    string.IsNullOrEmpty(resource.provenance) ? null : MuseumInterfaceText.Format("narration_provenance", resource.provenance) }.Where(value => !string.IsNullOrEmpty(value)));
-                UpdatePose();
+                pending.Alternative = resource.alternative_text;
                 timeline.MemoryAfter = UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong();
                 timeline.Outcome = "ready";
+                if (session != pending)
+                {
+                    // A resident piece stands on its pedestal; the piece of another record of its point may be on show.
+                    var shown = session != null && session.Point == pending.Point && session.Slug != pending.Slug;
+                    pending.Pivot.SetActive(!shown);
+                    Face(pending, 0, false);
+                    Place(pending, false);
+                    Debug.Log(timeline.ToString());
+                    return;
+                }
+                Progress = 1;
+                // The resource's credits and provenance notes are the closing credits' (owner, 22/10/2026).
+                Attribution = pending.Alternative ?? "";
+                Face(pending, 0, true);
+                UpdatePose();
                 // Keep watching frames for a moment: the first draws upload textures and may compile shaders.
                 observeUntil = Time.realtimeSinceStartup + 1;
                 SetState(ModelLoadState.Ready, MuseumInterfaceText.Get("model_ready"));
@@ -451,6 +676,7 @@ namespace MusiyoBetsknate.Museum
             }
             finally
             {
+                if (preloading == pending) preloading = null;
                 if (!retained)
                 {
                     if (pending.Pivot != null) Destroy(pending.Pivot);
@@ -458,6 +684,8 @@ namespace MusiyoBetsknate.Museum
                     pending.Dispose();
                     // Keep the target for an explicit retry, but never reuse a disposed token.
                     if (session == pending) session = null;
+                    if (pending.Resident && residents.TryGetValue(pending.Point.Anchor.Key, out var resident) && resident == pending)
+                        residents.Remove(pending.Point.Anchor.Key);
                 }
             }
         }
@@ -480,10 +708,10 @@ namespace MusiyoBetsknate.Museum
                     var operation = request.SendWebRequest();
                     while (!operation.isDone)
                     {
-                        if (session != current || this == null) { request.Abort(); return; }
+                        if (this == null || !Live(current)) { request.Abort(); return; }
                         await Task.Yield();
                     }
-                    if (session != current || this == null) return;
+                    if (this == null || !Live(current)) return;
                     var now = DateTimeOffset.UtcNow;
                     if (request.result == UnityWebRequest.Result.Success
                         && ModelResourcePolicy.TryAccess(api, request.downloadHandler.text, Profile, now, out var access, out _)
@@ -495,7 +723,12 @@ namespace MusiyoBetsknate.Museum
                     }
                     if (request.result == UnityWebRequest.Result.Success
                         || request.result == UnityWebRequest.Result.ProtocolError && request.responseCode < 500)
-                    { Fail(MuseumInterfaceText.Get("model_expired")); return; }
+                    {
+                        // A piece no longer granted leaves, as revocation must: the one on show and, if resident, its pedestal.
+                        if (session == current) Fail(MuseumInterfaceText.Get("model_expired"));
+                        else DropResident(current);
+                        return;
+                    }
                     current.RenewAt = now.AddSeconds(ModelResourcePolicy.RenewRetrySeconds);
                 }
             }
@@ -538,7 +771,7 @@ namespace MusiyoBetsknate.Museum
                     {
                         if (request.downloadedBytes > (ulong)ModelResourcePolicy.ByteLimit(Profile))
                         { request.Abort(); throw new InvalidOperationException(); }
-                        Progress = request.downloadProgress;
+                        if (session == pending) Progress = request.downloadProgress;
                     }
                     await Task.Yield();
                 }
@@ -565,14 +798,32 @@ namespace MusiyoBetsknate.Museum
         }
         private void Fail(string status)
         {
+            var failing = session;
             Release();
+            // A resident piece that failed or ran out leaves its pedestal too.
+            if (failing != null && failing.Resident) DropResident(failing);
             SetState(ModelLoadState.Unavailable, status);
         }
         public void Release()
         {
             var previous = session;
             session = null;
-            previous?.Cancel();
+            if (previous != null && Live(previous))
+            {
+                // A resident piece stays on its pedestal when it stops being the piece on show.
+                if (previous.Pivot != null) previous.Pivot.SetActive(true);
+                Place(previous, false);
+            }
+            else
+            {
+                previous?.Cancel();
+                // The point's resident piece comes back to its pedestal.
+                if (previous?.Point != null && residents.TryGetValue(previous.Point.Anchor.Key, out var resident) && resident.Pivot != null)
+                {
+                    resident.Pivot.SetActive(true);
+                    Place(resident, false);
+                }
+            }
             PoseHeld = false;
             if (studyLight != null) studyLight.enabled = false;
             interaction?.CancelModel();
