@@ -13,6 +13,13 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("schema_version")] public int SchemaVersion;
         [JsonProperty("menu_distance")] public float MenuDistance;
         [JsonProperty("menu_width")] public float MenuWidth;
+        /// <summary>Width of a menu page in the headset, in metres at the menu's distance.</summary>
+        [JsonProperty("menu_page_width")] public float MenuPageWidth;
+        /// <summary>
+        /// How far to the left of the gaze the middle of a menu page stands, in metres at the menu's distance, so the world
+        /// (the fire of the title menu) stays in view on the right, as in a game.
+        /// </summary>
+        [JsonProperty("menu_side_offset")] public float MenuSideOffset;
         /// <summary>Seconds the head must hold still before a menu that opens is placed in front of it.</summary>
         [JsonProperty("menu_settle_seconds")] public float MenuSettleSeconds;
         /// <summary>Head turning slower than this, in degrees per second, counts as holding still.</summary>
@@ -62,6 +69,7 @@ namespace MusiyoBetsknate.Museum
             var value = JsonConvert.DeserializeObject<MuseumXrConfiguration>(json);
             if (value == null || value.SchemaVersion != Version || !Range(value.MenuDistance, 1, 3)
                 || !Range(value.MenuWidth, .8f, 2) || !Range(value.RayLength, 2, 10)
+                || !Range(value.MenuPageWidth, .6f, 1.6f) || !Range(value.MenuSideOffset, 0, 1.2f)
                 || !Range(value.MenuSettleSeconds, 0, 1) || !Range(value.MenuSettleTurnSpeed, 5, 360)
                 || !Range(value.MenuPlacementTimeout, Mathf.Max(.1f, value.MenuSettleSeconds), 5)
                 || !Range(value.WalkSpeed, .2f, 2) || !Range(value.RunSpeed, value.WalkSpeed, 4)

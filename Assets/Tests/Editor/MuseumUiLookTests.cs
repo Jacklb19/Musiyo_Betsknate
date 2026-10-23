@@ -165,6 +165,37 @@ namespace MusiyoBetsknate.Tests
         }
 
         [Test]
+        public void InAHeadsetTheCardIsWiderAndStandsToTheLeftOfTheGaze()
+        {
+            using var fixture = new MenuFixture();
+            ((RectTransform)fixture.Canvas.transform).sizeDelta = new Vector2(1024, 900);
+            fixture.Look();
+            var layout = fixture.Menu.View.GetComponent<MuseumMenuLayout>();
+            layout.Spatial = true;
+            layout.Apply();
+            var centred = ((RectTransform)fixture.Menu.View.Settings.transform).rect.width;
+            layout.SpatialColumn = new Vector2(840, -440);
+            layout.Apply();
+            Assert.That(layout.Compact, Is.True, "A headset keeps the card the owner liked.");
+            foreach (var page in new[] { fixture.Menu.View.Pause, fixture.Menu.View.Settings, fixture.Menu.View.Controls })
+            {
+                var rect = (RectTransform)page.transform;
+                Assert.That(rect.pivot.x, Is.EqualTo(.5f));
+                Assert.That(rect.anchoredPosition.x, Is.EqualTo(-440).Within(.01f), page.name + " stands to the left.");
+                Assert.That(rect.rect.width, Is.EqualTo(840).Within(.01f), page.name + " takes the headset's width.");
+            }
+            Assert.That(840, Is.GreaterThan(centred), "The headset's card is wider than the one centred before.");
+            var main = fixture.Menu.View.Main.transform;
+            var frame = (RectTransform)(main.parent != fixture.Menu.View.Overlay.transform ? main.parent : main);
+            Assert.That(frame.anchoredPosition.x, Is.EqualTo(-440).Within(.01f));
+            // Without a headset the column on the left of a screen is unchanged.
+            layout.Spatial = false;
+            ((RectTransform)fixture.Canvas.transform).sizeDelta = new Vector2(1600, 900);
+            layout.Apply();
+            Assert.That(((RectTransform)fixture.Menu.View.Settings.transform).pivot.x, Is.EqualTo(0));
+        }
+
+        [Test]
         public void TheLookGivesEveryPageAColumnOnAScreenAndACardWhereItIsNarrow()
         {
             using var fixture = new MenuFixture();

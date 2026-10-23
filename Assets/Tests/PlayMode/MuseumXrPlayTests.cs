@@ -55,6 +55,8 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(host.MenuPlacementPending, Is.False);
                 Assert.That(canvas.enabled, Is.True, "The menu shows once it has its place.");
                 AssertInFront(camera.transform, menu.transform, "The first menu opens in front of the gaze, not of the scene.");
+                var main = menu.View.Main.transform;
+                AssertOnTheLeft(camera.transform, (RectTransform)(main.parent != menu.View.Overlay.transform ? main.parent : main));
                 var backdrop = flow.GetComponent<MuseumEntryBackdrop>();
                 if (backdrop != null && backdrop.Active)
                 {
@@ -121,6 +123,23 @@ namespace MusiyoBetsknate.Tests
             if (unloading != null) yield return unloading;
         }
 #endif
+
+        /// <summary>
+        /// The menu page stands to the left of the gaze and is wider than a screen's column, so the fire of the title menu
+        /// stays in view on the right (owner, 22/10).
+        /// </summary>
+        private static void AssertOnTheLeft(Transform eye, RectTransform page)
+        {
+            var corners = new Vector3[4];
+            page.GetWorldCorners(corners);
+            var look = Vector3.ProjectOnPlane(eye.forward, Vector3.up);
+            float Side(Vector3 point) => Vector3.SignedAngle(look, Vector3.ProjectOnPlane(point - eye.position, Vector3.up), Vector3.up);
+            var middle = (corners[0] + corners[2]) * .5f;
+            Assert.That(Side(middle), Is.LessThan(-10), "The middle of the menu stands to the left of the gaze.");
+            Assert.That(Side(corners[2]), Is.LessThan(2), "The right edge of the menu leaves the right of the view free.");
+            Assert.That(Side(corners[0]), Is.GreaterThan(-45), "The menu is read without turning the head far.");
+            Assert.That(Vector3.Distance(corners[1], corners[2]), Is.GreaterThan(1.05f), "The page is wider than the old 0.85 m card.");
+        }
 
         private static void AssertInFront(Transform eye, Transform menu, string message)
         {
