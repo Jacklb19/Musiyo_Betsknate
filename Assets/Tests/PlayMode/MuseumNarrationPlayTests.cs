@@ -25,6 +25,8 @@ namespace MusiyoBetsknate.Tests
     {
         private const string MuseumScene = "Assets/_Musiyo/Scenes/10_Museum_Blockout.unity";
         private const string Slug = "synthetic-narrated";
+        /// <summary>A second record of the same point with the same synthetic narration under its own slug.</summary>
+        private const string SecondSlug = "synthetic-narrated-second";
         private const string Transcript = "Audio sintético de prueba. Comprueba pausa, silencio y repetición. Sin contenido cultural.";
         private const string Subtitles = "WEBVTT\n\n00:00.000 --> 00:04.000\nAudio sintético de prueba.\n\n00:04.000 --> 00:08.000\nSin contenido cultural.\n";
         private HttpListener service;
@@ -70,6 +72,7 @@ namespace MusiyoBetsknate.Tests
             var audio = File.ReadAllBytes(Path.Combine(Application.dataPath, "Tests", "PlayMode", "Fixtures", "synthetic-narration.mp3"));
             var subtitles = Encoding.UTF8.GetBytes(Subtitles);
             var element = Encoding.UTF8.GetBytes(Element(audio.Length, subtitles.Length));
+            var second = Encoding.UTF8.GetBytes(Element(audio.Length, subtitles.Length).Replace("\"slug\": \"" + Slug + "\"", "\"slug\": \"" + SecondSlug + "\""));
             service = new HttpListener();
             service.Prefixes.Add("http://127.0.0.1:" + port + "/");
             service.Start();
@@ -86,6 +89,7 @@ namespace MusiyoBetsknate.Tests
                         var path = context.Request.Url.AbsolutePath;
                         byte[] body; string type; int status = 200;
                         if (path == "/api/v1/elements/" + Slug) { body = element; type = "application/json"; }
+                        else if (path == "/api/v1/elements/" + SecondSlug) { body = second; type = "application/json"; }
                         else if (path == "/api/v1/resources/synthetic-narration/access")
                         { body = Encoding.UTF8.GetBytes(Access("/files/narration.mp3", "audio/mpeg", audio.Length)); type = "application/json"; }
                         else if (path == "/api/v1/resources/synthetic-subtitles/access")
@@ -164,7 +168,7 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(narration.State, Is.EqualTo(NarrationState.Playing), narration.Status);
                 Assert.That(narration.Duration, Is.EqualTo(8).Within(.3f));
                 Assert.That(narration.Transcription, Is.EqualTo(Transcript));
-                Assert.That(narration.Attribution, Does.Contain("Tono sintético de prueba"));
+                Assert.That(narration.Attribution, Is.Empty, "The narration's credit and provenance belong to the closing credits.");
                 for (float waited = 0; narration.Subtitle != "Audio sintético de prueba." && waited < 5; waited += Time.unscaledDeltaTime) yield return null;
                 Assert.That(narration.Subtitle, Is.EqualTo("Audio sintético de prueba."), "The WebVTT cue in force is shown.");
 
@@ -176,8 +180,12 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(reading.ActiveCue, Is.EqualTo(0));
                 var transcriptText = UnityEngine.Object.FindObjectsByType<TMPro.TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None)
                     .First(text => text.name == "NarrationStatus");
-                Assert.That(transcriptText.text, Does.Contain(Transcript), "The transcription is shown literally, without markup.");
-                Assert.That(transcriptText.richText, Is.False, "Service text is never parsed as rich text.");
+                transcriptText.ForceMeshUpdate();
+                Assert.That(transcriptText.GetParsedText(), Does.Contain(Transcript), "The transcription is shown as published.");
+                Assert.That(transcriptText.text, Does.Contain("<noparse>Audio sintético de prueba.</noparse>"), "Service text is shown literally.");
+                Assert.That(transcriptText.text, Does.Contain(MuseumNarrationReading.MarkOpen), "The fragment being heard is marked.");
+                Assert.That(transcriptText.GetParsedText(), Does.Not.Contain("Tono sintético").And.Not.Contain("Generado para pruebas"),
+                    "No narration credit or provenance on the screen.");
                 var follow = UnityEngine.Object.FindObjectsByType<UnityEngine.UI.Button>(FindObjectsInactive.Include, FindObjectsSortMode.None)
                     .First(button => button.name == "FollowNarration");
                 Assert.That(follow.gameObject.activeSelf, Is.False, "Following needs no button while it follows.");
@@ -221,6 +229,47 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(narration.State, Is.EqualTo(NarrationState.Paused), "Pausing the visit pauses the narration.");
                 interaction.SetPaused(false);
                 Assert.That(narration.State, Is.EqualTo(NarrationState.Playing));
+
+                // Another record of the same point: the narration heard fades out and the new one is offered, not started.
+                Assert.That(runtime.Apply(new TourContractV1
+                {
+                    schema_version = 1, tour = new TourMetadataContractV1 { key = runtime.TourKey, name = "Test" },
+                    rooms = new[]
+                    {
+                        Room("room.arrival", 0), Room("room.welcome", 1), Room("room.characters", 2), Room("room.instruments", 3),
+                        Room("room.hearth", 4), Room("room.overlook", 5, new PointContractV1
+                        {
+                            key = "punto.mirador.creditos", name = "Créditos", order = 0, activation = new[] { "proximity", "keyboard" },
+                            elements = new[]
+                            {
+                                new ElementSummaryContractV1 { slug = Slug, title = "Elemento sintético", has_narration = true },
+                                new ElementSummaryContractV1 { slug = SecondSlug, title = "Segundo elemento sintético", has_narration = true },
+                            }
+                        }),
+                    },
+                }, out error), Is.True, error);
+                point = runtime.FindPoint("punto.mirador.creditos");
+                Assert.That(visitor.FocusPoint(point.Anchor), Is.True);
+                for (float waited = 0; (interaction.ActivePoint != point || narration.State != NarrationState.Playing) && waited < 20; waited += Time.unscaledDeltaTime) yield return null;
+                Assert.That(narration.State, Is.EqualTo(NarrationState.Playing), "Arriving at a point starts its narration.");
+                float before = narration.ContextSource.volume;
+                Assert.That(interaction.SelectElement(1), Is.True);
+                yield return null;
+                yield return null;
+                Assert.That(narration.Fading, Is.True, "The narration heard does not stop at once.");
+                Assert.That(narration.ContextSource.volume, Is.LessThan(before), "It fades out.");
+                for (float waited = 0; narration.State != NarrationState.Ready && waited < 20; waited += Time.unscaledDeltaTime) yield return null;
+                Assert.That(narration.State, Is.EqualTo(NarrationState.Ready), "The new record's narration is offered with its button.");
+                Assert.That(narration.NarratedSlug, Is.EqualTo(SecondSlug));
+                Assert.That(narration.ContextSource.isPlaying, Is.False);
+                Assert.That(narration.ContextSource.volume, Is.EqualTo(before).Within(.001f), "Its volume is the visitor's again.");
+                var toggle = UnityEngine.Object.FindObjectsByType<UnityEngine.UI.Button>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                    .First(button => button.name == "NarrationToggle");
+                yield return null;
+                Assert.That(toggle.GetComponentInChildren<TMPro.TMP_Text>().text, Does.StartWith("Escuchar"), "Its button invites to listen.");
+                narration.TogglePause();
+                Assert.That(narration.State, Is.EqualTo(NarrationState.Playing));
+                Assert.That(narration.PlaybackTime, Is.LessThan(.3f), "It starts from the beginning.");
             }
             finally
             {

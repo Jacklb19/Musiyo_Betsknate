@@ -86,12 +86,16 @@ namespace MusiyoBetsknate.Tests
             Assert.That(scroll.content.rect.height, Is.GreaterThan(viewportRect.rect.height * 3), "The fixture must scroll.");
             Assert.That(scroll.verticalNormalizedPosition, Is.EqualTo(1).Within(.01f), "The first fragment is at the top.");
 
-            int Start(int cue) => "Estado\n".Length + transcript.ToString().IndexOf(sentences[cue], System.StringComparison.Ordinal);
+            // Where a sentence starts in the screen's text, which wraps the published text and marks the heard fragment.
+            int Start(int cue) => text.text.IndexOf(sentences[cue] + "</noparse>", System.StringComparison.Ordinal);
             float follow = viewportRect.rect.height * MuseumExperienceConfiguration.Current.ReadingFollowLine;
             time = 61; // Fragment 30.
             yield return new WaitForSecondsRealtime(1.5f);
             Assert.That(reading.ActiveCue, Is.EqualTo(30));
             Assert.That(LineOffsetFromTop(scroll, text, Start(30)), Is.EqualTo(follow).Within(12), "The heard line sits at its reading height.");
+            Assert.That(reading.MarkedIndex, Is.EqualTo(Start(30)), "The heard fragment is the marked one.");
+            Assert.That(text.text, Does.Contain(MuseumNarrationReading.MarkOpen + "<noparse>" + sentences[30] + "</noparse>" + MuseumNarrationReading.MarkClose));
+            Assert.That(text.GetParsedText(), Does.Contain(sentences[29] + " " + sentences[30]), "The text reads as published.");
             Assert.That(resume.gameObject.activeSelf, Is.False);
 
             // The visitor scrolls by hand: following stops and the panel stays where they left it.
