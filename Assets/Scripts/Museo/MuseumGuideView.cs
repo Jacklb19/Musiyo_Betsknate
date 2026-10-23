@@ -176,17 +176,32 @@ namespace MusiyoBetsknate.Museum
             survey.Changed += Refresh;
         }
 
-        /// <summary>Large, wrapped captions: these choices are read and aimed at from a headset.</summary>
-        private static void Enlarge(Button choice)
+        /// <summary>
+        /// Large, wrapped captions at one size: these choices are read and aimed at from a headset. Auto-sizing inside the
+        /// screen's layout measured itself again every frame and the choices flickered on the headset (23/10/2026), so the
+        /// size is fixed and each choice is made tall enough for its words once, when they are set (<see cref="Fit"/>).
+        /// </summary>
+        private static void Enlarge(Button choice, float size = ChoiceFontSize)
         {
             var caption = choice.GetComponentInChildren<TMP_Text>();
             caption.richText = false;
             caption.textWrappingMode = TextWrappingModes.Normal;
-            caption.enableAutoSizing = true;
-            caption.fontSizeMin = 20;
-            caption.fontSizeMax = Mathf.Max(caption.fontSize, 28);
+            caption.enableAutoSizing = false;
+            caption.fontSize = size;
             caption.margin = new Vector4(10, 4, 10, 4);
-            if (choice.TryGetComponent<LayoutElement>(out var layout)) layout.preferredHeight = 84;
+            if (choice.TryGetComponent<LayoutElement>(out var layout)) layout.preferredHeight = ChoiceHeight;
+        }
+
+        private const float ChoiceFontSize = 26, ChoiceHeight = 84;
+
+        /// <summary>Makes a choice tall enough for its caption at the width of its column; never less than a large choice.</summary>
+        private static void Fit(Button choice)
+        {
+            if (!choice.TryGetComponent<LayoutElement>(out var layout)) return;
+            var caption = choice.GetComponentInChildren<TMP_Text>();
+            float width = choice.transform.parent is RectTransform column && column.rect.width > 1 ? column.rect.width : 520;
+            var size = caption.GetPreferredValues(caption.text, Mathf.Max(80, width - caption.margin.x - caption.margin.z - 16), 0);
+            layout.preferredHeight = Mathf.Max(ChoiceHeight, Mathf.Ceil(size.y + caption.margin.y + caption.margin.w + 16));
         }
 
         private bool Surveying => guide != null && guide.Open && survey != null && survey.Stage != ClosingSurveyStage.Off;
@@ -237,6 +252,7 @@ namespace MusiyoBetsknate.Museum
             var label = choice.GetComponentInChildren<TMP_Text>(true);
             foreach (var bound in choice.GetComponentsInChildren<MuseumInterfaceLabel>(true)) bound.enabled = string.IsNullOrWhiteSpace(published);
             label.text = string.IsNullOrWhiteSpace(published) ? MuseumInterfaceText.Get(catalogKey) : published;
+            Fit(choice);
         }
 
         private void ShowSurveyOptions(ClosingSurveyQuestion question)
@@ -267,6 +283,7 @@ namespace MusiyoBetsknate.Museum
                 option.onClick.AddListener(() => survey.Choose(chosen));
                 option.GetComponentInChildren<TMP_Text>().text = question.Options[index].Text;
                 option.gameObject.SetActive(true);
+                Fit(option);
                 shownSurveyOptions.Add(option);
             }
         }
@@ -548,15 +565,11 @@ namespace MusiyoBetsknate.Museum
                         option.name = "QuizOption";
                         option.onClick.RemoveAllListeners();
                         option.onClick.AddListener(() => quiz.Choose(chosenIndex));
-                        var caption = option.GetComponentInChildren<TMP_Text>();
-                        caption.richText = false;
-                        caption.textWrappingMode = TextWrappingModes.Normal;
-                        caption.enableAutoSizing = true;
-                        caption.fontSizeMin = 18;
-                        caption.fontSizeMax = caption.fontSize;
-                        caption.margin = new Vector4(8, 4, 8, 4);
-                        if (option.TryGetComponent<LayoutElement>(out var layout)) layout.preferredHeight = 84;
+                        Enlarge(option, option.GetComponentInChildren<TMP_Text>().fontSize);
+                        option.GetComponentInChildren<TMP_Text>().text = (quiz.Chosen == question.options[index].id
+                            ? MuseumInterfaceText.Get("quiz_chosen_mark") : "") + question.options[index].text;
                         option.gameObject.SetActive(true);
+                        Fit(option);
                         shownOptions.Add(option);
                     }
                 }

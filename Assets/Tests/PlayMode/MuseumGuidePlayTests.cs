@@ -242,6 +242,25 @@ namespace MusiyoBetsknate.Tests
             yield return null;
         }
 
+        /// <summary>
+        /// The choices on show keep their size and their captions' size from frame to frame: nothing re-measures itself
+        /// while the visitor reads (on the headset the choices flickered, 23/10/2026).
+        /// </summary>
+        private static IEnumerator AssertSteady(System.Collections.Generic.IReadOnlyList<UnityEngine.UI.Button> choices)
+        {
+            Assert.That(choices.Select(choice => choice.GetComponentInChildren<TMPro.TMP_Text>()).All(caption => !caption.enableAutoSizing), Is.True,
+                "No caption sizes itself to its box.");
+            // The screen lays the new choices out at the end of their first frames.
+            for (int frame = 0; frame < 3; frame++) yield return null;
+            var first = choices.Select(choice => (((RectTransform)choice.transform).rect.size, choice.GetComponentInChildren<TMPro.TMP_Text>().fontSize)).ToArray();
+            for (int frame = 0; frame < 15; frame++)
+            {
+                yield return null;
+                var now = choices.Select(choice => (((RectTransform)choice.transform).rect.size, choice.GetComponentInChildren<TMPro.TMP_Text>().fontSize)).ToArray();
+                Assert.That(now, Is.EqualTo(first), "The choices hold still, frame " + frame);
+            }
+        }
+
         private static IEnumerator Until(Func<bool> condition, float seconds)
         {
             for (float waited = 0; !condition() && waited < seconds; waited += Time.unscaledDeltaTime) yield return null;
@@ -822,6 +841,7 @@ namespace MusiyoBetsknate.Tests
             Assert.That(survey.Storing, Is.False);
             Assert.That(guide.Message, Is.EqualTo("Tu opinión · pregunta 1 de 2"));
             Assert.That(view.SurveyOptions.Select(option => option.GetComponentInChildren<TMPro.TMP_Text>().text), Is.EqualTo(new[] { "Opción A", "Opción B" }));
+            yield return AssertSteady(view.SurveyOptions);
             view.SurveyOptions[1].onClick.Invoke();
             yield return null;
             StringAssert.Contains("1 = poco", view.SurveyText.text);
@@ -907,6 +927,7 @@ namespace MusiyoBetsknate.Tests
             StringAssert.Contains("¿Qué ficha contiene «Texto sintético de prueba»?", view.QuizText.text);
             Assert.That(view.QuizOptions.Select(option => option.GetComponentInChildren<TMPro.TMP_Text>().text),
                 Is.EqualTo(new[] { "Ficha sintética A", "Ficha sintética B", "Ficha sintética C" }), "Options in published order.");
+            yield return AssertSteady(view.QuizOptions);
             Assert.That(view.QuizSkip.gameObject.activeInHierarchy && view.QuizClose.gameObject.activeInHierarchy, Is.True);
             Assert.That(guide.Message, Does.StartWith("Pregunta 1 de 1"));
 
