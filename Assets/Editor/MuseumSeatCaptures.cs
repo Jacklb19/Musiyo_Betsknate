@@ -42,6 +42,24 @@ namespace MusiyoBetsknate.Editor
                     .Where(item => item.name.StartsWith("Pasaje_") || item.name.StartsWith("Umbral_") || item.name.Contains("Puerta")).OrderBy(item => item.name))
                     list.AppendLine(FormattableString.Invariant(
                         $"way {way.name}: centre {way.bounds.center.x:F2} {way.bounds.center.z:F2}, size {way.bounds.size.x:F2} {way.bounds.size.z:F2}"));
+                // The entrance gate is pictured whole, roof and sign included, before anything is left out.
+                var gateViews = new List<(string name, Vector3 eye, Vector3 target)>();
+                var gate = UnityEngine.Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None)
+                    .Where(item => item.name.StartsWith("Portada_")).Select(item => item.bounds).ToList();
+                if (gate.Count > 0)
+                {
+                    var bounds = gate[0];
+                    foreach (var item in gate) bounds.Encapsulate(item);
+                    var middle = bounds.center;
+                    list.AppendLine(FormattableString.Invariant($"gate: centre {middle.x:F2} {middle.y:F2} {middle.z:F2}, size {bounds.size.x:F2} {bounds.size.y:F2} {bounds.size.z:F2}"));
+                    var floor = new Vector3(middle.x, 0, middle.z);
+                    gateViews.Add(("gate_far", floor + new Vector3(-1.2f, 1.65f, -9), floor + Vector3.up * 2.6f));
+                    gateViews.Add(("gate_near", floor + new Vector3(-.6f, 1.65f, -4.2f), floor + Vector3.up * 2.7f));
+                    gateViews.Add(("gate_side", floor + new Vector3(4.5f, 1.65f, -3.5f), floor + Vector3.up * 2.2f));
+                    gateViews.Add(("gate_under", floor + new Vector3(.2f, 1.65f, -1.4f), floor + new Vector3(0, 3.1f, .2f)));
+                    gateViews.Add(("gate_from_inside", floor + new Vector3(.8f, 1.65f, 5), floor + Vector3.up * 2.4f));
+                }
+                MuseumViewCapture.Render(Path.Combine(Folder, Label), gateViews, 62, 1280, 760, .05f, 600);
                 // Roofs, beams and the tops of walls hide the seats from above; the pictures leave them out.
                 var floors = UnityEngine.Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None).Where(item => item.name.Contains("_Piso")).ToList();
                 foreach (var high in UnityEngine.Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None))
@@ -63,21 +81,6 @@ namespace MusiyoBetsknate.Editor
                     foreach (var item in room) bounds.Encapsulate(item.bounds);
                     float reach = Mathf.Max(bounds.size.x, bounds.size.z);
                     views.Add(("room_" + room.Key, bounds.center + new Vector3(0, reach * .95f + 3, -reach * .25f), bounds.center));
-                }
-                var gate = UnityEngine.Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None)
-                    .Where(item => item.name.StartsWith("Portada_")).Select(item => item.bounds).ToList();
-                if (gate.Count > 0)
-                {
-                    var bounds = gate[0];
-                    foreach (var item in gate) bounds.Encapsulate(item);
-                    var middle = bounds.center;
-                    list.AppendLine(FormattableString.Invariant($"gate: centre {middle.x:F2} {middle.y:F2} {middle.z:F2}, size {bounds.size.x:F2} {bounds.size.y:F2} {bounds.size.z:F2}"));
-                    var floor = new Vector3(middle.x, 0, middle.z);
-                    views.Add(("gate_far", floor + new Vector3(-1.2f, 1.65f, -9), floor + Vector3.up * 2.6f));
-                    views.Add(("gate_near", floor + new Vector3(-.6f, 1.65f, -4.2f), floor + Vector3.up * 2.7f));
-                    views.Add(("gate_side", floor + new Vector3(4.5f, 1.65f, -3.5f), floor + Vector3.up * 2.2f));
-                    views.Add(("gate_under", floor + new Vector3(.2f, 1.65f, -1.4f), floor + new Vector3(0, 3.1f, .2f)));
-                    views.Add(("gate_from_inside", floor + new Vector3(.8f, 1.65f, 5), floor + Vector3.up * 2.4f));
                 }
                 File.WriteAllText(Path.Combine(Folder, Label + "_seats.txt"), list.ToString(), new UTF8Encoding(false));
                 MuseumViewCapture.Render(Path.Combine(Folder, Label), views, 62, 1280, 760, .05f, 600);
