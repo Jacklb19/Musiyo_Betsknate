@@ -152,6 +152,13 @@ namespace MusiyoBetsknate.Tests
             {
                 var entry = characters.transform.TransformPoint(new Vector3(0, 0, -characters.HalfSize.y + 1.2f));
                 visitor.PlaceAt(entry, Quaternion.LookRotation(characters.transform.forward));
+                // Where the pieces are brought from the start, the picture waits until they stand (a visitor needs a minute
+                // or more to walk here from the entrance); before that change, it shows what four seconds after arriving show.
+                var residents = typeof(MuseumModelPresenter).GetProperty("ResidentCount");
+                float since = Time.realtimeSinceStartup;
+                if (residents != null) yield return Until(() => (int)residents.GetValue(presenter) >= 3, 120);
+                notes.Add("characters entry: waited " + (Time.realtimeSinceStartup - since).ToString("F0") + " s for the pieces"
+                    + (residents != null ? ", " + residents.GetValue(presenter) + " standing" : ""));
                 yield return new WaitForSecondsRealtime(4);
                 Render(camera, "a_characters_entry");
                 notes.Add("characters entry " + F(entry) + ": model on show " + presenter.ModelSlug + " " + presenter.State);
@@ -182,6 +189,20 @@ namespace MusiyoBetsknate.Tests
                 yield return new WaitForSecondsRealtime(1);
                 Render(spectator, "f_point_markers");
                 UnityEngine.Object.Destroy(spectator.gameObject);
+            }
+
+            // A close look at the floor light of a point not yet visited, where the old spheres stood.
+            var unvisited = runtime.FindPoint("punto.personajes.pedestal_5");
+            if (unvisited != null)
+            {
+                var spot = unvisited.Anchor.transform.position;
+                var glow = unvisited.GetComponentsInChildren<Transform>(true).FirstOrDefault(item => item.name == "PointGlow");
+                var focus = glow != null ? glow.position : spot;
+                var spectator = Spectator(camera, focus + (Vector3.left * 2.2f + Vector3.back * 1.6f) + Vector3.up * 1.7f, focus + Vector3.up * .5f);
+                yield return new WaitForSecondsRealtime(1.5f);
+                Render(spectator, "f_point_close");
+                UnityEngine.Object.Destroy(spectator.gameObject);
+                notes.Add("pedestal_5 floor light: " + (glow != null ? F(glow.position) : "none"));
             }
 
             // The automatic tour's first route from four starting places, drawn from above.
