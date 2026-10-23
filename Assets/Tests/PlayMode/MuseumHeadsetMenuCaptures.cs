@@ -196,10 +196,12 @@ namespace MusiyoBetsknate.Tests
             flow.GetComponent<MuseumArrival>()?.Dismiss();
             yield return null;
             var ending = flow.GetComponent<MuseumEnding>();
+            // The visit asks for the credits on reaching the overlook; the picture skips the walk there.
+            ending.Client.Load();
             for (float waited = 0; !ending.Client.Ready && waited < 10; waited += Time.unscaledDeltaTime) yield return null;
-            Assert.That(ending.Ask(), Is.True);
-            yield return null;
-            ending.YesButton.onClick.Invoke();
+            ending.Finish();
+            Assert.That(ending.Stage, Is.EqualTo(EndingStage.Closing),
+                "credits ready " + ending.Client.Ready + ", phase " + flow.Phase + ", stage " + ending.Stage);
             for (float waited = 0; ending.Roll == null && waited < 6; waited += Time.unscaledDeltaTime) yield return null;
             for (float waited = 0; ending.Darkness > 0 && waited < 5; waited += Time.unscaledDeltaTime) yield return null;
             Assert.That(ending.Roll, Is.Not.Null);
