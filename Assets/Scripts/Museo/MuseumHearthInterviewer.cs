@@ -79,15 +79,12 @@ namespace MusiyoBetsknate.Museum
             if (mat != null) spot = mat.bounds.center;
             else if (seated != null) spot = seated.bounds.center;
             else spot = anchor.transform.position + anchor.transform.forward * 1.1f;
-            // The floor where the visitor stands to talk: under the mat stands the museum's bench, which is no floor.
+            // The floor where the visitor stands to talk: the lowest surface under the guide's anchor, since stools,
+            // markers or the visitor may stand there and under the mat stands the museum's bench, which is no floor.
             float floor = anchor.transform.position.y;
-            foreach (var hit in Physics.RaycastAll(anchor.transform.position + Vector3.up * .5f, Vector3.down, 1.5f,
-                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore).OrderBy(hit => hit.distance))
-            {
-                if (hit.collider.GetComponentInParent<DesktopVisitorController>() != null) continue;
-                floor = hit.point.y;
-                break;
-            }
+            var hits = Physics.RaycastAll(anchor.transform.position + Vector3.up * .5f, Vector3.down, 1.1f, Physics.DefaultRaycastLayers,
+                QueryTriggerInteraction.Ignore).Where(hit => hit.collider.GetComponentInParent<DesktopVisitorController>() == null).ToArray();
+            if (hits.Length > 0) floor = hits.Min(hit => hit.point.y);
             return new Vector3(spot.x, floor, spot.z);
         }
 
@@ -237,7 +234,7 @@ namespace MusiyoBetsknate.Museum
             invitation.gameObject.SetActive(false);
         }
 
-        private float InvitationHeight => Figure.Height + .5f;
+        private float InvitationHeight => Figure.Height + .3f;
 
         private void Update()
         {
@@ -270,7 +267,8 @@ namespace MusiyoBetsknate.Museum
             invitationGroup.alpha = alpha;
             invitation.gameObject.SetActive(alpha > 0);
             if (alpha <= 0) return;
-            invitation.transform.localPosition = Figure.transform.localPosition + Vector3.up * InvitationHeight;
+            // A little in front of the guide, toward the visitor, so the cobs hanging over the fire never hide it.
+            invitation.transform.localPosition = Figure.transform.localPosition + Vector3.forward * .7f + Vector3.up * InvitationHeight;
             invitation.transform.rotation = MuseumWorldUi.Facing(invitation.transform.position, eyes);
         }
 
