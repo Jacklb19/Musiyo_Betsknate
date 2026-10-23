@@ -215,6 +215,7 @@ namespace MusiyoBetsknate.Museum
             vignette.Intensity = MuseumComfort.Intensity(menu.Preferences?.VignetteChoice ?? MuseumVignette.Soft);
             vignette.Set(false);
             if (!HeadTracked) { StopWalking(); teleport.Cancel(); return; }
+            FollowHead();
             bool blocked = flow.BlocksInput || interaction.BlocksMovement || interaction.HoldsVisitor
                 || interaction.GetComponent<MuseumWayfinding>()?.MenuOpen == true || input.Context != MuseumInputContext.Visit
                 || flow.InputConsumedThisFrame;
@@ -284,6 +285,19 @@ namespace MusiyoBetsknate.Museum
                 verticalSpeed = 0;
                 interaction.GetComponent<MuseumAutoTour>()?.Stop();
             }
+        }
+
+        /// <summary>
+        /// The body stands where the head is in the play area. A visitor standing away from the middle of their room
+        /// otherwise carries a body that swings around them when they turn and bumps into things beside them when they
+        /// walk or follow the tour (owner, headset test of 23/10).
+        /// </summary>
+        private void FollowHead()
+        {
+            var local = visitor.InverseTransformPoint(head.transform.position);
+            var centre = body.center;
+            if (Mathf.Abs(centre.x - local.x) < .001f && Mathf.Abs(centre.z - local.z) < .001f) return;
+            body.center = new Vector3(local.x, centre.y, local.z);
         }
 
         private void StopWalking()
