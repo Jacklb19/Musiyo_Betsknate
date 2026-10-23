@@ -73,7 +73,7 @@ namespace MusiyoBetsknate.Tests
         }
 
 #if UNITY_EDITOR
-        [UnityTest]
+        [UnityTest, Timeout(600000)]
         public IEnumerator CaptureTheExhibitionAgainstTheLiveApi()
         {
             var api = Environment.GetEnvironmentVariable("MUSIYO_LIVE_API");
@@ -91,7 +91,8 @@ namespace MusiyoBetsknate.Tests
             settings.ApplyModifiedPropertiesWithoutUndo();
             flow.GetComponent<MuseumEntryView>().HeadsetActive = () => false;
             loader.Reload();
-            yield return Until(() => loader.State == TourLoadState.Ready, 60);
+            // The free hosting may need a minute or two to wake up.
+            yield return Until(() => loader.State == TourLoadState.Ready, 240);
             Assert.That(loader.State, Is.EqualTo(TourLoadState.Ready), loader.Status);
             MuseumAtmosphere.Current.Apply();
             flow.EnterImmediately();
@@ -151,6 +152,13 @@ namespace MusiyoBetsknate.Tests
             {
                 var entry = characters.transform.TransformPoint(new Vector3(0, 0, -characters.HalfSize.y + 1.2f));
                 visitor.PlaceAt(entry, Quaternion.LookRotation(characters.transform.forward));
+                // Where the pieces are brought from the start, the picture waits until they stand (a visitor needs a minute
+                // or more to walk here from the entrance); before that change, it shows what four seconds after arriving show.
+                var residents = typeof(MuseumModelPresenter).GetProperty("ResidentCount");
+                float since = Time.realtimeSinceStartup;
+                if (residents != null) yield return Until(() => (int)residents.GetValue(presenter) >= 3, 120);
+                notes.Add("characters entry: waited " + (Time.realtimeSinceStartup - since).ToString("F0") + " s for the pieces"
+                    + (residents != null ? ", " + residents.GetValue(presenter) + " standing" : ""));
                 yield return new WaitForSecondsRealtime(4);
                 Render(camera, "a_characters_entry");
                 notes.Add("characters entry " + F(entry) + ": model on show " + presenter.ModelSlug + " " + presenter.State);
@@ -183,6 +191,20 @@ namespace MusiyoBetsknate.Tests
                 UnityEngine.Object.Destroy(spectator.gameObject);
             }
 
+            // A close look at the floor light of a point not yet visited, where the old spheres stood.
+            var unvisited = runtime.FindPoint("punto.personajes.pedestal_5");
+            if (unvisited != null)
+            {
+                var spot = unvisited.Anchor.transform.position;
+                var glow = unvisited.GetComponentsInChildren<Transform>(true).FirstOrDefault(item => item.name == "PointGlow");
+                var focus = glow != null ? glow.position : spot;
+                var spectator = Spectator(camera, focus + (Vector3.left * 2.2f + Vector3.back * 1.6f) + Vector3.up * 1.7f, focus + Vector3.up * .5f);
+                yield return new WaitForSecondsRealtime(1.5f);
+                Render(spectator, "f_point_close");
+                UnityEngine.Object.Destroy(spectator.gameObject);
+                notes.Add("pedestal_5 floor light: " + (glow != null ? F(glow.position) : "none"));
+            }
+
             // The automatic tour's first route from four starting places, drawn from above.
             var tour = flow.GetComponent<MuseumAutoTour>();
             var corners = typeof(MuseumAutoTour).GetField("corners", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -194,7 +216,9 @@ namespace MusiyoBetsknate.Tests
             var field = maize.Where(item => item.bounds.center.z < -25).OrderByDescending(item => item.bounds.size.x * item.bounds.size.z).FirstOrDefault()
                 ?? maize.OrderByDescending(item => item.bounds.size.x * item.bounds.size.z).FirstOrDefault();
             if (field != null)
-                starts.Add(("maiz", field.bounds.center + Vector3.right * field.bounds.extents.x * .5f, new Color(.95f, .2f, .2f)));
+                // Deep in the maize, toward the garden's far corner, where a straight line to the rooms would cross it.
+                starts.Add(("maiz", field.bounds.center + Vector3.right * field.bounds.extents.x * .75f + Vector3.back * field.bounds.extents.z * .6f,
+                    new Color(.95f, .2f, .2f)));
             var lagoon = renderers.FirstOrDefault(item => item.name.Contains("Laguna") && item.name.Contains("Agua"))
                 ?? renderers.FirstOrDefault(item => item.name.Contains("Laguna"));
             notes.Add("lagoon: " + (lagoon != null ? lagoon.name + " " + F(lagoon.bounds.center) + " " + F(lagoon.bounds.size) : "-"));
@@ -220,8 +244,10 @@ namespace MusiyoBetsknate.Tests
                 if (route.Length < 2) continue;
                 var line = new GameObject("CaptureRoute_" + name).AddComponent<LineRenderer>();
                 line.positionCount = route.Length + 1;
-                line.SetPosition(0, floor + Vector3.up * .3f);
-                for (int index = 0; index < route.Length; index++) line.SetPosition(index + 1, route[index] + Vector3.up * .3f);
+                // Drawn above the roofs, so the picture from above shows the routes inside the rooms too.
+                Vector3 Above(Vector3 spot) => new Vector3(spot.x, 14, spot.z);
+                line.SetPosition(0, Above(floor));
+                for (int index = 0; index < route.Length; index++) line.SetPosition(index + 1, Above(route[index]));
                 line.widthMultiplier = .45f;
                 line.material = new Material(Shader.Find("Sprites/Default"));
                 line.startColor = line.endColor = colour;
