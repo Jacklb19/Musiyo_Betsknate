@@ -32,11 +32,15 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("lectern_float_height")] public float LecternFloatHeight;
         [JsonProperty("lectern_float_distance")] public float LecternFloatDistance;
         [JsonProperty("lectern_follow_seconds")] public float LecternFollowSeconds;
-        /// <summary>Height above the stand's base of the lower edge of the screen that rests on a reading stand, in metres.</summary>
-        [JsonProperty("lectern_screen_bottom")] public float LecternScreenBottom;
-        /// <summary>Most the screen on a stand leans back from upright, in degrees; it leans with the board up to this.</summary>
-        [JsonProperty("lectern_screen_tilt")] public float LecternScreenTilt;
-        /// <summary>Gap between a stand's board and the screen resting on it, in metres.</summary>
+        /// <summary>
+        /// Reading board of a stand, in metres: across, and up its slope from the lower edge of the stand's own board. It
+        /// is larger than the delivered board so a page of the record reads comfortably on it (owner, 23/10/2026).
+        /// </summary>
+        [JsonProperty("lectern_board_width")] public float LecternBoardWidth;
+        [JsonProperty("lectern_board_height")] public float LecternBoardHeight;
+        /// <summary>Margin between the edges of the reading board and the page that lies on it, in metres.</summary>
+        [JsonProperty("lectern_board_margin")] public float LecternBoardMargin;
+        /// <summary>Gap between a stand's reading board and the page lying on it, in metres.</summary>
         [JsonProperty("lectern_screen_gap")] public float LecternScreenGap;
         /// <summary>Finish of the reading stands: the wood of the stand and the face of its board.</summary>
         [JsonProperty("lectern_wood_color")] public string LecternWoodColor;
@@ -123,8 +127,10 @@ namespace MusiyoBetsknate.Museum
                 || !Positive(result.PointLeaveMargin) || !Positive(result.LecternScreenWidth)
                 || !Positive(result.LecternUnfoldSeconds) || !Positive(result.LecternViewingDistance)
                 || !Positive(result.LecternFloatHeight) || !Positive(result.LecternFloatDistance)
-                || !Positive(result.LecternFollowSeconds) || !Positive(result.LecternScreenBottom) || result.LecternScreenBottom > 2
-                || !Finite(result.LecternScreenTilt) || result.LecternScreenTilt < 0 || result.LecternScreenTilt > 60
+                || !Positive(result.LecternFollowSeconds)
+                || !Positive(result.LecternBoardWidth) || result.LecternBoardWidth > 2 || !Positive(result.LecternBoardHeight)
+                || result.LecternBoardHeight > 2 || !Finite(result.LecternBoardMargin) || result.LecternBoardMargin < 0
+                || result.LecternBoardMargin * 4 >= Mathf.Min(result.LecternBoardWidth, result.LecternBoardHeight)
                 || !Finite(result.LecternScreenGap) || result.LecternScreenGap < 0 || result.LecternScreenGap > .2f
                 || !Positive(result.KeyboardLookSpeed) || !Positive(result.MaximumPitch) || result.MaximumPitch >= 90
                 || !Positive(result.MinimumSensitivity) || !Positive(result.MaximumSensitivity)

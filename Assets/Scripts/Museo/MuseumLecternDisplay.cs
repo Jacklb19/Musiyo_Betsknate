@@ -6,9 +6,9 @@ using UnityEngine.UI;
 namespace MusiyoBetsknate.Museum
 {
     /// <summary>
-    /// Carries the point panel into the museum. By a reading stand the screen rests on the stand's board, centred on it,
-    /// leaning back with it and fixed in the museum like a real label (owner's decision D1 of 22/10/2026): it is read by
-    /// stopping in front of it. Where a point has no stand, the screen floats at the stable point anchor turned toward
+    /// Carries the point panel into the museum. By a reading stand the screen is a page lying on the stand's reading
+    /// board: the same slope, inside the board's edges, fixed in the museum like a real lectern (owner's decisions D1 of
+    /// 22/10/2026 and of 23/10/2026): it is read by stopping in front of it. Where a point has no stand, the screen floats at the stable point anchor turned toward
     /// the visitor.
     /// </summary>
     public sealed class MuseumLecternDisplay : MonoBehaviour
@@ -168,7 +168,7 @@ namespace MusiyoBetsknate.Museum
                 panel.SetParent(surface, false);
                 panel.anchorMin = panel.anchorMax = panel.pivot = new Vector2(.5f, 0);
                 panel.anchoredPosition = new Vector2(0, Border);
-                panel.sizeDelta = new Vector2(InWorldWidth, InWorldMaxHeight);
+                panel.sizeDelta = new Vector2(InWorldWidth, stand != null ? PageHeight(MuseumExperienceConfiguration.Current) : InWorldMaxHeight);
                 surface.sizeDelta = panel.sizeDelta + Vector2.one * (Border * 2);
                 panel.gameObject.SetActive(true);
                 aimMark.SetAsLastSibling();
@@ -279,10 +279,22 @@ namespace MusiyoBetsknate.Museum
 
         private void Update() => Advance(Time.unscaledDeltaTime);
 
+        /// <summary>
+        /// Height of the panel on a reading board, in interface units: the page fills the board inside its margin, whatever
+        /// it shows; its text scrolls within it.
+        /// </summary>
+        public static float PageHeight(MuseumExperienceConfiguration settings)
+        {
+            float width = settings.LecternBoardWidth - settings.LecternBoardMargin * 2;
+            float height = settings.LecternBoardHeight - settings.LecternBoardMargin * 2;
+            return height * (InWorldWidth + Border * 2) / width - Border * 2;
+        }
+
         /// <summary>A floating screen is as tall as what it shows, up to the height of the screen panel, so short texts leave no empty board.</summary>
         private void LateUpdate()
         {
-            if (!InWorld || scroll == null || scroll.viewport == null || scroll.content == null) return;
+            // A page on a reading board keeps the board's size.
+            if (!InWorld || Host != null || scroll == null || scroll.viewport == null || scroll.content == null) return;
             float chrome = panel.rect.height - scroll.viewport.rect.height;
             float wanted = chrome + LayoutUtility.GetPreferredHeight(scroll.content);
             // The controls column is never cut: the screen grows for it beyond its usual height when it must.
@@ -310,22 +322,13 @@ namespace MusiyoBetsknate.Museum
         }
 
         /// <summary>
-        /// Where the lower edge of a screen resting on a stand lies and how it is turned: on the board's plane, centred
-        /// across it, at the configured height above the stand's base, leaning back with the board (never more than the
-        /// configured tilt) and facing the board's reader. Its forward axis points into the board, away from the reader.
+        /// Where the lower edge of the page on a stand lies and how it is turned: on the reading board, inside its margin,
+        /// on the board's slope and facing the board's reader. Its forward axis points into the board, away from the reader.
         /// </summary>
         public static Pose RestingPose(PointLectern stand, MuseumExperienceConfiguration settings)
         {
-            var board = stand.Board;
-            var facing = stand.Facing;
-            float boardTilt = Vector3.Angle(board.up, Vector3.up);
-            float tilt = Mathf.Min(boardTilt, settings.LecternScreenTilt);
-            // Up the board's slope to the height of the lower edge, without leaving the board.
-            float climb = Mathf.Abs(board.up.y) > .01f ? (stand.transform.position.y + settings.LecternScreenBottom - board.position.y) / board.up.y : 0;
-            climb = Mathf.Clamp(climb, 0, stand.BoardSize.y);
-            var edge = board.position + board.up * climb - board.forward * settings.LecternScreenGap;
-            var rotation = Quaternion.LookRotation(-facing, Vector3.up) * Quaternion.Euler(tilt, 0, 0);
-            return new Pose(edge, rotation);
+            var (bottom, rotation, _) = MuseumLecternFinish.Page(stand, settings);
+            return new Pose(bottom, rotation);
         }
 
         private void Apply()
@@ -349,7 +352,8 @@ namespace MusiyoBetsknate.Museum
                 surface.SetPositionAndRotation(centre + toViewer * settings.LecternFloatDistance, Quaternion.LookRotation(-toViewer, Vector3.up));
             }
             float eased = Mathf.SmoothStep(0, 1, Openness);
-            float scale = settings.LecternScreenWidth / surface.sizeDelta.x;
+            float width = Host != null ? settings.LecternBoardWidth - settings.LecternBoardMargin * 2 : settings.LecternScreenWidth;
+            float scale = width / surface.sizeDelta.x;
             // The screen rises from its lower edge.
             surface.localScale = new Vector3(scale, scale * eased, scale);
             group.alpha = eased;

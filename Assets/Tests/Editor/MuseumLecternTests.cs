@@ -97,21 +97,31 @@ namespace MusiyoBetsknate.Tests
             Assert.That(display.Surface.localScale.y, Is.LessThan(display.Surface.localScale.x), "It rises instead of popping in.");
             display.Advance(seconds);
             Assert.That(display.Openness, Is.EqualTo(1));
+            // It is a page lying on the stand's reading board: the board's slope, inside its edges, read from the board's side.
+            float boardWidth = settings.LecternBoardWidth, boardHeight = settings.LecternBoardHeight, margin = settings.LecternBoardMargin;
             float width = display.Surface.sizeDelta.x * display.Surface.localScale.x;
-            Assert.That(width, Is.EqualTo(settings.LecternScreenWidth).Within(.001f));
-            // It rests on the board: its lower edge on the board's plane at the configured height, centred across the
-            // board, leaning back with it and read from the board's side.
-            var edge = display.Surface.position;
-            Assert.That(edge.y, Is.EqualTo(stand.transform.position.y + settings.LecternScreenBottom).Within(.01f), "Its lower edge is at a comfortable height.");
-            var fromBoard = edge - stand.Board.position;
-            Assert.That(Vector3.Dot(fromBoard, stand.Board.forward), Is.EqualTo(-settings.LecternScreenGap).Within(.001f), "It lies on the board, just in front of it.");
-            Assert.That(Vector3.Dot(fromBoard, stand.Board.right), Is.EqualTo(0).Within(.001f), "It is centred across the board.");
-            float lean = Vector3.Angle(display.Surface.up, Vector3.up);
-            Assert.That(lean, Is.EqualTo(Mathf.Min(25, settings.LecternScreenTilt)).Within(.1f), "It leans back with the board.");
-            var forward = display.Surface.forward;
-            forward.y = 0;
-            Assert.That(Vector3.Angle(forward, -stand.Facing), Is.LessThan(.01f), "It is read from the board's side.");
+            float height = display.Surface.sizeDelta.y * display.Surface.localScale.y;
+            Assert.That(width, Is.EqualTo(boardWidth - margin * 2).Within(.001f), "It is as wide as the board inside its margin.");
+            Assert.That(height, Is.EqualTo(boardHeight - margin * 2).Within(.002f), "It is as tall as the board inside its margin.");
+            Assert.That(Quaternion.Angle(display.Surface.rotation, Quaternion.LookRotation(stand.Board.forward, stand.Board.up)), Is.LessThan(.1f),
+                "It has the board's slope and faces the board's reader.");
+            var page = display.Surface;
+            var corners = new Vector3[4];
+            page.GetWorldCorners(corners);
+            foreach (var corner in corners)
+            {
+                var offset = corner - stand.Board.position;
+                float across = Vector3.Dot(offset, stand.Board.right), up = Vector3.Dot(offset, stand.Board.up);
+                float depth = Vector3.Dot(offset, stand.Board.forward);
+                Assert.That(Mathf.Abs(across), Is.LessThanOrEqualTo(boardWidth * .5f - margin + .001f), "Inside the board's sides.");
+                Assert.That(up, Is.InRange(margin - .001f, boardHeight - margin + .001f), "Inside the board's lower and upper edges.");
+                Assert.That(depth, Is.InRange(-(MuseumLecternFinish.FaceOffset + settings.LecternScreenGap) - .001f, 0),
+                    "Just in front of the board, lying on it.");
+            }
             Assert.That(display.Surface.up.z, Is.GreaterThan(0), "Its top leans away from the reader.");
+            // A body text of the reading size stays comfortable: about 3 cm at a lectern.
+            float metresPerUnit = width / display.Surface.sizeDelta.x;
+            Assert.That(MuseumLecternDisplay.TextSize * metresPerUnit, Is.GreaterThan(.028f), "The text is not shrunk to fit.");
 
             display.Hide();
             Assert.That(panel.gameObject.activeSelf, Is.True, "The folding screen keeps its content until it has closed.");
@@ -175,6 +185,25 @@ namespace MusiyoBetsknate.Tests
             Assert.That(finished[0].shader, Is.SameAs(source.shader), "The finish keeps the delivered shader.");
             MuseumLecternFinish.Apply(stand);
             Assert.That(renderer.sharedMaterials[0], Is.SameAs(finished[0]), "A finished stand is left as it is.");
+
+            // A larger reading board lies over the stand's own, on its slope, in the stand's colours.
+            var board = stand.transform.Find(MuseumLecternFinish.ReadingBoardName);
+            Assert.That(board, Is.Not.Null);
+            Assert.That(stand.transform.Find(MuseumLecternFinish.ReadingBoardName + "(Clone)"), Is.Null);
+            int boards = 0;
+            foreach (Transform child in stand.transform) if (child.name == MuseumLecternFinish.ReadingBoardName) boards++;
+            Assert.That(boards, Is.EqualTo(1), "Finishing twice builds one board.");
+            var face = board.Find("Face");
+            Assert.That(face.lossyScale.x, Is.EqualTo(settings.LecternBoardWidth).Within(.001f));
+            Assert.That(face.lossyScale.y, Is.EqualTo(settings.LecternBoardHeight).Within(.001f));
+            Assert.That(face.GetComponent<MeshRenderer>().sharedMaterial, Is.SameAs(finished[1]));
+            Assert.That(board.Find("Rim").GetComponent<MeshRenderer>().sharedMaterial, Is.SameAs(finished[0]));
+            Assert.That(face.GetComponent<Collider>(), Is.Null, "The stand's own collider is enough.");
+            Assert.That(Vector3.Angle(face.up, stand.Board.up), Is.LessThan(.1f), "It has the stand's slope.");
+            var lower = face.position - face.up * (settings.LecternBoardHeight * .5f);
+            Assert.That(Vector3.Distance(Vector3.ProjectOnPlane(lower - stand.Board.position, stand.Board.forward), Vector3.zero), Is.LessThan(.001f),
+                "Its lower edge is the lower edge of the stand's own board, and it is centred across it.");
+            Assert.That(settings.LecternBoardWidth, Is.GreaterThan(stand.BoardSize.x), "It is larger than the delivered board.");
         }
 
         private Button AddControl(Transform parent, Vector2 position, Vector2 size)

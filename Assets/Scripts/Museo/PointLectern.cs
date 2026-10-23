@@ -45,11 +45,11 @@ namespace MusiyoBetsknate.Museum
             watched = null;
         }
 
-        /// <summary>An information-only stand appears with its point and goes with it, collision included.</summary>
+        /// <summary>An information-only stand appears with its point and goes with it, collision and reading board included.</summary>
         private void Follow(TourPoint tourPoint)
         {
             Standing = !informationOnly || tourPoint != null && tourPoint.State != PointState.Undeclared;
-            foreach (var shown in GetComponents<Renderer>()) shown.enabled = Standing;
+            foreach (var shown in GetComponentsInChildren<Renderer>(true)) shown.enabled = Standing;
             foreach (var solid in GetComponents<Collider>()) solid.enabled = Standing;
         }
 
