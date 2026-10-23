@@ -15,6 +15,10 @@ namespace MusiyoBetsknate.Museum
         /// <summary>Words under the lowest and highest values of a scale; empty for choices.</summary>
         public string LowLabel = "", HighLabel = "";
         public bool Scale;
+        /// <summary>What the guide says once the question is answered, before the next one; empty for none.</summary>
+        public string Reply = "";
+        /// <summary>The visitor may pass this question.</summary>
+        public bool Optional = true;
     }
 
     public sealed class ClosingSurveyOption
@@ -25,11 +29,15 @@ namespace MusiyoBetsknate.Museum
         public int? Value;
     }
 
-    /// <summary>The published survey: its notice, worded and approved outside Unity, and its questions.</summary>
+    /// <summary>The published survey: its notice, worded and approved outside Unity, its questions and its closing words.</summary>
     public sealed class ClosingSurveyDefinition
     {
         public string Key = "", Version = "";
+        /// <summary>The guide's invitation, and the words of its three choices and of the explanation; empty uses the museum's own.</summary>
+        public string Intro = "", AcceptLabel = "", LocalLabel = "", DeclineLabel = "", MoreLabel = "";
         public string NoticeTitle = "", NoticeText = "";
+        /// <summary>What the guide says when the conversation ends, stored or not.</summary>
+        public string Closing = "";
         public IReadOnlyList<ClosingSurveyQuestion> Questions = Array.Empty<ClosingSurveyQuestion>();
     }
 
@@ -44,8 +52,8 @@ namespace MusiyoBetsknate.Museum
     public enum ClosingSurveySubmit { Idle, Sending, Stored, RateLimited, Failed }
 
     /// <summary>
-    /// Where the survey comes from and goes to: the museum API, once its contract is published (D6). Until then no source
-    /// is attached and the conversation by the hearth simply has no opinion questions.
+    /// Where the survey comes from and goes to: the museum API (<see cref="MuseumSurveyClient"/>). Without a published
+    /// survey the conversation by the hearth simply has no opinion questions.
     /// </summary>
     public interface IClosingSurveySource : IDisposable
     {
@@ -98,6 +106,10 @@ namespace MusiyoBetsknate.Museum
             ? Survey.Questions[Index] : null;
         public IReadOnlyList<ClosingSurveyAnswer> Answers => answers;
         public ClosingSurveySubmit SubmitState => source?.SubmitState ?? ClosingSurveySubmit.Idle;
+        /// <summary>The guide's reply to the question just answered, shown above the next one.</summary>
+        public string Reply { get; private set; } = "";
+        /// <summary>The notice shows why the questions are asked (its "more" explanation).</summary>
+        public bool MoreShown { get; private set; }
         /// <summary>A survey is published and can be offered.</summary>
         public bool Available => source != null && source.LoadState == ClosingSurveyLoad.Ready && Survey != null && Survey.Questions.Count > 0;
         public event Action Changed;
@@ -177,8 +189,18 @@ namespace MusiyoBetsknate.Museum
             answers.Clear();
             Index = 0;
             Storing = false;
+            Reply = "";
+            MoreShown = false;
             Set(ClosingSurveyStage.Notice);
             return true;
+        }
+
+        /// <summary>Shows or hides, under the invitation, why the questions are asked.</summary>
+        public void ToggleMore()
+        {
+            if (Stage != ClosingSurveyStage.Notice) return;
+            MoreShown = !MoreShown;
+            Changed?.Invoke();
         }
 
         /// <summary>The visitor answers and accepts that the answers are stored anonymously.</summary>
@@ -210,14 +232,16 @@ namespace MusiyoBetsknate.Museum
             var chosen = question.Options[option];
             answers.RemoveAll(answer => answer.QuestionId == question.Id);
             answers.Add(new ClosingSurveyAnswer { QuestionId = question.Id, OptionId = chosen.Value.HasValue ? null : chosen.Id, Value = chosen.Value });
+            Reply = question.Reply ?? "";
             Advance();
             return true;
         }
 
-        /// <summary>Leaves the current question unanswered and goes on.</summary>
+        /// <summary>Leaves the current question unanswered and goes on; only a question published as optional can be passed.</summary>
         public bool Skip()
         {
-            if (Current == null) return false;
+            if (Current == null || !Current.Optional) return false;
+            Reply = "";
             Advance();
             return true;
         }
@@ -252,6 +276,8 @@ namespace MusiyoBetsknate.Museum
             answers.Clear();
             Index = 0;
             Storing = false;
+            Reply = "";
+            MoreShown = false;
             if (Stage != ClosingSurveyStage.Off) Set(ClosingSurveyStage.Off);
         }
 
@@ -266,6 +292,10 @@ namespace MusiyoBetsknate.Museum
                     case ClosingSurveyStage.Answering: return MuseumInterfaceText.Format("survey_progress", Index + 1, Survey.Questions.Count);
                     case ClosingSurveyStage.Sending: return MuseumInterfaceText.Get("survey_sending");
                     case ClosingSurveyStage.Done:
+                        // The service's closing words end the conversation; a failure to store only adds a short note.
+                        if (!string.IsNullOrWhiteSpace(Survey.Closing))
+                            return Storing && answers.Count > 0 && SubmitState != ClosingSurveySubmit.Stored
+                                ? Survey.Closing + " " + MuseumInterfaceText.Get("survey_not_stored_note") : Survey.Closing;
                         if (!Storing || answers.Count == 0) return MuseumInterfaceText.Get("survey_done_not_stored");
                         return SubmitState == ClosingSurveySubmit.Stored ? MuseumInterfaceText.Get("survey_done_stored")
                             : MuseumInterfaceText.Get("survey_done_failed");

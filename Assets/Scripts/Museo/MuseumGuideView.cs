@@ -45,7 +45,7 @@ namespace MusiyoBetsknate.Museum
         private QuizQuestionContractV1 optionsFor;
         private MuseumClosingSurvey survey;
         private TMP_Text surveyText;
-        private Button surveyAccept, surveyWithout, surveyDecline, surveySkip, surveyFinish, surveyOptionTemplate;
+        private Button surveyAccept, surveyWithout, surveyDecline, surveyMore, surveySkip, surveyFinish, surveyOptionTemplate;
         private Transform surveyOptions;
         private readonly List<Button> shownSurveyOptions = new List<Button>();
         private ClosingSurveyQuestion surveyOptionsFor;
@@ -82,6 +82,8 @@ namespace MusiyoBetsknate.Museum
         public Button SurveyAccept => surveyAccept;
         public Button SurveyWithoutStoring => surveyWithout;
         public Button SurveyDecline => surveyDecline;
+        /// <summary>"¿Para qué es esto?": shows under the invitation why the questions are asked.</summary>
+        public Button SurveyMore => surveyMore;
         public Button SurveySkip => surveySkip;
         public Button SurveyFinish => surveyFinish;
         /// <summary>The choices of the opinion question on show, in published order.</summary>
@@ -166,6 +168,7 @@ namespace MusiyoBetsknate.Museum
             surveyAccept = Make("survey_accept", "SurveyAccept", () => survey.AcceptAndAnswer());
             surveyWithout = Make("survey_without_storing", "SurveyWithoutStoring", () => survey.AnswerWithoutStoring());
             surveyDecline = Make("survey_decline", "SurveyDecline", () => survey.Decline());
+            surveyMore = Make("survey_more", "SurveyMore", () => survey.ToggleMore());
             surveySkip = Make("survey_skip", "SurveySkip", () => survey.Skip());
             surveyFinish = Make("survey_finish", "SurveyFinish", () => survey.Finish());
             surveyOptionTemplate = Make("survey_skip", "SurveyOption", () => { });
@@ -194,10 +197,18 @@ namespace MusiyoBetsknate.Museum
             var stage = open ? survey.Stage : ClosingSurveyStage.Off;
             var question = stage == ClosingSurveyStage.Answering ? survey.Current : null;
             string text = "";
-            if (stage == ClosingSurveyStage.Notice) text = survey.Survey.NoticeText;
+            var published = survey.Survey;
+            if (stage == ClosingSurveyStage.Notice)
+            {
+                // The guide's invitation, and on request why the questions are asked; an older survey has only its notice.
+                text = !string.IsNullOrWhiteSpace(published.Intro) ? published.Intro : published.NoticeText;
+                if (survey.MoreShown && !string.IsNullOrWhiteSpace(published.Intro))
+                    text += "\n\n" + (string.IsNullOrWhiteSpace(published.NoticeTitle) ? "" : published.NoticeTitle + "\n") + published.NoticeText;
+            }
             else if (question != null)
             {
-                text = question.Text;
+                // The reply to the last answer comes first, as the guide would say it, then the next question.
+                text = (string.IsNullOrWhiteSpace(survey.Reply) ? "" : survey.Reply + "\n\n") + question.Text;
                 if (question.Scale && (question.LowLabel.Length > 0 || question.HighLabel.Length > 0))
                     text += "\n" + MuseumInterfaceText.Format("survey_scale", question.Options[0].Text, question.LowLabel,
                         question.Options[question.Options.Count - 1].Text, question.HighLabel);
@@ -207,9 +218,25 @@ namespace MusiyoBetsknate.Museum
             surveyAccept.gameObject.SetActive(stage == ClosingSurveyStage.Notice);
             surveyWithout.gameObject.SetActive(stage == ClosingSurveyStage.Notice);
             surveyDecline.gameObject.SetActive(stage == ClosingSurveyStage.Notice);
-            surveySkip.gameObject.SetActive(question != null);
+            surveyMore.gameObject.SetActive(stage == ClosingSurveyStage.Notice && published != null && !string.IsNullOrWhiteSpace(published.MoreLabel));
+            if (stage == ClosingSurveyStage.Notice)
+            {
+                // The service words its own choices; the museum's catalog words them when it does not.
+                Caption(surveyAccept, published.AcceptLabel, "survey_accept");
+                Caption(surveyWithout, published.LocalLabel, "survey_without_storing");
+                Caption(surveyDecline, published.DeclineLabel, "survey_decline");
+                Caption(surveyMore, published.MoreLabel, "survey_more");
+            }
+            surveySkip.gameObject.SetActive(question != null && question.Optional);
             surveyFinish.gameObject.SetActive(question != null);
             ShowSurveyOptions(question);
+        }
+
+        private static void Caption(Button choice, string published, string catalogKey)
+        {
+            var label = choice.GetComponentInChildren<TMP_Text>(true);
+            foreach (var bound in choice.GetComponentsInChildren<MuseumInterfaceLabel>(true)) bound.enabled = string.IsNullOrWhiteSpace(published);
+            label.text = string.IsNullOrWhiteSpace(published) ? MuseumInterfaceText.Get(catalogKey) : published;
         }
 
         private void ShowSurveyOptions(ClosingSurveyQuestion question)

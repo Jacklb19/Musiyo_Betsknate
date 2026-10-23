@@ -364,6 +364,8 @@
     "record_more": "Más sobre esta pieza",
     "narration_ready": "Narración lista.",
     "play_narration": "Escuchar la narración ({input:narration_pause})",
-    "play_narration_xr": "Escuchar la narración"
+    "play_narration_xr": "Escuchar la narración",
+    "survey_more": "¿Para qué es esto?",
+    "survey_not_stored_note": "(No pudimos guardar tus respuestas esta vez, pero gracias por contarnos.)"
   }
 }
