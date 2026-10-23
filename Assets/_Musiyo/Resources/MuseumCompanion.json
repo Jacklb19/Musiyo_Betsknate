@@ -13,6 +13,8 @@
   "figure_scale": 1.1,
   "home_room": "",
   "wait_outside_room": "room.hearth",
+  "wait_box_pieces": ["Fogon_Piedras_Shinyac", "Fogon_Manta_", "Hearth_Banco_"],
+  "wait_box_margin_m": 0.5,
   "welcome_text": "Te acompaño durante la visita. Puedes recorrer el museo con libertad; al acercarte a cada punto se abrirá su información.",
   "welcome_delay_seconds": 2.0,
   "remark_seconds": 7.0,

@@ -56,8 +56,17 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("figure_scale")] public float FigureScale;
         /// <summary>Room whose guide anchor is the companion's own place; there it waits by the anchor.</summary>
         [JsonProperty("home_room")] public string HomeRoom;
-        /// <summary>Room the companion does not enter: it waits at its door while the visitor is inside; empty for none.</summary>
+        /// <summary>
+        /// Room where the companion stays behind while the visitor is in it; empty for none. With <see cref="WaitBoxPieces"/>
+        /// only the box round those pieces of the room counts, and the companion waits at its edge, inside the room.
+        /// </summary>
         [JsonProperty("wait_outside_room")] public string WaitOutside = "";
+        /// <summary>
+        /// Museum pieces, by the start of their names, whose box (with <see cref="WaitBoxMargin"/>) the companion does not
+        /// enter: the fire and the seats round it (owner, 23/10/2026: «una caja exactamente donde está la fogata»).
+        /// </summary>
+        [JsonProperty("wait_box_pieces")] public List<string> WaitBoxPieces = new();
+        [JsonProperty("wait_box_margin_m")] public float WaitBoxMargin = .5f;
         [JsonProperty("welcome_text")] public string WelcomeText;
         [JsonProperty("welcome_delay_seconds")] public float WelcomeDelay;
         [JsonProperty("remark_seconds")] public float RemarkSeconds;
@@ -99,6 +108,10 @@ namespace MusiyoBetsknate.Museum
                 throw new InvalidOperationException("Invalid companion remark.");
             result.MaskElement ??= "";
             result.WaitOutside ??= "";
+            result.WaitBoxPieces ??= new();
+            if (result.WaitBoxPieces.Any(string.IsNullOrWhiteSpace) || !MuseumExperienceConfiguration.Finite(result.WaitBoxMargin)
+                || result.WaitBoxMargin < 0 || result.WaitBoxMargin > 3)
+                throw new InvalidOperationException("Invalid companion waiting box.");
             result.InterfaceRemarks ??= new();
             if (result.InterfaceRemarks.Any(remark => remark == null || string.IsNullOrWhiteSpace(remark.Id)
                 || string.IsNullOrWhiteSpace(remark.Zone) || string.IsNullOrWhiteSpace(remark.TextKey)

@@ -187,11 +187,12 @@ namespace MusiyoBetsknate.Tests
         }
 
         /// <summary>
-        /// In the hearth the companion stays at the door and says it waits there; the X button is the hearth guide's.
-        /// Coming out, it joins the visitor again.
+        /// In the hearth the companion comes in with the visitor and stays at the edge of the box round the fire and its
+        /// seats, saying it waits there (owner, 23/10/2026: not at the entrance of the whole section); the X button is the
+        /// hearth guide's meanwhile. Coming out of the box, it joins the visitor again.
         /// </summary>
         [UnityTest]
-        public IEnumerator TheCompanionWaitsAtTheHearthDoorAndComesBackAfterwards()
+        public IEnumerator TheCompanionWaitsByTheFireAndComesBackAfterwards()
         {
             yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(MuseumScene,
                 new LoadSceneParameters(LoadSceneMode.Additive));
@@ -205,22 +206,63 @@ namespace MusiyoBetsknate.Tests
             var hearth = Object.FindObjectsByType<RoomAnchor>(FindObjectsSortMode.None).First(room => room.Key == "room.hearth");
             yield return null;
             flow.EnterImmediately();
-            // From the courtyard into the hearth, by the guide's place.
-            var outside = new Vector3(0, .05f, -6);
-            Place(body, outside);
-            for (float waited = 0; waited < 3; waited += Time.deltaTime) yield return null;
+            Place(body, new Vector3(0, .05f, -6));
+            for (float waited = 0; waited < 2; waited += Time.deltaTime) yield return null;
             Assert.That(companion.Placed, Is.True);
-            var guidePlace = Object.FindObjectsByType<PointAnchor>(FindObjectsSortMode.None).First(anchor => anchor.Key == "guia.principal");
-            Assert.That(Object.FindAnyObjectByType<DesktopVisitorController>().FocusPoint(guidePlace), Is.True);
-            Assert.That(hearth.Contains(body.transform.position), Is.True, "The visitor is in the hearth.");
+            var box = companion.WaitArea;
+            Assert.That(box.HasValue, Is.True, "The box round the fire and its seats is found in the museum.");
+            var fire = Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None).First(piece => piece.name == "Fogon_Piedras_Shinyac").bounds.center;
+            Assert.That(companion.InWaitArea(fire), Is.True);
+            Assert.That(box.Value.size.x < 9 && box.Value.size.z < 9, Is.True, "A box by the fire, not the whole section: " + box.Value.size);
+            float floorY = hearth.transform.position.y + .05f;
+            Vector3 centre = new Vector3(box.Value.center.x, floorY, box.Value.center.z);
+            // A spot of the room a little outside the box, with floor, from where the visitor walks to the fire.
+            Vector3 start = Vector3.zero, toward = Vector3.zero;
+            bool found = false;
+            for (int turn = 0; turn < 16 && !found; turn++)
+            {
+                var direction = Quaternion.Euler(0, turn * 22.5f, 0) * Vector3.forward;
+                float reach = Mathf.Abs(direction.x) > 1e-3f ? box.Value.extents.x / Mathf.Abs(direction.x) : float.MaxValue;
+                reach = Mathf.Min(reach, Mathf.Abs(direction.z) > 1e-3f ? box.Value.extents.z / Mathf.Abs(direction.z) : float.MaxValue);
+                var candidate = centre + direction * (reach + 1.2f);
+                if (!hearth.Contains(candidate) || !companion.Free(candidate, floorY, out var spot)) continue;
+                start = spot;
+                toward = -direction;
+                found = true;
+            }
+            Assert.That(found, Is.True, "Some floor of the hearth lies outside the box.");
+            Place(body, start);
+            body.transform.rotation = Quaternion.LookRotation(toward, Vector3.up);
+            // The companion comes into the room with the visitor; outside the box it does not wait.
+            for (int step = 0; step < 120; step++)
+            {
+                Place(body, start + Vector3.Cross(Vector3.up, toward) * Mathf.Sin(step * .05f) * .8f);
+                yield return null;
+            }
+            Assert.That(companion.Waiting, Is.False, "In the room, outside the box by the fire, the companion keeps company.");
+            // Into the box, toward the fire.
+            for (float along = .1f; along <= 2.25f; along += .1f)
+            {
+                Place(body, start + toward * along);
+                yield return null;
+            }
+            Assert.That(companion.InWaitArea(body.transform.position), Is.True);
             for (float waited = 0; waited < 4; waited += Time.deltaTime) yield return null;
-            Assert.That(companion.Waiting, Is.True, "Inside the hearth the companion waits.");
-            Assert.That(hearth.Contains(companion.transform.position), Is.False, "It waits outside, by the door: " + companion.transform.position);
+            Assert.That(companion.Waiting, Is.True, "By the fire the companion waits.");
+            Assert.That(companion.InWaitArea(companion.WaitSpot), Is.False, "It waits outside the box: " + companion.WaitSpot);
+            Assert.That(hearth.Contains(companion.WaitSpot), Is.True, "It waits inside the hearth, by the fire, not at the section's entrance.");
+            var nearest = box.Value.ClosestPoint(new Vector3(companion.WaitSpot.x, box.Value.center.y, companion.WaitSpot.z));
+            Assert.That(CompanionTrail.Planar(nearest - companion.WaitSpot), Is.LessThan(2), "Right by the box.");
             Assert.That(Vector3.Distance(companion.transform.position, companion.WaitSpot), Is.LessThan(.3f));
-            Assert.That(companion.Voice.CanAsk, Is.False, "In the hearth the X button belongs to the hearth guide.");
+            Assert.That(companion.Voice.CanAsk, Is.False, "By the fire the X button belongs to the hearth guide.");
 
-            // Out again, it walks back to the visitor.
-            Place(body, outside);
+            // Out of the box again, it walks back to the visitor.
+            for (float along = 0; along < 2; along += .1f)
+            {
+                Place(body, body.transform.position - toward * .1f);
+                yield return null;
+            }
+            Place(body, start);
             for (float waited = 0; waited < 5; waited += Time.deltaTime) yield return null;
             Assert.That(companion.Waiting, Is.False);
             var rest = companion.transform.position - body.transform.position;

@@ -190,7 +190,7 @@ namespace MusiyoBetsknate.Museum
             var floor = new Vector3(eyes.x, visitor.position.y, eyes.z);
             Zone = rooms.FirstOrDefault(room => room != null && room.Contains(floor))?.Key;
             if (!placed) { Arrive(floor, eyes); return; }
-            bool inside = !string.IsNullOrEmpty(settings.WaitOutside) && Zone == settings.WaitOutside;
+            bool inside = !string.IsNullOrEmpty(settings.WaitOutside) && Zone == settings.WaitOutside && InWaitArea(floor);
             if (inside && !Waiting) BeginWaiting(floor);
             else if (!inside && Waiting) EndWaiting(floor);
             // A jump (a teleport, sitting down or standing up) starts the way afresh: the old target is gone with it.
@@ -206,22 +206,66 @@ namespace MusiyoBetsknate.Museum
         }
 
         /// <summary>
-        /// The visitor stepped into the hearth: the companion stays by the door they came through, the newest point of their
-        /// way outside the room, stepped back from the doorway, and says it will wait there.
+        /// The box round the fire and its seats where the companion does not go, from the pieces named in the settings that
+        /// stand in the waiting room; null where the settings name none or none is found (then the whole room counts).
+        /// Found again every few seconds while missing, since the museum may still be loading.
+        /// </summary>
+        public Bounds? WaitArea
+        {
+            get
+            {
+                if (waitBox.HasValue || settings.WaitBoxPieces.Count == 0 || Time.unscaledTime < waitBoxSearchAt) return waitBox;
+                waitBoxSearchAt = Time.unscaledTime + 3;
+                var room = rooms.FirstOrDefault(item => item != null && item.Key == settings.WaitOutside);
+                Bounds? found = null;
+                foreach (var piece in FindObjectsByType<Renderer>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                {
+                    if (!settings.WaitBoxPieces.Any(name => piece.name.StartsWith(name)) || room != null && !room.Contains(piece.bounds.center)) continue;
+                    if (found.HasValue) { var box = found.Value; box.Encapsulate(piece.bounds); found = box; }
+                    else found = piece.bounds;
+                }
+                if (found.HasValue)
+                {
+                    var box = found.Value;
+                    box.Expand(new Vector3(settings.WaitBoxMargin * 2, 0, settings.WaitBoxMargin * 2));
+                    waitBox = box;
+                }
+                return waitBox;
+            }
+        }
+        private Bounds? waitBox;
+        private float waitBoxSearchAt;
+
+        /// <summary>A floor spot within the box round the fire, or within the waiting room where there is no box.</summary>
+        public bool InWaitArea(Vector3 spot)
+        {
+            var box = WaitArea;
+            if (box.HasValue)
+                return spot.x >= box.Value.min.x && spot.x <= box.Value.max.x && spot.z >= box.Value.min.z && spot.z <= box.Value.max.z;
+            var room = rooms.FirstOrDefault(item => item != null && item.Key == settings.WaitOutside);
+            return room != null && room.Contains(spot);
+        }
+
+        /// <summary>
+        /// The visitor stepped into the box round the fire: the companion stays at its edge where they came in, the newest
+        /// point of their way outside the box, stepped back from it, and says it will wait there.
         /// </summary>
         private void BeginWaiting(Vector3 floor)
         {
             Waiting = true;
             var room = rooms.FirstOrDefault(item => item != null && item.Key == settings.WaitOutside);
+            var box = WaitArea;
             var door = transform.position;
             for (int index = trail.Count - 1; index >= 0; index--)
-                if (room == null || !room.Contains(trail[index])) { door = trail[index]; break; }
-            var away = room != null ? Flat(door - room.transform.position) : Flat(transform.position - floor);
+                if (!InWaitArea(trail[index])) { door = trail[index]; break; }
+            var middle = box.HasValue ? box.Value.center : room != null ? room.transform.position : floor;
+            var away = Flat(door - middle);
+            if (away == Vector3.zero) away = Flat(transform.position - floor);
             WaitSpot = door;
             foreach (float back in new[] { 1.2f, .8f, .4f })
                 if (Free(door + away * back, door.y, out var spot)) { WaitSpot = spot; break; }
-            // Outside already, it never walks through a wall to reach the door: it waits where it stands.
-            bool outside = room == null || !room.Contains(transform.position);
+            // Outside already, it never walks through a wall to reach its place: it waits where it stands.
+            bool outside = !InWaitArea(transform.position);
             if (outside && !Clear(transform.position, WaitSpot)) WaitSpot = transform.position;
             notice = MuseumInterfaceText.Get("companion_wait_here");
             noticeUntil = Time.unscaledTime + WaitNoticeSeconds;
