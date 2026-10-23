@@ -449,6 +449,12 @@ namespace MusiyoBetsknate.Museum
                     if (PreloadMode == "room" && (currentRoom == null || point.GetComponentInParent<RoomAnchor>() != currentRoom)) continue;
                     preloadQueue.Add((point, piece.slug));
                 }
+                // A piece built into the room at its natural size, like the Castle, comes first: it is what the visitor
+                // sees on entering the room, and it is light.
+                var first = preloadQueue.Where(item => item.point != null && item.point.Anchor.GetComponentInChildren<PointExhibitMount>() is PointExhibitMount mount
+                    && mount.KeepNaturalScale).ToList();
+                preloadQueue.RemoveAll(item => first.Contains(item));
+                preloadQueue.InsertRange(0, first);
             }
             if (preloading != null) return;
             while (preloadQueue.Count > 0)

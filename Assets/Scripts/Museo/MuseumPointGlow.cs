@@ -16,11 +16,11 @@ namespace MusiyoBetsknate.Museum
     public sealed class MuseumPointGlow : MonoBehaviour
     {
         /// <summary>Opacity of the light at a point not visited yet, at one visited, and while the visitor is there.</summary>
-        public const float WaitingAlpha = .34f, VisitedAlpha = .16f, PresentAlpha = 0f;
+        public const float WaitingAlpha = .6f, VisitedAlpha = .28f, PresentAlpha = 0f;
         /// <summary>Seconds a change of light takes.</summary>
         public const float FadeSeconds = 1.2f;
         /// <summary>Width of the light on the floor, in metres.</summary>
-        public const float Size = 1.25f;
+        public const float Size = 1.4f;
         private const string GlowMaterial = "EntryBackdropGlow";
         private MuseumInteraction interaction;
         private readonly Dictionary<TourPoint, Glow> glows = new Dictionary<TourPoint, Glow>();
