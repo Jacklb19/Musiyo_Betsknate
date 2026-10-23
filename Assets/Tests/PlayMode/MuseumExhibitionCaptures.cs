@@ -73,7 +73,7 @@ namespace MusiyoBetsknate.Tests
         }
 
 #if UNITY_EDITOR
-        [UnityTest, Timeout(600000)]
+        [UnityTest, Timeout(900000)]
         public IEnumerator CaptureTheExhibitionAgainstTheLiveApi()
         {
             var api = Environment.GetEnvironmentVariable("MUSIYO_LIVE_API");
@@ -143,7 +143,39 @@ namespace MusiyoBetsknate.Tests
                     var spectator = Spectator(camera, stand.BoardCentre + side * 2.4f + Vector3.up * .25f, stand.BoardCentre + Vector3.up * .2f);
                     Render(spectator, picture + "_side");
                     UnityEngine.Object.Destroy(spectator.gameObject);
+                    // As a reader standing at the stand sees it: eyes 1.6 m high, 0.7 m in front of the board.
+                    if (display.Surface != null)
+                    {
+                        var page = display.Surface;
+                        var middle = page.TransformPoint(page.rect.center);
+                        var reader = stand.BoardCentre + stand.Facing * .7f;
+                        reader.y = stand.transform.position.y + 1.6f;
+                        var reading = Spectator(camera, reader, middle);
+                        Render(reading, picture + "_reading");
+                        UnityEngine.Object.Destroy(reading.gameObject);
+                    }
                 }
+                yield return Piece(picture + "_piece");
+            }
+
+            // The piece on show, seen from close by on the line from the visitor's eyes: its face should be in view.
+            IEnumerator Piece(string picture)
+            {
+                yield return new WaitForSecondsRealtime(3);
+                var model = presenter.Model;
+                if (model == null) yield break;
+                var renderers = model.GetComponentsInChildren<Renderer>();
+                if (renderers.Length == 0) yield break;
+                var bounds = renderers[0].bounds;
+                foreach (var item in renderers) bounds.Encapsulate(item.bounds);
+                var toEye = camera.transform.position - bounds.center;
+                toEye.y = 0;
+                var close = Spectator(camera, bounds.center + toEye.normalized * Mathf.Max(.9f, bounds.extents.magnitude * 2.2f) + Vector3.up * .1f, bounds.center);
+                Render(close, picture);
+                UnityEngine.Object.Destroy(close.gameObject);
+                var front = model.forward;
+                front.y = 0;
+                notes.Add(picture + ": " + presenter.ModelSlug + " model +Z vs eyes " + Vector3.Angle(front, toEye).ToString("F0") + " degrees");
             }
 
             // Entering the characters room: what the visitor sees first.
@@ -176,7 +208,20 @@ namespace MusiyoBetsknate.Tests
                 yield return new WaitForSecondsRealtime(1.5f);
                 Render(camera, "c_sanjuanes_step");
                 File.WriteAllText(Path.Combine(Folder, "c_sanjuanes_step.txt"), Screen());
+                // Every mask of the point, each from close by on the line from the visitor's eyes.
+                var records = interaction.ActivePoint.Content.elements;
+                for (int index = 0; index < records.Length; index++)
+                {
+                    if (!records[index].has_3d_model) continue;
+                    interaction.SelectElement(index);
+                    yield return new WaitForSecondsRealtime(.5f);
+                    yield return Until(() => presenter.State != ModelLoadState.Loading, 60);
+                    yield return Piece("c_mask_" + records[index].slug);
+                }
             }
+            yield return Visit("punto.personajes.pedestal_2", "h_bandereros");
+            yield return Visit("punto.personajes.pedestal_5", "h_saraguayes");
+            yield return Visit("punto.personajes.gobernador", "h_gobernador");
             yield return Visit("punto.bienvenida.mito", "d_mito");
             yield return Visit("punto.personajes.castillo", "e_castillo");
 
