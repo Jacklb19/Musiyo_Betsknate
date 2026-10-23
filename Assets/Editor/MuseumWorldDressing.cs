@@ -12,7 +12,9 @@ namespace MusiyoBetsknate.Editor
     /// Play mode or a build (<see cref="MuseumWorldBuildStep"/>), so the saved scene and the repository stay light. Valley
     /// ground with relief, ridges and a forest of rendered tree cards around a clearing, clear shallow water in the lagoon,
     /// a leafy crown for the tree of life, grass along the path instead of the loose ferns and flowers, potted and hanging
-    /// ferns by the walls, and the entrance, surroundings and benches of <see cref="MuseumWorldSurroundings"/>. The
+    /// ferns by the walls, the entrance, surroundings and benches of <see cref="MuseumWorldSurroundings"/> and the finish of the
+    /// entrance gate (<see cref="MuseumGateDressing"/>), and the decoration approved from the research
+    /// (<see cref="MuseumCulturalDressing"/>). The
     /// delivered pieces it replaces keep their place in the scene with their renderers switched off. Sources and
     /// licences: ThirdParty/third_party_assets.json. Everything is seeded, so each build makes the same world.
     /// </summary>
@@ -68,6 +70,8 @@ namespace MusiyoBetsknate.Editor
             BuildPathGrass(root.transform, random, -33.6f);
             BuildWallPlants(root.transform, objects, random);
             MuseumWorldSurroundings.Apply(root.transform, objects, new System.Random(20261019));
+            MuseumGateDressing.Apply(root.transform, objects, new System.Random(20261023));
+            MuseumCulturalDressing.Apply(root.transform, new System.Random(20261024));
             return root;
         }
 

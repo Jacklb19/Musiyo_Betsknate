@@ -15,7 +15,7 @@ namespace MusiyoBetsknate.Editor
     public static class MuseumWorldSurroundings
     {
         /// <summary>A delivered material of the authoring set; a build swaps it for its profile's namesake.</summary>
-        private static Material Delivered(string name)
+        internal static Material Delivered(string name)
             => AssetDatabase.LoadAssetAtPath<Material>(MuseumDeliveryManifest.MaterialPath(MuseumDeliveryAssets.AuthoringProfile, name));
         private static readonly Vector2 WelcomeCentre = new Vector2(0, -20);
         /// <summary>Centre and radius of the forecourt in front of the welcome room's door.</summary>
