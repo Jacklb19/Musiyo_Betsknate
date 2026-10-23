@@ -45,6 +45,63 @@ namespace MusiyoBetsknate.Tests
 
         private static float Planar(Vector3 value) { value.y = 0; return value.magnitude; }
 
+        /// <summary>Front of a piece in glTF: +Z (glTF 2.0, "the front of a glTF asset faces +Z").</summary>
+        private const float Nose = .3f;
+
+        /// <summary>
+        /// A small binary glTF with a face: a flat plate in the XY plane and a nose that sticks out toward glTF +Z, the
+        /// front of a glTF asset. A piece that looks at the visitor shows them its nose.
+        /// </summary>
+        public static byte[] NosedPiece()
+        {
+            var positions = new[]
+            {
+                -.2f, -.3f, 0f, .2f, -.3f, 0f, .2f, .3f, 0f, -.2f, .3f, 0f,
+                -.05f, 0f, 0f, .05f, 0f, 0f, 0f, .05f, Nose,
+            };
+            var indices = new ushort[] { 0, 1, 2, 0, 2, 3, 4, 5, 6, 0, 0, 0 };
+            var binary = new System.IO.MemoryStream();
+            var writer = new System.IO.BinaryWriter(binary);
+            foreach (var value in positions) writer.Write(value);
+            int indexOffset = (int)binary.Length;
+            for (int index = 0; index < 9; index++) writer.Write(indices[index]);
+            while (binary.Length % 4 != 0) writer.Write((byte)0);
+            writer.Flush();
+            var json = "{\"asset\":{\"version\":\"2.0\"},\"scene\":0,\"scenes\":[{\"nodes\":[0]}],\"nodes\":[{\"mesh\":0}],"
+                + "\"meshes\":[{\"primitives\":[{\"attributes\":{\"POSITION\":0},\"indices\":1}]}],"
+                + "\"accessors\":[{\"bufferView\":0,\"componentType\":5126,\"count\":7,\"type\":\"VEC3\",\"min\":[-0.2,-0.3,0],\"max\":[0.2,0.3," + Nose.ToString(System.Globalization.CultureInfo.InvariantCulture) + "]},"
+                + "{\"bufferView\":1,\"componentType\":5123,\"count\":9,\"type\":\"SCALAR\"}],"
+                + "\"bufferViews\":[{\"buffer\":0,\"byteOffset\":0,\"byteLength\":" + indexOffset + "},{\"buffer\":0,\"byteOffset\":" + indexOffset + ",\"byteLength\":18}],"
+                + "\"buffers\":[{\"byteLength\":" + binary.Length + "}]}";
+            var jsonBytes = new System.Collections.Generic.List<byte>(System.Text.Encoding.UTF8.GetBytes(json));
+            while (jsonBytes.Count % 4 != 0) jsonBytes.Add((byte)' ');
+            var bin = binary.ToArray();
+            var glb = new System.IO.MemoryStream();
+            var output = new System.IO.BinaryWriter(glb);
+            output.Write(0x46546c67u);
+            output.Write(2u);
+            output.Write((uint)(12 + 8 + jsonBytes.Count + 8 + bin.Length));
+            output.Write((uint)jsonBytes.Count);
+            output.Write(0x4e4f534au);
+            output.Write(jsonBytes.ToArray());
+            output.Write((uint)bin.Length);
+            output.Write(0x004e4942u);
+            output.Write(bin);
+            output.Flush();
+            return glb.ToArray();
+        }
+
+        /// <summary>World position of the tip of the nose of a piece made by <see cref="NosedPiece"/>.</summary>
+        private static Vector3 NoseOf(Transform model)
+        {
+            // The mesh's own bounds survive the upload to the graphics device: the plate lies at z = 0 of the mesh and the
+            // nose is the bound that reaches furthest from it, on whichever side the import put it.
+            var filter = model.GetComponentInChildren<MeshFilter>();
+            var bounds = filter.sharedMesh.bounds;
+            float depth = Mathf.Abs(bounds.max.z) > Mathf.Abs(bounds.min.z) ? bounds.max.z : bounds.min.z;
+            return filter.transform.TransformPoint(new Vector3(0, 0, depth));
+        }
+
         [UnityTest]
         public IEnumerator PiecesStandFromTheStartAndFaceTheVisitorAtTheirPoint()
         {
@@ -52,7 +109,8 @@ namespace MusiyoBetsknate.Tests
             InputSystem.AddDevice<Mouse>();
             service = new SyntheticMuseumService();
             var cube = Convert.FromBase64String(RemoteModelPlayTests.Cube);
-            foreach (var (slug, title) in new[] { ("piece-a", "Pieza sintética A"), ("piece-b", "Pieza sintética B"), ("piece-c", "Pieza sintética C") })
+            service.AddModel("piece-a", "Pieza sintética A", NosedPiece());
+            foreach (var (slug, title) in new[] { ("piece-b", "Pieza sintética B"), ("piece-c", "Pieza sintética C") })
                 service.AddModel(slug, title, cube);
             yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(MuseumScene,
                 new LoadSceneParameters(LoadSceneMode.Additive));
@@ -132,13 +190,14 @@ namespace MusiyoBetsknate.Tests
             yield return new WaitForSecondsRealtime(MuseumPointGlow.FadeSeconds + .3f);
             Assert.That(glows.AlphaOf(first), Is.LessThan(.01f), "The light gives way to the screen while the visitor is there.");
 
-            // Its face (the piece's -Z side) turns to the visitor.
+            // Its face, the side its nose sticks out of (glTF +Z), turns to the visitor: the visitor sees its front.
             yield return new WaitForSecondsRealtime(MuseumModelPresenter.FacingSeconds * 4);
             var toVisitor = eye.position - firstModel.position;
             toVisitor.y = 0;
-            var face = -firstModel.forward;
-            face.y = 0;
-            Assert.That(Vector3.Angle(face, toVisitor), Is.LessThan(12), "The piece looks at the visitor.");
+            var nose = NoseOf(firstModel) - firstModel.position;
+            nose.y = 0;
+            Assert.That(Vector3.Angle(nose, toVisitor), Is.LessThan(12), "The piece looks at the visitor, nose first.");
+            Assert.That(Vector3.Angle(firstModel.forward, toVisitor), Is.LessThan(12), "Its +Z side, the front of a glTF asset, faces the visitor.");
 
             // Another piece of the point takes the resident's place while it is read, and gives it back afterwards.
             Assert.That(interaction.SelectedElement.slug, Is.EqualTo("piece-common"), "By a stand the point opens on its own record.");

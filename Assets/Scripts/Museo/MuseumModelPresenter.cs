@@ -372,7 +372,9 @@ namespace MusiyoBetsknate.Museum
 
         /// <summary>
         /// Turns a piece's face toward the visitor at its point, and toward the reading spot of its stand otherwise. The
-        /// face of an imported piece is its -Z side: the side the examination shows to the camera.
+        /// face of a published piece is its +Z side: glTF puts the front of an asset toward +Z and glTFast keeps that axis
+        /// when it converts to Unity (it mirrors X only). Turning -Z toward the visitor showed them the back of the masks
+        /// (owner's headset test of 23/10/2026).
         /// </summary>
         private void Face(LoadSession piece, float elapsed, bool active)
         {
@@ -391,7 +393,7 @@ namespace MusiyoBetsknate.Museum
             }
             toward.y = 0;
             if (toward.sqrMagnitude < .0001f) return;
-            float target = Mathf.Atan2(-toward.x, -toward.z) * Mathf.Rad2Deg;
+            float target = Mathf.Atan2(toward.x, toward.z) * Mathf.Rad2Deg;
             piece.Yaw = piece.YawSet ? Mathf.LerpAngle(piece.Yaw, target, 1 - Mathf.Exp(-Mathf.Max(0, elapsed) / FacingSeconds)) : target;
             piece.YawSet = true;
             Place(piece, active);
