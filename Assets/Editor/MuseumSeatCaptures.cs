@@ -36,20 +36,34 @@ namespace MusiyoBetsknate.Editor
                 MuseumAtmosphere.Current.Apply(true);
                 Physics.SyncTransforms();
                 var seats = MuseumSeating.FindSeats();
-                var views = new List<(string name, Vector3 eye, Vector3 target)>();
                 var list = new StringBuilder();
+                // Doorways and passages, to judge whether a seat stands in a way through.
+                foreach (var way in UnityEngine.Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None)
+                    .Where(item => item.name.StartsWith("Pasaje_") || item.name.StartsWith("Umbral_") || item.name.Contains("Puerta")).OrderBy(item => item.name))
+                    list.AppendLine(FormattableString.Invariant(
+                        $"way {way.name}: centre {way.bounds.center.x:F2} {way.bounds.center.z:F2}, size {way.bounds.size.x:F2} {way.bounds.size.z:F2}"));
+                // Roofs, beams and the tops of walls hide the seats from above; the pictures leave them out.
+                var floors = UnityEngine.Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None).Where(item => item.name.Contains("_Piso")).ToList();
+                foreach (var high in UnityEngine.Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+                    if (high.bounds.min.y > 2.2f) high.enabled = false;
+                var views = new List<(string name, Vector3 eye, Vector3 target)>();
                 int index = 0;
                 foreach (var seat in seats.OrderBy(item => item.Top.z).ThenBy(item => item.Top.x))
                 {
                     string name = FormattableString.Invariant($"{index++:D2}_{seat.Name}_{seat.Top.x:F1}_{seat.Top.z:F1}").Replace(' ', '_');
-                    views.Add(("seat_" + name + "_front", seat.Top + seat.Facing * 2.4f + Vector3.up * 1.25f, seat.Top + Vector3.down * .1f));
-                    views.Add(("seat_" + name + "_above", seat.Top + Vector3.up * 5.5f - seat.Facing * .6f, seat.Top));
+                    views.Add(("seat_" + name + "_front", seat.Top + seat.Facing * 1.7f + Vector3.up * 1.2f, seat.Top + Vector3.down * .15f));
+                    views.Add(("seat_" + name + "_above", seat.Top + Vector3.up * 6.5f - seat.Facing * 1.2f, seat.Top));
                     list.AppendLine(FormattableString.Invariant(
                         $"{name}: top {seat.Top.x:F2} {seat.Top.y:F2} {seat.Top.z:F2}, facing {seat.Facing.x:F2} {seat.Facing.z:F2}, length {seat.Along.magnitude * 2:F2} m, hearth {seat.Hearth}, {Surroundings(seat)}"));
                 }
-                // The doorway of the instruments room, from the corridor and from inside.
-                views.Add(("instruments_door_from_corridor", new Vector3(14.5f, 1.6f, -6.5f), new Vector3(20.5f, .6f, -9.4f)));
-                views.Add(("instruments_door_from_inside", new Vector3(22.5f, 1.6f, -3.2f), new Vector3(18.5f, .6f, -9.6f)));
+                // Every room from above, its floors whole.
+                foreach (var room in floors.GroupBy(item => item.name.Substring(0, item.name.IndexOf("_Piso"))))
+                {
+                    var bounds = room.First().bounds;
+                    foreach (var item in room) bounds.Encapsulate(item.bounds);
+                    float reach = Mathf.Max(bounds.size.x, bounds.size.z);
+                    views.Add(("room_" + room.Key, bounds.center + new Vector3(0, reach * .95f + 3, -reach * .25f), bounds.center));
+                }
                 var gate = UnityEngine.Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None)
                     .Where(item => item.name.StartsWith("Portada_")).Select(item => item.bounds).ToList();
                 if (gate.Count > 0)
