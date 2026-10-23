@@ -193,7 +193,8 @@ namespace MusiyoBetsknate.Museum
             bool inside = !string.IsNullOrEmpty(settings.WaitOutside) && Zone == settings.WaitOutside;
             if (inside && !Waiting) BeginWaiting(floor);
             else if (!inside && Waiting) EndWaiting(floor);
-            if (!Waiting && !trail.Record(floor)) rejoinPending = true;
+            // A jump (a teleport, sitting down or standing up) starts the way afresh: the old target is gone with it.
+            if (!Waiting && !trail.Record(floor)) { rejoinPending = true; target = -1; }
             if (!Waiting && rejoinPending && Rejoin(floor, eyes)) rejoinPending = false;
             if (Waiting) WaitAtDoor();
             else Move(floor);
@@ -298,6 +299,7 @@ namespace MusiyoBetsknate.Museum
                     retargetAt = Time.unscaledTime + RetargetSeconds;
                     target = trail.FarthestReachable(position, Clear, 20);
                 }
+                if (target >= trail.Count) target = trail.Count - 1;
                 float along = trail.LengthFrom(position, Mathf.Max(target, 0), floor);
                 goal = target >= 0 ? trail[target] : trail.Count > 0 ? trail[0] : position;
                 float wanted = settings.FollowDistance;
@@ -381,7 +383,7 @@ namespace MusiyoBetsknate.Museum
         private void Face(Vector3 floor)
         {
             var moving = speed > .2f && trail.Count > 0;
-            var look = moving && target >= 0 ? Flat(trail[target] - transform.position) : Flat(floor - transform.position);
+            var look = moving && target >= 0 && target < trail.Count ? Flat(trail[target] - transform.position) : Flat(floor - transform.position);
             if (look.sqrMagnitude < 1e-4f) return;
             transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(look, Vector3.up),
                 settings.TurnSpeed * Time.deltaTime);

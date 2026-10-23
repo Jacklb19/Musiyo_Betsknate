@@ -135,7 +135,11 @@ namespace MusiyoBetsknate.Museum
                     Capabilities = capabilities;
                     SetCapability(VoiceCapabilityState.Ready);
                 }
-                else SetCapability(VoiceCapabilityState.Failed);
+                else
+                {
+                    UnityEngine.Debug.LogWarning("[GuideVoiceClient] voice capabilities unusable: " + result + " " + code);
+                    SetCapability(VoiceCapabilityState.Failed);
+                }
                 return;
             }
             var state = ClassifyTranscription(result, code, text, out var transcript);

@@ -47,6 +47,25 @@ namespace MusiyoBetsknate.Tests
             }
         }
 
+        /// <summary>The colibrí turns its head about the head's own middle, so it never leaves its body (headset, 23/10/2026).</summary>
+        [Test]
+        public void TheColibrisHeadTurnsWithoutLeavingItsBody()
+        {
+            var holder = new GameObject("Holder");
+            try
+            {
+                var figure = GuideFigure.Build(holder.transform, GuideFigureSettings.Companion);
+                var skull = figure.Head.GetComponentsInChildren<Renderer>().First(renderer => renderer.name.Contains("Cabeza"));
+                var before = skull.bounds.center;
+                foreach (var turn in new[] { Quaternion.Euler(0, 65, 0), Quaternion.Euler(0, -65, 0), Quaternion.Euler(-14, 30, 14) })
+                {
+                    figure.Head.localRotation = turn;
+                    Assert.That(Vector3.Distance(skull.bounds.center, before), Is.LessThan(.02f), "The head stays on the body: " + turn.eulerAngles);
+                }
+            }
+            finally { Object.DestroyImmediate(holder); }
+        }
+
         [Test]
         public void TheBallsOfYarnStayAvailableThroughTheSettings()
         {

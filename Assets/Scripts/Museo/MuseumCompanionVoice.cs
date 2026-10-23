@@ -63,6 +63,7 @@ namespace MusiyoBetsknate.Museum
         private bool pausedNarration;
         private bool connected;
         private int shownSeconds = -1;
+        private VoiceCapabilityState loggedCapability;
 
         public CompanionVoiceStage Stage { get; private set; }
         /// <summary>Interface text key of the last problem, while <see cref="Stage"/> is Problem.</summary>
@@ -202,7 +203,12 @@ namespace MusiyoBetsknate.Museum
         /// <summary>Starts a question: the notice first while the visitor has not accepted the processing reported now.</summary>
         public bool Talk()
         {
-            if (!CanAsk) return false;
+            if (!CanAsk)
+            {
+                Debug.Log("[MuseumCompanionVoice] not now: " + (interaction != null ? interaction.State.ToString() : "no visit")
+                    + (companion != null && companion.Waiting ? ", waiting outside" : ""));
+                return false;
+            }
             if (!QuestionsOffered) return Fail("companion_voice_unavailable");
             if (voice.CapabilityState != VoiceCapabilityState.Ready)
             {
@@ -320,6 +326,12 @@ namespace MusiyoBetsknate.Museum
 
         private void OnVoiceChanged()
         {
+            if (voice.CapabilityState != loggedCapability)
+            {
+                loggedCapability = voice.CapabilityState;
+                Debug.Log("[MuseumCompanionVoice] capabilities " + loggedCapability
+                    + (loggedCapability == VoiceCapabilityState.Ready ? ": listens " + voice.Capabilities.Listens + ", speaks " + voice.Capabilities.Speaks : ""));
+            }
             switch (voice.TranscriptionState)
             {
                 case GuideTranscriptionState.Transcribed:
@@ -442,6 +454,7 @@ namespace MusiyoBetsknate.Museum
 
         private void Set(CompanionVoiceStage stage)
         {
+            if (stage != Stage) Debug.Log("[MuseumCompanionVoice] " + stage + (stage == CompanionVoiceStage.Problem ? " " + problem : ""));
             Stage = stage;
             stageSince = Time.unscaledTime;
             if (stage != CompanionVoiceStage.Problem) problem = "";

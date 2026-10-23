@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Linq;
+using System.Reflection;
 using MusiyoBetsknate.Museum;
 using NUnit.Framework;
 using UnityEngine;
@@ -126,6 +127,50 @@ namespace MusiyoBetsknate.Tests
             AssertBallShape(companion);
             Assert.That(companion.Figure.Renderers.Select(renderer => renderer.GetComponent<MeshFilter>()?.sharedMesh)
                 .All(mesh => mesh != null && !mesh.name.StartsWith("Combined")), Is.True, "The figure never shows a merged museum mesh.");
+        }
+
+        /// <summary>
+        /// A jump (a teleport, sitting down or standing up) clears the way the companion follows; its next step never reads a
+        /// point that went with it. On the headset it did, and the companion stopped where it was (23/10/2026).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheCompanionNeverReadsPastItsWayAfterAJump()
+        {
+            yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(MuseumScene,
+                new LoadSceneParameters(LoadSceneMode.Additive));
+            var flow = Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var settings = new UnityEditor.SerializedObject(flow.GetComponent<TourLoader>());
+            settings.FindProperty("apiBase").stringValue = "http://127.0.0.1:9/api/v1";
+            settings.ApplyModifiedPropertiesWithoutUndo();
+            flow.GetComponent<MuseumEntryView>().HeadsetActive = () => false;
+            var companion = Object.FindAnyObjectByType<MuseumCompanion>();
+            var body = Object.FindAnyObjectByType<DesktopVisitorController>().GetComponent<CharacterController>();
+            yield return null;
+            flow.EnterImmediately();
+            Place(body, new Vector3(0, .05f, -56));
+            for (int frame = 0; frame < 10; frame++) yield return null;
+            Assert.That(companion.Placed, Is.True);
+            // A few steps give it a way to follow; then the visitor is taken back at once, its target the newest point.
+            for (int step = 1; step <= 12; step++) { Place(body, new Vector3(0, .05f, -56 + step * .4f)); yield return null; }
+            var flags = BindingFlags.NonPublic | BindingFlags.Instance;
+            var target = typeof(MuseumCompanion).GetField("target", flags);
+            var trail = (CompanionTrail)typeof(MuseumCompanion).GetField("trail", flags).GetValue(companion);
+            var move = typeof(MuseumCompanion).GetMethod("Move", flags);
+            Assert.That(trail.Count, Is.GreaterThan(3));
+            target.SetValue(companion, trail.Count - 1);
+            Place(body, new Vector3(0, .05f, -56));
+            // Any exception thrown by its Update fails the test.
+            for (int frame = 0; frame < 30; frame++) yield return null;
+            // A short way and an empty one, with a target beyond them.
+            var floor = body.transform.position;
+            trail.Clear();
+            trail.Record(floor);
+            target.SetValue(companion, 9);
+            Assert.DoesNotThrow(() => move.Invoke(companion, new object[] { floor }));
+            trail.Clear();
+            target.SetValue(companion, 3);
+            Assert.DoesNotThrow(() => move.Invoke(companion, new object[] { floor }));
+            yield return null;
         }
 
         /// <summary>The companion is the wooden colibrí, flying at about shoulder height where the companion stands.</summary>

@@ -62,6 +62,12 @@ namespace MusiyoBetsknate.Tests
         [Test]
         public void CapabilitiesSayWhetherAndWhereTheVoiceIsProcessed()
         {
+            // As the online service answered on 23/10/2026, when the headset could not talk to the companion.
+            const string online = "{\"schema_version\":1,\"transcription\":\"configured\",\"synthesis\":\"configured\",\"processing\":\"external_providers\","
+                + "\"providers\":[\"ElevenLabs\",\"Groq\"],\"retention\":\"request_only\",\"input_mime\":\"audio/wav\",\"max_input_bytes\":5000000,"
+                + "\"max_input_seconds\":30,\"request_timeout_seconds\":45}";
+            Assert.That(VoiceCapabilitiesContractV1.TryParse(online, out var live), Is.True);
+            Assert.That(live.Listens && live.Speaks && live.External, Is.True);
             Assert.That(VoiceCapabilitiesContractV1.TryParse(Example("voice_capabilities_disabled.json"), out var disabled), Is.True);
             Assert.That(disabled.Listens || disabled.Speaks, Is.False, "Both disabled: no voice controls.");
             Assert.That(VoiceCapabilitiesContractV1.TryParse(Example("voice_capabilities_external.json"), out var external), Is.True);
