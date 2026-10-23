@@ -224,6 +224,7 @@ namespace MusiyoBetsknate.Museum
             FromModel = true;
             Floats = motion != GuideFigureDefinition.Rest;
             head = FindPart(model.transform, "Cabeza");
+            if (head != null) head = Pivoted(head);
             if (head == null)
             {
                 head = new GameObject("Head").transform;
@@ -241,6 +242,22 @@ namespace MusiyoBetsknate.Museum
         private static void Discard(UnityEngine.Object item)
         {
             if (Application.isPlaying) Destroy(item); else DestroyImmediate(item);
+        }
+
+        /// <summary>
+        /// A pivot at the middle of a part's own mesh, holding the part. Parts from Blender keep the model's origin, so
+        /// turning the part itself swings it about the body: on the headset the colibrí's head left its body that way.
+        /// </summary>
+        private static Transform Pivoted(Transform part)
+        {
+            var renderers = part.GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0 || part.parent == null) return part;
+            var own = renderers.FirstOrDefault(renderer => renderer.name.Contains(part.name)) ?? renderers[0];
+            var pivot = new GameObject(part.name + "_Pivot").transform;
+            pivot.SetParent(part.parent, false);
+            pivot.position = own.bounds.center;
+            part.SetParent(pivot, true);
+            return pivot;
         }
 
         private static Transform FindPart(Transform root, string name)
