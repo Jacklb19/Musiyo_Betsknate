@@ -45,6 +45,7 @@ namespace MusiyoBetsknate.Museum
         private Button orientation;
         private Button quitMain;
         private Button quitPause;
+        private MuseumControlsDiagram diagram;
         private TMP_Text subtitlesValue;
         private TMP_Text turnModeValue;
         private TMP_Text turnSpeedValue;
@@ -78,6 +79,8 @@ namespace MusiyoBetsknate.Museum
         private bool spatial;
         private readonly System.Collections.Generic.List<System.Action> removeListeners = new();
         public MuseumMenuView View => view;
+        /// <summary>The drawing of the controls at the top of the controls page.</summary>
+        public MuseumControlsDiagram ControlsDiagram => diagram;
         public MuseumVisitorPreferences Preferences => preferences;
         public Slider MusicLevelSlider => musicLevel;
         /// <summary>Headset-only turning choices, added beside the subtitles option of the settings page.</summary>
@@ -188,6 +191,8 @@ namespace MusiyoBetsknate.Museum
             headingControl ??= AddHeading(sensitivity, "heading_control");
             headingComfort ??= AddHeading(vignette, "heading_comfort");
             OrderSettings();
+            // The controls page opens on a drawing of the controls in use, above its lists.
+            if (diagram == null) diagram = MuseumControlsDiagram.Ensure(view.Controls);
             turnMode.gameObject.SetActive(spatial);
             turnSpeed.gameObject.SetActive(spatial);
             ShowComfort(spatial);
@@ -246,6 +251,7 @@ namespace MusiyoBetsknate.Museum
             input = MuseumInput.Current;
             input.BindingsChanged += RefreshKeys;
             BuildRebindRows();
+            diagram?.Build(spatial);
             SyncSettings(); Refresh();
         }
 
@@ -258,6 +264,14 @@ namespace MusiyoBetsknate.Museum
             var option = Instantiate(template, template.transform.parent, false);
             option.name = name;
             option.onClick = new Button.ButtonClickedEvent();
+            // A copy of an option that already shows its state carries that state's text too; left there it would read
+            // the new option's caption over its value («Texto del atril» on «Texto del atril», «Giro» on «Continuo»).
+            foreach (var copied in option.GetComponentsInChildren<TMP_Text>(true))
+                if (copied.name == "Value")
+                {
+                    copied.transform.SetParent(null, false);
+                    Discard(copied.gameObject);
+                }
             option.transform.SetSiblingIndex(template.transform.GetSiblingIndex() + 1);
             foreach (var label in option.GetComponentsInChildren<MuseumInterfaceLabel>(true)) label.TextKey = textKey;
             option.GetComponentInChildren<TMP_Text>(true).text = MuseumInterfaceText.Get(textKey);
@@ -388,6 +402,7 @@ namespace MusiyoBetsknate.Museum
             view.Controls.BindingStatus.gameObject.SetActive(!value);
             turnMode.gameObject.SetActive(value);
             ShowComfort(value);
+            if (bound) diagram?.Build(value);
             Refresh();
         }
 
@@ -402,6 +417,7 @@ namespace MusiyoBetsknate.Museum
         {
             foreach (var row in rebindRows) if (row != null) row.Refresh();
             foreach (var label in view.GetComponentsInChildren<MuseumInterfaceLabel>(true)) label.RefreshText();
+            diagram?.Build(spatial);
             Refresh();
         }
 

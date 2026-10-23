@@ -58,6 +58,29 @@ namespace MusiyoBetsknate.Museum
             return sprite;
         }
 
+        /// <summary>A white circle outline with soft antialiased edges, for the ring around a drawn thumbstick.</summary>
+        public static Sprite Ring(int size = 64, float thickness = 4)
+        {
+            size = Mathf.Clamp(size, 16, 128);
+            thickness = Mathf.Clamp(thickness, 1, size / 4f);
+            string key = "ring" + size + ":" + thickness.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+            if (cache.TryGetValue(key, out var found) && found != null) return found;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, name = key, filterMode = FilterMode.Bilinear };
+            float outer = size / 2f - 1, inner = outer - thickness;
+            var centre = new Vector2(size / 2f, size / 2f);
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float distance = (new Vector2(x + .5f, y + .5f) - centre).magnitude;
+                    float alpha = Mathf.Clamp01(outer - distance + .5f) * Mathf.Clamp01(distance - inner + .5f);
+                    texture.SetPixel(x, y, new Color(1, 1, 1, alpha));
+                }
+            texture.Apply();
+            var sprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(.5f, .5f));
+            cache[key] = sprite;
+            return sprite;
+        }
+
         /// <summary>A white sprite whose alpha follows the given (position, alpha) stops from left to right.</summary>
         public static Sprite Horizontal(string name, (float at, float alpha)[] stops)
         {
