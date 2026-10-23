@@ -211,8 +211,11 @@ namespace MusiyoBetsknate.Tests
             for (float waited = 0; waited < 4; waited += Time.unscaledDeltaTime) yield return null;
             var at = companion.transform.position;
             var side = companion.transform.right;
-            yield return Shot("companion_front", at + companion.transform.forward * 2.4f + Vector3.up * 1.5f, at + Vector3.up * 1.0f, 50);
-            yield return Shot("companion_side", at + side * 2.4f + Vector3.up * 1.4f, at + Vector3.up * .95f, 50);
+            // Close to the figure itself, whatever its height: the colibrí flies at the shoulder.
+            var centre = companion.Figure.WorldBounds().center;
+            yield return Shot("companion_front", centre + companion.transform.forward * 1.1f + Vector3.up * .12f, centre, 45);
+            yield return Shot("companion_side", centre + side * 1.1f + Vector3.up * .08f, centre, 45);
+            yield return Shot("companion_wide", at + companion.transform.forward * 2.6f + Vector3.up * 1.5f, at + Vector3.up * 1.0f, 50);
             yield return Shot("companion_visitor_view", visitor.transform.position + Vector3.up * 1.65f, at + Vector3.up * 1.1f);
 
             // The companion's own screen for a spoken question: the notice, then listening.
@@ -263,7 +266,15 @@ namespace MusiyoBetsknate.Tests
                 Place(anchor.transform.position + toward * (anchor.ActivationRadius + 3));
                 for (float waited = 0; waited < 1.5f; waited += Time.unscaledDeltaTime) yield return null;
                 yield return Shot("interviewer_invitation", visitor.transform.position + Vector3.up * 1.65f, place + Vector3.up * 1.4f, 70);
-                yield return Shot("interviewer_close", place + toward * 2.2f + Vector3.up * 1.55f, place + Vector3.up * 1.0f, 55);
+                // From where it faces: toward the fire, inside the room.
+                var figure = interviewer.Figure.WorldBounds().center;
+                var ahead = interviewer.Figure.transform.forward;
+                yield return Shot("interviewer_close", figure + ahead * 1.3f + Vector3.up * .35f, figure, 45);
+                yield return Shot("interviewer_bench", place + ahead * 2.4f + Vector3.up * 1.3f, place + Vector3.up * .1f, 55);
+                // As a visitor standing across the fire sees it.
+                var across = new Vector3(fire.x, place.y, fire.z) - place;
+                across.y = 0;
+                yield return Shot("interviewer_across_fire", new Vector3(fire.x, hearth.y + 1.6f, fire.z) + across.normalized * 1.4f, figure, 55);
             }
             // The companion waits at the hearth's door while the visitor is inside.
             Assert.That(visitor.FocusPoint(anchor), Is.True);

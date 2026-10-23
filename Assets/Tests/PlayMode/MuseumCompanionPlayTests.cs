@@ -128,13 +128,13 @@ namespace MusiyoBetsknate.Tests
                 .All(mesh => mesh != null && !mesh.name.StartsWith("Combined")), Is.True, "The figure never shows a merged museum mesh.");
         }
 
-        /// <summary>The companion is a ball of yarn floating at about shoulder height where the companion stands.</summary>
+        /// <summary>The companion is the wooden colibrí, flying at about shoulder height where the companion stands.</summary>
         private static void AssertBallShape(MuseumCompanion companion)
         {
             Assert.That(companion.Figure, Is.Not.Null);
-            Assert.That(companion.Figure.Floats, Is.True, "No human figure: a ball of yarn (owner, 22/10/2026).");
+            Assert.That(companion.Figure.Floats && companion.Figure.FromModel, Is.True, "No human figure: the colibrí (owner, 22/10/2026).");
             var bounds = companion.Figure.WorldBounds();
-            Assert.That(Mathf.Max(bounds.size.x, bounds.size.y, bounds.size.z), Is.InRange(.15f, .45f), "As big as a ball of yarn: " + bounds.size);
+            Assert.That(Mathf.Max(bounds.size.x, bounds.size.y, bounds.size.z), Is.InRange(.15f, .45f), "As big as a small carving: " + bounds.size);
             float above = bounds.center.y - companion.transform.position.y;
             Assert.That(above, Is.InRange(1.1f, 1.6f), "It floats at about shoulder height: " + above);
             Assert.That(Vector3.Distance(new Vector3(bounds.center.x, 0, bounds.center.z),

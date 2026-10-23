@@ -7,8 +7,48 @@ namespace MusiyoBetsknate.Tests
 {
     public sealed class GuideFigureTests
     {
+        /// <summary>The owner's choice (22/10/2026): the colibrí flies with the visitor, the ovillito rests by the hearth.</summary>
         [Test]
-        public void BothGuidesAreBallsOfYarnThatNeedNothingFromTheMuseumModel()
+        public void TheColibriFliesAndTheOvillitoRestsBothFromTheirOwnModels()
+        {
+            var settings = GuideFigureSettings.Current;
+            foreach (var (role, model, motion) in new[] { (GuideFigureSettings.Companion, "Guides/Colibri", GuideFigureDefinition.Fly),
+                (GuideFigureSettings.Interviewer, "Guides/Ovillito", GuideFigureDefinition.Rest) })
+            {
+                var definition = settings.For(role);
+                Assert.That(definition.Model, Is.EqualTo(model), role);
+                Assert.That(definition.Motion, Is.EqualTo(motion), role);
+                var holder = new GameObject("Holder");
+                try
+                {
+                    var figure = GuideFigure.Build(holder.transform, role);
+                    Assert.That(figure.FromModel && !figure.Seated, Is.True, role + " comes from its model.");
+                    Assert.That(figure.Floats, Is.EqualTo(motion == GuideFigureDefinition.Fly), role);
+                    var bounds = figure.WorldBounds();
+                    Assert.That(Mathf.Max(bounds.size.x, bounds.size.y, bounds.size.z), Is.EqualTo(definition.ModelSize).Within(.03f), role + " has its size: " + bounds.size);
+                    if (motion == GuideFigureDefinition.Fly)
+                        Assert.That(bounds.center.y, Is.EqualTo(definition.FloatHeight).Within(.05f), "The colibrí flies at about shoulder height.");
+                    else
+                        Assert.That(bounds.min.y, Is.EqualTo(0).Within(.02f), "The ovillito rests where it is put.");
+                    Assert.That(figure.GetComponentsInChildren<Collider>(), Is.Empty);
+                    Assert.That(figure.Renderers.SelectMany(renderer => renderer.sharedMaterials).All(material => material != null
+                        && material.shader.name == "Universal Render Pipeline/Lit" && !material.IsKeywordEnabled("_EMISSION")), Is.True,
+                        "Museum materials from the shipped URP material, never glowing.");
+                    Assert.That(figure.Renderers.SelectMany(renderer => renderer.sharedMaterials).Select(material => material.name)
+                        .All(name => name.StartsWith("Guide_Guia_")), Is.True, "Every part gets the museum's material for its name.");
+                    Assert.That(figure.Head, Is.Not.Null);
+                    var parts = figure.GetComponentsInChildren<Transform>().Select(part => part.name).ToArray();
+                    if (motion == GuideFigureDefinition.Fly)
+                        Assert.That(parts, Does.Contain("Ala_Izquierda").And.Contain("Ala_Derecha").And.Contain("Cabeza"), "Wings that beat and a head that turns.");
+                    else
+                        Assert.That(parts, Does.Contain("Ojos"), "Eyes that blink.");
+                }
+                finally { Object.DestroyImmediate(holder); }
+            }
+        }
+
+        [Test]
+        public void TheBallsOfYarnStayAvailableThroughTheSettings()
         {
             var settings = GuideFigureSettings.Current;
             foreach (var role in new[] { GuideFigureSettings.Companion, GuideFigureSettings.Interviewer })
@@ -16,10 +56,17 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(settings.Figures.ContainsKey(role), Is.True, role);
                 var definition = settings.For(role);
                 Assert.That(definition.Kind, Is.EqualTo(GuideFigureDefinition.Yarn), role + ": no human figure (owner, 22/10/2026).");
+                // The same entry without its model: the form used if the model were missing, floating where it would rest.
+                definition = new GuideFigureDefinition
+                {
+                    Kind = definition.Kind, Diameter = definition.Diameter, FloatHeight = Mathf.Max(definition.FloatHeight, .95f),
+                    SayoColor = definition.SayoColor, StripeColor = definition.StripeColor, StripeCount = definition.StripeCount,
+                    StripeWidth = definition.StripeWidth, HeadColor = definition.HeadColor
+                };
                 var holder = new GameObject("Holder");
                 try
                 {
-                    var figure = GuideFigure.Build(holder.transform, role);
+                    var figure = GuideFigure.Build(holder.transform, definition);
                     Assert.That(figure.Floats && !figure.FromModel && !figure.Seated, Is.True);
                     var bounds = figure.WorldBounds();
                     // Turns of thread crossing the ball widen its box a little.
@@ -100,6 +147,10 @@ namespace MusiyoBetsknate.Tests
             Assert.That(() => GuideFigureSettings.Parse("{\"schema_version\":2,\"figures\":{}}"), Throws.InvalidOperationException);
             Assert.That(() => GuideFigureSettings.Parse("{\"schema_version\":1,\"figures\":{\"companion\":{\"kind\":\"ghost\"}}}"),
                 Throws.InvalidOperationException, "Only the known forms.");
+            Assert.That(() => GuideFigureSettings.Parse("{\"schema_version\":1,\"figures\":{\"companion\":{\"motion\":\"teleport\"}}}"),
+                Throws.InvalidOperationException, "Only the known ways of moving.");
+            Assert.That(() => GuideFigureSettings.Parse("{\"schema_version\":1,\"figures\":{\"companion\":{\"model_size_m\":9}}}"),
+                Throws.InvalidOperationException);
             var parsed = GuideFigureSettings.Parse("{\"schema_version\":1,\"figures\":{\"interviewer\":{\"model\":\"Guides/Other\",\"height_m\":1.7}}}");
             Assert.That(parsed.For("interviewer").Model, Is.EqualTo("Guides/Other"));
             Assert.That(parsed.For("companion").Height, Is.EqualTo(1.6f), "A role without an entry gets the woven figure.");
@@ -111,7 +162,7 @@ namespace MusiyoBetsknate.Tests
             var holder = new GameObject("Holder");
             try
             {
-                UnityEngine.TestTools.LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("woven figure"));
+                UnityEngine.TestTools.LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("built form"));
                 var figure = GuideFigure.Build(holder.transform, new GuideFigureDefinition { Model = "Guides/DoesNotExist", Kind = GuideFigureDefinition.Woven });
                 Assert.That(figure.FromModel, Is.False);
                 Assert.That(figure.Renderers, Is.Not.Empty);

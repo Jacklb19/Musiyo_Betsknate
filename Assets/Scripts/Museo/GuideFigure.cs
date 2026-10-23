@@ -13,11 +13,14 @@ namespace MusiyoBetsknate.Museum
     public sealed class GuideFigureDefinition
     {
         public const string Yarn = "yarn", Jigra = "jigra", Wood = "wood", Woven = "woven";
+        public const string Fly = "fly", Rest = "rest", Float = "float";
         /// <summary>The floating forms proposed for the guides; the woven figure walks.</summary>
         public static readonly string[] Floating = { Yarn, Jigra, Wood };
         /// <summary>
-        /// Resources path of a model that replaces the woven figure, empty for the woven one. The model stands on its
-        /// origin, faces +Z and is scaled to <see cref="Height"/>; nothing of it is read from the museum model.
+        /// Resources path of a model that replaces the built forms, empty for none. It faces +Z and is scaled to
+        /// <see cref="ModelSize"/> (or <see cref="Height"/>); nothing of it is read from the museum model. The owner chose a
+        /// carved wooden colibrí for the companion and a ball of the sayo's wool with eyes, the ovillito, for the hearth
+        /// (22/10/2026); <see cref="Kind"/> is the form used if the model is missing.
         /// </summary>
         [JsonProperty("model")] public string Model = "";
         /// <summary>
@@ -30,6 +33,13 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("diameter_m")] public float Diameter = .26f;
         /// <summary>Height of the ball's centre above the floor, in metres: about the visitor's shoulder for the companion.</summary>
         [JsonProperty("float_height_m")] public float FloatHeight = 1.35f;
+        /// <summary>
+        /// How a modelled guide moves: <c>fly</c> (hovers at its height beating its wings, the colibrí), <c>rest</c> (sits
+        /// where it is placed, breathing and turning, the ovillito) or <c>float</c>.
+        /// </summary>
+        [JsonProperty("motion")] public string Motion = GuideFigureDefinition.Float;
+        /// <summary>Largest side of a modelled guide, in metres; zero scales it to <see cref="Height"/>.</summary>
+        [JsonProperty("model_size_m")] public float ModelSize;
         [JsonProperty("height_m")] public float Height = 1.6f;
         /// <summary>Seated on a bench (the hearth guide) instead of standing and walking (the companion).</summary>
         [JsonProperty("seated")] public bool Seated;
@@ -85,7 +95,9 @@ namespace MusiyoBetsknate.Museum
                     || definition.StripeWidth < 0 || definition.StripeWidth > .5f
                     || definition.Kind != GuideFigureDefinition.Woven && Array.IndexOf(GuideFigureDefinition.Floating, definition.Kind) < 0
                     || !MuseumExperienceConfiguration.Finite(definition.Diameter) || definition.Diameter < .08f || definition.Diameter > 1
-                    || !MuseumExperienceConfiguration.Finite(definition.FloatHeight) || definition.FloatHeight < .2f || definition.FloatHeight > 2)
+                    || !MuseumExperienceConfiguration.Finite(definition.FloatHeight) || definition.FloatHeight < 0 || definition.FloatHeight > 2
+                    || definition.Motion != GuideFigureDefinition.Fly && definition.Motion != GuideFigureDefinition.Rest && definition.Motion != GuideFigureDefinition.Float
+                    || !MuseumExperienceConfiguration.Finite(definition.ModelSize) || definition.ModelSize < 0 || definition.ModelSize > 2)
                     throw new InvalidOperationException("Invalid guide figure.");
                 foreach (var color in new[] { definition.SayoColor, definition.StripeColor, definition.TunicColor, definition.BeltColor, definition.HeadColor })
                     MuseumExperienceConfiguration.ColorValue(color);
@@ -117,7 +129,13 @@ namespace MusiyoBetsknate.Museum
         private const int Sides = 20;
         private static readonly Dictionary<string, Mesh> Meshes = new();
         private readonly List<UnityEngine.Object> owned = new();
-        private Transform head, body, leftLeg, rightLeg, ball;
+        private Transform head, body, leftLeg, rightLeg, ball, eyes;
+        private Transform[] wings = new Transform[0];
+        private Quaternion[] wingRest = new Quaternion[0];
+        private Vector3 eyesRest = Vector3.one;
+        private string motion = "";
+        private float blinkAt = 3, blinkUntil, turn;
+        private readonly Dictionary<string, Material> tones = new();
         private Material wool;
         private Color woolColor;
         private float floatHeight;
@@ -131,7 +149,7 @@ namespace MusiyoBetsknate.Museum
         public Renderer[] Renderers { get; private set; } = new Renderer[0];
         /// <summary>The figure is a replacement model rather than the woven one.</summary>
         public bool FromModel { get; private set; }
-        /// <summary>The guide is a floating object (yarn, jigra or wood) rather than a figure.</summary>
+        /// <summary>The guide floats or flies (a floating object, or the colibrí) rather than standing or resting.</summary>
         public bool Floats { get; private set; }
         public bool Seated { get; private set; }
         public Transform Head => head;
@@ -152,40 +170,127 @@ namespace MusiyoBetsknate.Museum
             var figure = root.AddComponent<GuideFigure>();
             float height = definition.Height * Mathf.Max(.1f, scale);
             figure.Seated = definition.Seated;
-            if (!string.IsNullOrEmpty(definition.Model) && figure.BuildModel(definition.Model, height)) return figure;
+            if (!string.IsNullOrEmpty(definition.Model) && figure.BuildModel(definition, height)) return figure;
             if (Array.IndexOf(GuideFigureDefinition.Floating, definition.Kind) >= 0) figure.BuildFloating(definition, scale);
             else figure.BuildWoven(definition, height);
             return figure;
         }
 
-        private bool BuildModel(string path, float height)
+        /// <summary>
+        /// A guide modelled in Blender (<c>Resources/Guides</c>): sized to its definition, given the museum's own materials by
+        /// the names of its parts' materials (<c>Guia_*</c>), and moved by <see cref="UpdateModel"/>. Parts found by name:
+        /// <c>Cabeza</c> (turns toward someone), <c>Ala_*</c> (wings that beat), <c>Ojos</c> (eyes that blink).
+        /// </summary>
+        private bool BuildModel(GuideFigureDefinition definition, float height)
         {
-            var source = Resources.Load<GameObject>(path);
+            var source = Resources.Load<GameObject>(definition.Model);
             if (source == null)
             {
-                Debug.LogWarning("[GuideFigure] model " + path + " is missing; the woven figure is used.");
+                Debug.LogWarning("[GuideFigure] model " + definition.Model + " is missing; the built form is used.");
                 return false;
             }
-            var model = Instantiate(source, transform, false);
+            motion = definition.Motion;
+            body = new GameObject("Body").transform;
+            body.SetParent(transform, false);
+            var model = Instantiate(source, body, false);
             model.name = "Model";
-            foreach (var collider in model.GetComponentsInChildren<Collider>()) Destroy(collider);
+            foreach (var collider in model.GetComponentsInChildren<Collider>()) Discard(collider);
+            foreach (var animator in model.GetComponentsInChildren<Animator>()) Discard(animator);
             var renderers = model.GetComponentsInChildren<Renderer>();
-            if (renderers.Length == 0) { Destroy(model); return false; }
+            if (renderers.Length == 0) { Discard(body.gameObject); return false; }
+            foreach (var renderer in renderers)
+            {
+                renderer.sharedMaterials = renderer.sharedMaterials.Select(material => ModelTone(material != null ? material.name : "", definition)).ToArray();
+                renderer.shadowCastingMode = ShadowCastingMode.On;
+                renderer.lightProbeUsage = LightProbeUsage.Off;
+                renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
+            }
             var bounds = renderers[0].bounds;
             foreach (var renderer in renderers) bounds.Encapsulate(renderer.bounds);
-            if (bounds.size.y < 1e-3f) { Destroy(model); return false; }
-            float factor = height / bounds.size.y;
+            float largest = Mathf.Max(bounds.size.x, bounds.size.y, bounds.size.z);
+            if (largest < 1e-3f) { Discard(body.gameObject); return false; }
+            float factor = definition.ModelSize > 0 ? definition.ModelSize / largest : height / bounds.size.y;
+            // A resting guide sits on its lowest point; a flying or floating one hangs from its middle.
+            var anchor = transform.InverseTransformPoint(motion == GuideFigureDefinition.Rest
+                ? new Vector3(bounds.center.x, bounds.min.y, bounds.center.z) : bounds.center);
+            var pivot = model.transform.localPosition;
             model.transform.localScale *= factor;
-            var foot = transform.InverseTransformPoint(new Vector3(bounds.center.x, bounds.min.y, bounds.center.z));
-            model.transform.localPosition -= foot * factor;
+            model.transform.localPosition = -(anchor - pivot) * factor;
+            floatHeight = definition.FloatHeight;
+            body.localPosition = Vector3.up * floatHeight;
             Renderers = renderers;
-            Height = height;
+            float size = bounds.size.y * factor;
+            Height = motion == GuideFigureDefinition.Rest ? floatHeight + size : floatHeight + size * .5f;
             FromModel = true;
-            head = new GameObject("Head").transform;
-            head.SetParent(transform, false);
-            head.localPosition = Vector3.up * height * .93f;
-            headRest = Quaternion.identity;
+            Floats = motion != GuideFigureDefinition.Rest;
+            head = FindPart(model.transform, "Cabeza");
+            if (head == null)
+            {
+                head = new GameObject("Head").transform;
+                head.SetParent(body, false);
+                head.localPosition = Vector3.up * size * (motion == GuideFigureDefinition.Rest ? .6f : .1f);
+            }
+            headRest = head.localRotation;
+            eyes = FindPart(model.transform, "Ojos");
+            if (eyes != null) eyesRest = eyes.localScale;
+            wings = model.GetComponentsInChildren<Transform>().Where(part => part.name.StartsWith("Ala_")).ToArray();
+            wingRest = wings.Select(wing => wing.localRotation).ToArray();
             return true;
+        }
+
+        private static void Discard(UnityEngine.Object item)
+        {
+            if (Application.isPlaying) Destroy(item); else DestroyImmediate(item);
+        }
+
+        private static Transform FindPart(Transform root, string name)
+            => root.GetComponentsInChildren<Transform>().FirstOrDefault(part => part.name == name);
+
+        /// <summary>
+        /// The museum's material for a part of a model, by the name it carries from Blender: painted, pale or dark wood with
+        /// its grain, the beak, the sayo's wool and its stripe, felt and the eyes. All opaque, none glowing.
+        /// </summary>
+        private Material ModelTone(string imported, GuideFigureDefinition definition)
+        {
+            string key = imported.Replace(" (Instance)", "").Trim();
+            int dot = key.IndexOf('.');
+            if (dot > 0) key = key.Substring(0, dot);
+            if (tones.TryGetValue(key, out var made)) return made;
+            var authored = Resources.Load<Material>(MaterialResource);
+            var material = authored != null ? new Material(authored) : new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            material.name = "Guide_" + key;
+            var colour = Color.white;
+            Texture2D texture = null;
+            var scale = Vector2.one;
+            float smooth = .3f;
+            Texture2D Wood(string tone) => Weave(new GuideFigureDefinition { Kind = GuideFigureDefinition.Wood, HeadColor = tone });
+            switch (key)
+            {
+                case "Guia_MaderaVerde": texture = Wood("#5C9C8C"); scale = new Vector2(3, 1); smooth = .35f; break;
+                case "Guia_MaderaClara": texture = Wood("#D9B98D"); scale = new Vector2(3, 1); smooth = .35f; break;
+                case "Guia_MaderaOscura": texture = Wood("#7A5134"); scale = new Vector2(4, 1); break;
+                case "Guia_Lana":
+                    texture = Weave(new GuideFigureDefinition { Kind = GuideFigureDefinition.Yarn, SayoColor = definition.SayoColor,
+                        StripeColor = definition.StripeColor, StripeWidth = definition.StripeWidth });
+                    scale = new Vector2(2, 5); smooth = .08f; break;
+                case "Guia_Pico": colour = new Color(.22f, .14f, .09f); smooth = .45f; break;
+                case "Guia_Franja": colour = MuseumExperienceConfiguration.ColorValue(definition.StripeColor); smooth = .08f; break;
+                case "Guia_Fieltro": colour = new Color(.27f, .21f, .17f); smooth = .05f; break;
+                case "Guia_OjoPupila": colour = new Color(.02f, .02f, .025f); smooth = .9f; break;
+                case "Guia_OjoBrillo": smooth = .9f; break;
+                default: colour = MuseumExperienceConfiguration.ColorValue(definition.SayoColor); break;
+            }
+            material.SetColor("_BaseColor", colour);
+            material.color = colour;
+            material.SetFloat("_Smoothness", smooth);
+            if (texture != null)
+            {
+                material.SetTexture("_BaseMap", texture);
+                material.SetTextureScale("_BaseMap", scale);
+            }
+            owned.Add(material);
+            tones[key] = material;
+            return material;
         }
 
         private void BuildWoven(GuideFigureDefinition definition, float height)
@@ -360,6 +465,65 @@ namespace MusiyoBetsknate.Museum
             return mesh;
         });
 
+        /// <summary>
+        /// A modelled guide's life. Flying (the colibrí): it hovers with a gentle bob, beats its wings fast (faster while it
+        /// speaks), leans into its way and turns its head toward someone, tilting it while it listens and looking up while
+        /// it thinks. Resting (the ovillito): it breathes, turns its whole body toward someone, leans while it listens,
+        /// sways while it thinks and gives small hops while it speaks. Both blink now and then. Nothing glows or fades.
+        /// </summary>
+        private void UpdateModel(float delta)
+        {
+            bool flying = motion == GuideFigureDefinition.Fly;
+            float stride = Mathf.Clamp01(Stride);
+            float bob = flying ? Mathf.Sin(breath * 2.1f) * .035f : 0;
+            float hop = !flying && Gesture == GuideGesture.Speak ? Mathf.Abs(Mathf.Sin(breath * 6)) * .025f : 0;
+            body.localPosition = Vector3.up * (floatHeight + bob + hop);
+            // A resting guide turns its whole body toward someone; a flying one leans into its way and turns its head.
+            float wantedTurn = 0;
+            if (LookAt.HasValue && !flying)
+            {
+                var local = transform.InverseTransformPoint(LookAt.Value);
+                wantedTurn = Mathf.Clamp(Mathf.Atan2(local.x, local.z) * Mathf.Rad2Deg, -75, 75);
+            }
+            turn = Mathf.LerpAngle(turn, wantedTurn, 1 - Mathf.Exp(-delta * 3));
+            float tilt = flying ? stride * 12 : Gesture == GuideGesture.Listen ? 8 : 0;
+            float sway = Gesture == GuideGesture.Think ? Mathf.Sin(breath * 1.4f) * 6 : 0;
+            body.localRotation = Quaternion.Slerp(body.localRotation, Quaternion.Euler(tilt, turn, sway), 1 - Mathf.Exp(-delta * 4));
+            float breathe = flying ? 0 : Mathf.Sin(breath * 1.7f) * .02f + hop * .6f;
+            body.localScale = new Vector3(1 - breathe * .5f, 1 + breathe, 1 - breathe * .5f);
+            // The wings beat about the body's length, each the opposite way.
+            float beat = Mathf.Sin(breath * (Gesture == GuideGesture.Speak ? 46 : 34)) * 38;
+            for (int index = 0; index < wings.Length; index++)
+            {
+                var wing = wings[index];
+                if (wing == null) continue;
+                float side = wing.name.Contains("Izq") ? 1 : -1;
+                var axis = wing.parent.InverseTransformDirection(body.forward);
+                wing.localRotation = Quaternion.AngleAxis(beat * side, axis) * wingRest[index];
+            }
+            if (flying && head != null && head.parent != null)
+            {
+                var wanted = headRest;
+                if (LookAt.HasValue)
+                {
+                    var towards = head.parent.InverseTransformDirection(LookAt.Value - head.position);
+                    var ahead = head.parent.InverseTransformDirection(body.forward);
+                    if (towards.sqrMagnitude > 1e-6f)
+                        wanted = Quaternion.RotateTowards(Quaternion.identity, Quaternion.FromToRotation(ahead, towards), 65) * headRest;
+                }
+                var parentRight = head.parent.InverseTransformDirection(body.right);
+                var parentAhead = head.parent.InverseTransformDirection(body.forward);
+                if (Gesture == GuideGesture.Listen) wanted = Quaternion.AngleAxis(14, parentAhead) * wanted;
+                else if (Gesture == GuideGesture.Think) wanted = Quaternion.AngleAxis(-14 + Mathf.Sin(breath) * 4, parentRight) * wanted;
+                head.localRotation = Quaternion.Slerp(head.localRotation, wanted, 1 - Mathf.Exp(-delta * 5));
+            }
+            if (eyes != null)
+            {
+                if (breath >= blinkAt) { blinkUntil = breath + .12f; blinkAt = breath + 2.5f + Mathf.Repeat(breath * 7.31f, 3); }
+                eyes.localScale = breath < blinkUntil ? new Vector3(eyesRest.x, eyesRest.y * .15f, eyesRest.z) : eyesRest;
+            }
+        }
+
         /// <summary>The ball's slow life: bob, sway, lean into its way, turn toward someone, think and speak.</summary>
         private void UpdateFloating(float delta)
         {
@@ -383,7 +547,6 @@ namespace MusiyoBetsknate.Museum
             if (wool != null) wool.SetColor("_BaseColor", Color.Lerp(woolColor, new Color(1, .93f, .82f), swell * .5f));
         }
 
-        /// <summary>The sayo's stripes: one band of wool with a thin dark stripe, repeated around the garment.</summary>
         /// <summary>
         /// The surface of a floating guide, of <paramref name="size"/> pixels square, tiled over it: wound thread (fine threads
         /// with the sayo's stripes among them), a knotted net of cabuya, or the grain of turned wood.
@@ -431,6 +594,7 @@ namespace MusiyoBetsknate.Museum
             return texture;
         }
 
+        /// <summary>The sayo's stripes: one band of wool with a thin dark stripe, repeated around the garment.</summary>
         private Texture2D Stripes(GuideFigureDefinition definition)
         {
             const int width = 64;
@@ -467,6 +631,7 @@ namespace MusiyoBetsknate.Museum
         {
             float delta = Time.deltaTime;
             breath += delta;
+            if (FromModel && body != null) { UpdateModel(delta); return; }
             if (Floats) { UpdateFloating(delta); return; }
             if (body != null) body.localScale = new Vector3(1, 1 + Mathf.Sin(breath * 1.6f) * .005f, 1) * unit;
             float stride = Seated ? 0 : Mathf.Clamp01(Stride);

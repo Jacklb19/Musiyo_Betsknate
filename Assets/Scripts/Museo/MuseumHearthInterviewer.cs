@@ -6,13 +6,14 @@ using UnityEngine;
 namespace MusiyoBetsknate.Museum
 {
     /// <summary>
-    /// The guide who waits by the hearth for the closing conversation: a large ball of yarn in the sayo's colours (the
-    /// owner's choice of 22/10/2026: no human figure) floating gently over one end of the museum's own north bench by the
-    /// fire, so the guide's screen unfolds beside it. From across the room an invitation floats near it, «Acércate a
-    /// conversar», and the ball turns toward the visitor. Sitting down on a bench of the hearth (<see cref="MuseumSeating"/>)
-    /// opens the conversation; the first time it begins the interview with the published questions. While the visitor
-    /// sits there the conversation stays open, whichever bench they chose. The ball turns slowly while an answer is on its
-    /// way and its wool swells softly while its voice is heard; it never glows, flickers or fades.
+    /// The guide who waits by the hearth for the closing conversation: the ovillito, a ball of the sayo's wool with eyes
+    /// and felt feet (the owner's choice of 22/10/2026: no human figure), resting on one end of the museum's own north
+    /// bench by the fire, so the guide's screen unfolds beside it. A floating form (<see cref="GuideFigureDefinition.Motion"/>)
+    /// hovers over that end instead. From across the room an invitation floats near it, «Acércate a conversar», and the
+    /// ovillito turns toward the visitor. Sitting down on a bench of the hearth (<see cref="MuseumSeating"/>) opens the
+    /// conversation, beside the ovillito if on its bench; the first time it begins the interview with the published
+    /// questions. While the visitor sits there the conversation stays open, whichever bench they chose. The ovillito sways
+    /// while an answer is on its way and hops softly while its voice is heard; it never glows, flickers or fades.
     /// </summary>
     [RequireComponent(typeof(MuseumGuide))]
     public sealed class MuseumHearthInterviewer : MonoBehaviour
@@ -41,10 +42,12 @@ namespace MusiyoBetsknate.Museum
         /// <summary>The invitation is on show.</summary>
         public bool Inviting => invitation != null && invitation.gameObject.activeSelf && invitationGroup.alpha > .5f;
         public string InvitationText { get; private set; } = "";
-        /// <summary>Where the guide's place is, on the floor.</summary>
+        /// <summary>Where the guide is: on the bench it rests on, or on the floor under a floating form.</summary>
         public Vector3 Place => stand != null ? stand.position : transform.position;
         /// <summary>The visitor sits on a bench of the hearth.</summary>
         public bool VisitorSeated => seating != null && seating.Seated && seating.Current.Hearth;
+        /// <summary>The guide rests on its bench (the ovillito) rather than floating over it.</summary>
+        public bool Rests { get; private set; }
 
         private void Start()
         {
@@ -58,6 +61,7 @@ namespace MusiyoBetsknate.Museum
             {
                 seating.SatDown += OnSatDown;
                 seating.HearthFocus = () => Figure != null ? Figure.Head.position : (Vector3?)null;
+                seating.Occupied = () => Figure != null && Rests ? stand.position : (Vector3?)null;
             }
             // Seated in the hearth, the conversation stays open whichever bench the visitor chose.
             guide.KeepsInRange = () => VisitorSeated;
@@ -101,19 +105,26 @@ namespace MusiyoBetsknate.Museum
             var seat = FindObjectsByType<Renderer>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
                 .Where(piece => HearthSeats.Contains(piece.name))
                 .OrderBy(piece => (Flat(piece.bounds.center) - Flat(place)).sqrMagnitude).FirstOrDefault();
+            var definition = GuideFigureSettings.Current.For(GuideFigureSettings.Interviewer);
+            Rests = false;
             if (seat != null && (Flat(seat.bounds.center) - Flat(place)).magnitude < 2.5f)
             {
-                // Over one end of the museum's bench: the guide's screen unfolds at its middle, in front of it.
+                // On (or over) one end of the museum's bench: the guide's screen unfolds at its middle, in front of it.
                 var bounds = seat.bounds;
                 var along = bounds.size.x >= bounds.size.z ? Vector3.right : Vector3.forward;
                 float reach = Mathf.Max(bounds.size.x, bounds.size.z) * .5f;
-                stand.position = new Vector3(bounds.center.x, place.y, bounds.center.z) + along * Mathf.Clamp(reach - .35f, 0, .75f);
+                Rests = !string.IsNullOrEmpty(definition.Model) && definition.Motion == GuideFigureDefinition.Rest;
+                stand.position = new Vector3(bounds.center.x, Rests ? bounds.max.y : place.y, bounds.center.z) + along * Mathf.Clamp(reach - .35f, 0, .75f);
             }
-            var front = Flat(anchor.transform.position - stand.position);
+            // Facing the fire, where visitors sit round it; without the hearth's stones, toward its anchor.
+            var fire = FindObjectsByType<Renderer>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
+                .FirstOrDefault(piece => piece.name == MuseumSeating.FirePiece);
+            var front = Flat((fire != null ? fire.bounds.center : anchor.transform.position) - stand.position);
             stand.rotation = Quaternion.LookRotation(front.sqrMagnitude > .01f ? front.normalized : -anchor.transform.forward, Vector3.up);
-            Figure = GuideFigure.Build(stand, GuideFigureSettings.Interviewer);
+            Figure = GuideFigure.Build(stand, definition);
+            Rests &= Figure.FromModel;
             BuildInvitation();
-            Debug.Log("[MuseumHearthInterviewer] ball at " + stand.position.ToString("F2") + (seat != null ? " by " + seat.name : ""));
+            Debug.Log("[MuseumHearthInterviewer] guide at " + stand.position.ToString("F2") + (seat != null ? " by " + seat.name : ""));
         }
 
         private static Vector3 Flat(Vector3 value) => new Vector3(value.x, 0, value.z);
@@ -169,7 +180,7 @@ namespace MusiyoBetsknate.Museum
             invitationGroup.alpha = alpha;
             invitation.gameObject.SetActive(alpha > 0);
             if (alpha <= 0) return;
-            // A little in front of the ball, toward the visitor, above it.
+            // A little in front of the guide, toward the visitor, above it.
             invitation.transform.localPosition = Vector3.forward * .6f + Vector3.up * (Figure.Height + .35f);
             invitation.transform.rotation = MuseumWorldUi.Facing(invitation.transform.position, eyes);
         }

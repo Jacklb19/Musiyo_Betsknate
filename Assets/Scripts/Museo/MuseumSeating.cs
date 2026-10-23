@@ -91,6 +91,8 @@ namespace MusiyoBetsknate.Museum
         public RectTransform PromptSurface => promptSurface;
         /// <summary>What a seated visitor in the hearth looks at besides the fire; the hearth guide sets it.</summary>
         public Func<Vector3?> HearthFocus { get; set; }
+        /// <summary>A spot on a seat already taken (the ovillito resting on its bench); the visitor sits beside it.</summary>
+        public Func<Vector3?> Occupied { get; set; }
         public event Action<SeatSpot> SatDown;
         public event Action<SeatSpot> StoodUp;
 
@@ -209,6 +211,14 @@ namespace MusiyoBetsknate.Museum
             var feet = Feet();
             standingSpot = feet;
             SeatPoint = seat.Nearest(feet);
+            var taken = Occupied?.Invoke();
+            if (taken.HasValue && seat.Along.sqrMagnitude > 1e-6f && Flat(SeatPoint - taken.Value).magnitude < .55f)
+            {
+                // Beside what rests there, toward the middle of the seat.
+                var axis = seat.Along.normalized;
+                float side = Vector3.Dot(seat.Top - taken.Value, axis) >= 0 ? 1 : -1;
+                SeatPoint = seat.Nearest(taken.Value + axis * side * .6f);
+            }
             float floor = desktop.transform.position.y;
             var target = new Vector3(SeatPoint.x, floor, SeatPoint.z);
             if (body != null) body.enabled = false;

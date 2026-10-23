@@ -3,7 +3,9 @@
   "figures": {
     "companion": {
       "kind": "yarn",
-      "model": "",
+      "model": "Guides/Colibri",
+      "motion": "fly",
+      "model_size_m": 0.3,
       "diameter_m": 0.26,
       "float_height_m": 1.35,
       "height_m": 1.6,
@@ -18,9 +20,11 @@
     },
     "interviewer": {
       "kind": "yarn",
-      "model": "",
-      "diameter_m": 0.5,
-      "float_height_m": 0.95,
+      "model": "Guides/Ovillito",
+      "motion": "rest",
+      "model_size_m": 0.45,
+      "diameter_m": 0.45,
+      "float_height_m": 0.0,
       "height_m": 1.6,
       "seated": false,
       "sayo_color": "#EDE2C3",

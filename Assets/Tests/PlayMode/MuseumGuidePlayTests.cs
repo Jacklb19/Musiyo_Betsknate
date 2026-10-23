@@ -614,7 +614,7 @@ namespace MusiyoBetsknate.Tests
         /// the visitor's view is lower and walking is held; the sit control stands them up where they were.
         /// </summary>
         [UnityTest]
-        public IEnumerator TheHearthGuideIsABallOfYarnAndTheInterviewBeginsOnSittingDown()
+        public IEnumerator TheHearthGuideIsTheOvillitoAndTheInterviewBeginsOnSittingDown()
         {
             var keyboard = InputSystem.AddDevice<Keyboard>();
             InputSystem.AddDevice<Mouse>();
@@ -633,10 +633,12 @@ namespace MusiyoBetsknate.Tests
             var eye = visitor.GetComponentInChildren<Camera>().transform;
             yield return Until(() => interviewer.Figure != null, 3);
             Assert.That(interviewer.Figure, Is.Not.Null);
-            Assert.That(interviewer.Figure.Floats, Is.True, "No human figure: a large ball of yarn.");
+            Assert.That(interviewer.Figure.FromModel && interviewer.Rests, Is.True, "No human figure: the ovillito, resting on the bench.");
             var bounds = interviewer.Figure.WorldBounds();
-            Assert.That(Mathf.Max(bounds.size.x, bounds.size.y, bounds.size.z), Is.InRange(.35f, .7f), "A large ball: " + bounds.size);
-            Assert.That(bounds.min.y - interviewer.Place.y, Is.InRange(.4f, 1f), "It floats gently above the bench, by the fire.");
+            Assert.That(Mathf.Max(bounds.size.x, bounds.size.y, bounds.size.z), Is.InRange(.35f, .6f), "A large ovillito: " + bounds.size);
+            var blanket = UnityEngine.Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None).First(piece => piece.name == "Fogon_Manta_Norte");
+            Assert.That(bounds.min.y - blanket.bounds.max.y, Is.EqualTo(0).Within(.03f), "It rests on the north bench, by the fire.");
+            Assert.That(blanket.bounds.Contains(new Vector3(bounds.center.x, blanket.bounds.center.y, bounds.center.z)), Is.True, "On the bench, not beside it.");
             Assert.That(interviewer.Figure.GetComponentsInChildren<Collider>(), Is.Empty);
             Assert.That(UnityEngine.Object.FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None)
                 .Where(renderer => renderer.name == MuseumCompanion.BodyPiece || renderer.name == MuseumCompanion.HeadPiece)
@@ -675,13 +677,16 @@ namespace MusiyoBetsknate.Tests
             yield return null;
             Assert.That(seating.Seated, Is.True, "The sit key sits the visitor down.");
             Assert.That(seating.Current.Hearth, Is.True);
+            Assert.That(Vector3.Distance(new Vector3(seating.SeatPoint.x, 0, seating.SeatPoint.z), new Vector3(interviewer.Place.x, 0, interviewer.Place.z)),
+                Is.GreaterThan(.5f), "The visitor sits beside the ovillito, never on it.");
             Assert.That(standingEyes - eye.position.y, Is.GreaterThan(.3f), "The view goes down to a seated person's eyes.");
             Assert.That(eye.position.y - seating.SeatPoint.y, Is.EqualTo(MuseumSeating.SeatedEyes).Within(.05f));
             yield return Until(() => interaction.State == InteractionState.GuideQuestion, 2);
             Assert.That(interaction.State, Is.EqualTo(InteractionState.GuideQuestion), "Sitting down opens the conversation.");
             yield return Until(() => quiz.Active, 10);
             Assert.That(quiz.Active, Is.True, "The interview begins with the published questions.");
-            Assert.That(interviewer.Inviting, Is.False);
+            yield return Until(() => !interviewer.Inviting, 2);
+            Assert.That(interviewer.Inviting, Is.False, "Seated, the invitation fades away.");
 
             // Seated, walking is held; the conversation stays open.
             var seated = visitor.transform.position;
@@ -692,7 +697,8 @@ namespace MusiyoBetsknate.Tests
             Assert.That(seating.Seated, Is.False, "Moving stands the visitor up.");
             Assert.That(Vector3.Distance(new Vector3(visitor.transform.position.x, 0, visitor.transform.position.z),
                 new Vector3(standing.x, 0, standing.z)), Is.LessThan(.6f), "They stand where they stood.");
-            Assert.That(eye.position.y, Is.EqualTo(standingEyes).Within(.05f), "The view is back at its height.");
+            // Measured from the feet: walking on after standing up may climb a low step.
+            Assert.That(eye.position.y - visitor.transform.position.y, Is.EqualTo(standingEyes - standing.y).Within(.05f), "The view is back at its height.");
         }
 
         /// <summary>Any stool or bench outside the hearth can be sat on, and the sit key stands the visitor up.</summary>
