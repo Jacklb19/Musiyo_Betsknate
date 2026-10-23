@@ -24,7 +24,62 @@ namespace MusiyoBetsknate.Tests
             ? folder : "TestResults/guides";
 
         public override void Setup() { base.Setup(); MuseumInput.Replace(MuseumInput.CreateDefault()); }
-        public override void TearDown() { MuseumInput.Replace(null); base.TearDown(); }
+
+        private static System.Net.HttpListener service;
+
+        /// <summary>A local service that only says the guides' voice is configured; everything else is not found.</summary>
+        private static string StartVoiceService()
+        {
+            var probe = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+            probe.Start();
+            int port = ((System.Net.IPEndPoint)probe.LocalEndpoint).Port;
+            probe.Stop();
+            var capabilities = File.ReadAllText(Path.Combine(Application.dataPath, "Contracts", "examples", "voice_capabilities_external.json"));
+            service = new System.Net.HttpListener();
+            service.Prefixes.Add("http://127.0.0.1:" + port + "/");
+            service.Start();
+            var listener = service;
+            void Receive(IAsyncResult pending)
+            {
+                System.Net.HttpListenerContext context;
+                try { context = listener.EndGetContext(pending); listener.BeginGetContext(Receive, null); }
+                catch (Exception) { return; }
+                try
+                {
+                    bool voice = context.Request.Url.AbsolutePath == "/api/v1/guide/voice-capabilities";
+                    var bytes = System.Text.Encoding.UTF8.GetBytes(voice ? capabilities : "{\"detail\":\"Not Found\"}");
+                    context.Response.StatusCode = voice ? 200 : 404;
+                    context.Response.ContentType = "application/json";
+                    context.Response.OutputStream.Write(bytes, 0, bytes.Length);
+                    context.Response.OutputStream.Close();
+                }
+                catch (Exception) { }
+            }
+            service.BeginGetContext(Receive, null);
+            return "http://127.0.0.1:" + port + "/api/v1";
+        }
+
+        /// <summary>A microphone that records nothing, so no device or person is needed for the pictures.</summary>
+        private sealed class SilentRecorder : IGuideVoiceRecorder
+        {
+            private bool recording;
+            public bool Available => true;
+            public bool Recording => recording;
+            public float Elapsed => recording ? 3 : 0;
+            public bool AwaitingPermission => false;
+            public GuideRecorderStart Begin(int maxSeconds) { recording = true; return GuideRecorderStart.Started; }
+            public byte[] End() { recording = false; return null; }
+            public void Discard() => recording = false;
+            public void Dispose() { }
+        }
+
+        public override void TearDown()
+        {
+            try { service?.Stop(); service?.Close(); } catch (Exception) { }
+            service = null;
+            MuseumInput.Replace(null);
+            base.TearDown();
+        }
 
         /// <summary>Renders a camera of its own at a chosen eye and target, with every world screen in view.</summary>
         private static IEnumerator Shot(string name, Vector3 eye, Vector3 target, float fov = 70)
@@ -71,7 +126,7 @@ namespace MusiyoBetsknate.Tests
             var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
             var loader = flow.GetComponent<TourLoader>();
             var settings = new UnityEditor.SerializedObject(loader);
-            settings.FindProperty("apiBase").stringValue = "http://127.0.0.1:9/api/v1";
+            settings.FindProperty("apiBase").stringValue = StartVoiceService();
             settings.ApplyModifiedPropertiesWithoutUndo();
             flow.GetComponent<MuseumEntryView>().HeadsetActive = () => false;
             for (float waited = 0; loader.State == TourLoadState.Loading && waited < 20; waited += Time.unscaledDeltaTime) yield return null;
@@ -159,6 +214,23 @@ namespace MusiyoBetsknate.Tests
             yield return Shot("companion_front", at + companion.transform.forward * 2.4f + Vector3.up * 1.5f, at + Vector3.up * 1.0f, 50);
             yield return Shot("companion_side", at + side * 2.4f + Vector3.up * 1.4f, at + Vector3.up * .95f, 50);
             yield return Shot("companion_visitor_view", visitor.transform.position + Vector3.up * 1.65f, at + Vector3.up * 1.1f);
+
+            // The companion's own screen for a spoken question: the notice, then listening.
+            var voice = companion.Voice;
+            voice.Recorder = new SilentRecorder();
+            for (float waited = 0; !voice.Listens && waited < 10; waited += Time.unscaledDeltaTime) yield return null;
+            var eye = visitor.GetComponentInChildren<Camera>().transform;
+            for (float waited = 0; waited < 1; waited += Time.unscaledDeltaTime) yield return null;
+            yield return Shot("companion_voice_invite", eye.position, eye.position + eye.forward * 2 + Vector3.left * .35f, 70);
+            if (voice.Talk())
+            {
+                for (float waited = 0; waited < .6f; waited += Time.unscaledDeltaTime) yield return null;
+                yield return Shot("companion_voice_notice", eye.position, eye.position + eye.forward * 2 + eye.right * -.4f + Vector3.down * .3f, 60);
+                voice.Accept();
+                for (float waited = 0; waited < .6f; waited += Time.unscaledDeltaTime) yield return null;
+                yield return Shot("companion_voice_listening", eye.position, eye.position + eye.forward * 2 + eye.right * -.4f + Vector3.down * .3f, 60);
+                voice.End();
+            }
 
             // The scene's own anchor: the tour may still be retrying its unreachable service.
             var anchor = UnityEngine.Object.FindObjectsByType<PointAnchor>(FindObjectsSortMode.None).First(item => item.Key == "guia.principal");
