@@ -171,6 +171,35 @@ namespace MusiyoBetsknate.Museo
     }
 
     [Serializable, Preserve]
+    public sealed partial class GuideSurveyContractV1
+    {
+        [Preserve] public int schema_version;
+        [Preserve] public string survey_key;
+        [Preserve] public string version;
+        [Preserve] public string tour_key;
+        [Preserve] public SurveyNoticeContractV1 notice;
+        [Preserve] public SurveyQuestionContractV1[] questions;
+        [Preserve] public string closing;
+    }
+
+    [Serializable, Preserve]
+    public sealed partial class GuideSurveyResponseContractV1
+    {
+        [Preserve] public int schema_version;
+        [Preserve] public string survey_key;
+        [Preserve] public string version;
+        [Preserve] public string platform;
+        [Preserve] public SurveyAnswerContractV1[] answers;
+    }
+
+    [Serializable, Preserve]
+    public sealed partial class GuideSurveyStoredContractV1
+    {
+        [Preserve] public int schema_version;
+        [Preserve] public string status;
+    }
+
+    [Serializable, Preserve]
     public sealed partial class GuideTranscriptionContractV1
     {
         [Preserve] public int schema_version;
@@ -359,6 +388,43 @@ namespace MusiyoBetsknate.Museo
     }
 
     [Serializable, Preserve]
+    public sealed partial class SurveyAnswerContractV1
+    {
+        [Preserve] public string question_id;
+        [Preserve] public string option_id;
+    }
+
+    [Serializable, Preserve]
+    public sealed partial class SurveyNoticeContractV1
+    {
+        [Preserve] public string intro;
+        [Preserve] public string accept_label;
+        [Preserve] public string local_label;
+        [Preserve] public string decline_label;
+        [Preserve] public string more_label;
+        [Preserve] public string title;
+        [Preserve] public string text;
+    }
+
+    [Serializable, Preserve]
+    public sealed partial class SurveyOptionContractV1
+    {
+        [Preserve] public string id;
+        [Preserve] public string text;
+    }
+
+    [Serializable, Preserve]
+    public sealed partial class SurveyQuestionContractV1
+    {
+        [Preserve] public string id;
+        [Preserve] public string kind;
+        [Preserve] public string text;
+        [Preserve] public SurveyOptionContractV1[] options;
+        [Preserve] public string reply;
+        [Preserve] public bool optional;
+    }
+
+    [Serializable, Preserve]
     public sealed partial class TextBlockContractV1
     {
         [Preserve] public string id;
@@ -438,5 +504,8 @@ namespace MusiyoBetsknate.Museo
         public const string GuideTranscription = @"{""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""default"":1,""title"":""Schema Version"",""type"":""integer""},""text"":{""maxLength"":500,""minLength"":3,""title"":""Text"",""type"":""string""}},""required"":[""text""],""title"":""GuideTranscription"",""type"":""object""}";
         public const string GuideVoiceAnswer = @"{""$defs"":{""GuideCitation"":{""additionalProperties"":false,""properties"":{""element_slug"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Element Slug"",""type"":""string""},""title"":{""minLength"":1,""title"":""Title"",""type"":""string""}},""required"":[""element_slug"",""title""],""title"":""GuideCitation"",""type"":""object""},""GuideResponse"":{""additionalProperties"":false,""allOf"":[{""if"":{""properties"":{""status"":{""const"":""answered""}}},""then"":{""properties"":{""answer"":{""minLength"":1,""pattern"":""\\S"",""type"":""string""},""citations"":{""minItems"":1},""reason"":{""type"":""null""}}}},{""if"":{""properties"":{""status"":{""const"":""abstained""}}},""then"":{""properties"":{""answer"":{""type"":""null""},""citations"":{""maxItems"":0},""reason"":{""const"":""insufficient_evidence""}}}},{""if"":{""properties"":{""status"":{""const"":""provider_unavailable""}}},""then"":{""properties"":{""answer"":{""type"":""null""},""citations"":{""maxItems"":0},""reason"":{""const"":""provider_unavailable""}}}}],""properties"":{""schema_version"":{""const"":1,""title"":""Schema Version"",""type"":""integer""},""status"":{""enum"":[""answered"",""abstained"",""provider_unavailable""],""title"":""Status"",""type"":""string""},""answer"":{""anyOf"":[{""maxLength"":2000,""minLength"":1,""pattern"":""\\S"",""type"":""string""},{""type"":""null""}],""title"":""Answer""},""citations"":{""items"":{""$ref"":""#/$defs/GuideCitation""},""maxItems"":8,""title"":""Citations"",""type"":""array""},""reason"":{""anyOf"":[{""enum"":[""insufficient_evidence"",""provider_unavailable""],""type"":""string""},{""type"":""null""}],""title"":""Reason""}},""required"":[""schema_version"",""status"",""answer"",""citations"",""reason""],""title"":""GuideResponse"",""type"":""object""},""GuideSpeech"":{""additionalProperties"":false,""properties"":{""mime"":{""const"":""audio/wav"",""default"":""audio/wav"",""title"":""Mime"",""type"":""string""},""data_base64"":{""maxLength"":4000000,""minLength"":1,""title"":""Data Base64"",""type"":""string""}},""required"":[""data_base64""],""title"":""GuideSpeech"",""type"":""object""}},""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""default"":1,""title"":""Schema Version"",""type"":""integer""},""response"":{""$ref"":""#/$defs/GuideResponse""},""speech_status"":{""enum"":[""ready"",""disabled"",""unavailable"",""not_applicable""],""title"":""Speech Status"",""type"":""string""},""audio"":{""anyOf"":[{""$ref"":""#/$defs/GuideSpeech""},{""type"":""null""}]}},""required"":[""response"",""speech_status"",""audio""],""title"":""GuideVoiceAnswer"",""type"":""object""}";
         public const string MuseumCredits = @"{""$defs"":{""CreditLine"":{""additionalProperties"":false,""properties"":{""role"":{""anyOf"":[{""type"":""string""},{""type"":""null""}],""default"":null,""title"":""Role""},""text"":{""title"":""Text"",""type"":""string""}},""required"":[""text""],""title"":""CreditLine"",""type"":""object""},""CreditSection"":{""additionalProperties"":false,""properties"":{""key"":{""enum"":[""project"",""pieces"",""testimonies"",""media"",""sources"",""technology""],""title"":""Key"",""type"":""string""},""title"":{""title"":""Title"",""type"":""string""},""lines"":{""items"":{""$ref"":""#/$defs/CreditLine""},""title"":""Lines"",""type"":""array""}},""required"":[""key"",""title"",""lines""],""title"":""CreditSection"",""type"":""object""}},""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""default"":1,""title"":""Schema Version"",""type"":""integer""},""title"":{""title"":""Title"",""type"":""string""},""subtitle"":{""title"":""Subtitle"",""type"":""string""},""sections"":{""items"":{""$ref"":""#/$defs/CreditSection""},""title"":""Sections"",""type"":""array""}},""required"":[""title"",""subtitle""],""title"":""MuseumCredits"",""type"":""object""}";
+        public const string GuideSurvey = @"{""$defs"":{""SurveyNotice"":{""additionalProperties"":false,""properties"":{""intro"":{""maxLength"":400,""minLength"":1,""title"":""Intro"",""type"":""string""},""accept_label"":{""maxLength"":80,""minLength"":1,""title"":""Accept Label"",""type"":""string""},""local_label"":{""maxLength"":80,""minLength"":1,""title"":""Local Label"",""type"":""string""},""decline_label"":{""maxLength"":80,""minLength"":1,""title"":""Decline Label"",""type"":""string""},""more_label"":{""maxLength"":80,""minLength"":1,""title"":""More Label"",""type"":""string""},""title"":{""maxLength"":120,""minLength"":1,""title"":""Title"",""type"":""string""},""text"":{""maxLength"":1200,""minLength"":1,""title"":""Text"",""type"":""string""}},""required"":[""intro"",""accept_label"",""local_label"",""decline_label"",""more_label"",""title"",""text""],""title"":""SurveyNotice"",""type"":""object""},""SurveyOption"":{""additionalProperties"":false,""properties"":{""id"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Id"",""type"":""string""},""text"":{""maxLength"":120,""minLength"":1,""title"":""Text"",""type"":""string""}},""required"":[""id"",""text""],""title"":""SurveyOption"",""type"":""object""},""SurveyQuestion"":{""additionalProperties"":false,""properties"":{""id"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Id"",""type"":""string""},""kind"":{""const"":""single_choice"",""default"":""single_choice"",""title"":""Kind"",""type"":""string""},""text"":{""maxLength"":400,""minLength"":1,""title"":""Text"",""type"":""string""},""options"":{""items"":{""$ref"":""#/$defs/SurveyOption""},""maxItems"":8,""minItems"":2,""title"":""Options"",""type"":""array""},""reply"":{""anyOf"":[{""maxLength"":200,""type"":""string""},{""type"":""null""}],""default"":null,""title"":""Reply""},""optional"":{""default"":false,""title"":""Optional"",""type"":""boolean""}},""required"":[""id"",""text"",""options""],""title"":""SurveyQuestion"",""type"":""object""}},""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""default"":1,""title"":""Schema Version"",""type"":""integer""},""survey_key"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Survey Key"",""type"":""string""},""version"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Version"",""type"":""string""},""tour_key"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Tour Key"",""type"":""string""},""notice"":{""$ref"":""#/$defs/SurveyNotice""},""questions"":{""items"":{""$ref"":""#/$defs/SurveyQuestion""},""maxItems"":15,""minItems"":1,""title"":""Questions"",""type"":""array""},""closing"":{""maxLength"":400,""minLength"":1,""title"":""Closing"",""type"":""string""}},""required"":[""survey_key"",""version"",""tour_key"",""notice"",""questions"",""closing""],""title"":""GuideSurvey"",""type"":""object""}";
+        public const string GuideSurveyResponse = @"{""$defs"":{""SurveyAnswer"":{""additionalProperties"":false,""properties"":{""question_id"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Question Id"",""type"":""string""},""option_id"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Option Id"",""type"":""string""}},""required"":[""question_id"",""option_id""],""title"":""SurveyAnswer"",""type"":""object""}},""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""title"":""Schema Version"",""type"":""integer""},""survey_key"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Survey Key"",""type"":""string""},""version"":{""minLength"":1,""pattern"":""^\\S+$"",""title"":""Version"",""type"":""string""},""platform"":{""anyOf"":[{""enum"":[""quest"",""web"",""desktop""],""type"":""string""},{""type"":""null""}],""default"":null,""title"":""Platform""},""answers"":{""items"":{""$ref"":""#/$defs/SurveyAnswer""},""maxItems"":15,""minItems"":1,""title"":""Answers"",""type"":""array""}},""required"":[""schema_version"",""survey_key"",""version"",""answers""],""title"":""GuideSurveyResponse"",""type"":""object""}";
+        public const string GuideSurveyStored = @"{""additionalProperties"":false,""properties"":{""schema_version"":{""const"":1,""default"":1,""title"":""Schema Version"",""type"":""integer""},""status"":{""const"":""stored"",""default"":""stored"",""title"":""Status"",""type"":""string""}},""title"":""GuideSurveyStored"",""type"":""object""}";
     }
 }
