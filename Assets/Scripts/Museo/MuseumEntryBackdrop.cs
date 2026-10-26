@@ -513,6 +513,8 @@ namespace MusiyoBetsknate.Museum
             var found = FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None)
                 .SelectMany(candidate => candidate.sharedMaterials).FirstOrDefault(material => material != null && material.name == museumMaterial);
             if (found != null) { renderer.sharedMaterial = found; return; }
+            // Never a primitive's own material: in a player it can be one the render pipeline cannot draw.
+            renderer.sharedMaterial = MuseumFirePit.DefaultMaterial();
             var tint = new MaterialPropertyBlock();
             tint.SetColor("_BaseColor", fallback);
             renderer.SetPropertyBlock(tint);

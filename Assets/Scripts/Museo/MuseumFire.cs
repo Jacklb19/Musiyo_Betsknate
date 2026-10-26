@@ -261,13 +261,7 @@ namespace MusiyoBetsknate.Museum
         }
 
         /// <summary>The render pipeline's default material, the one a primitive gets, for meshes built here.</summary>
-        private static Material PlainMaterial()
-        {
-            var probe = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            var material = probe.GetComponent<MeshRenderer>().sharedMaterial;
-            if (Application.isPlaying) Destroy(probe); else DestroyImmediate(probe);
-            return material;
-        }
+        private static Material PlainMaterial() => MuseumFirePit.DefaultMaterial();
 
         /// <summary>Uses a material of the delivered museum when the scene has it, and a plain one otherwise.</summary>
         private static void Paint(MeshRenderer renderer, string museumMaterial, Color fallback)

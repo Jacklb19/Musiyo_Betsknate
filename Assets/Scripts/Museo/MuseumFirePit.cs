@@ -49,10 +49,17 @@ namespace MusiyoBetsknate.Museum
             renderer.SetPropertyBlock(tint);
         }
 
+        public const string PlainMaterialName = "FirePitPlain";
         private static Material defaultMaterial;
-        /// <summary>The render pipeline's own default material, the one a primitive gets, so the build already carries its shader.</summary>
-        private static Material DefaultMaterial()
+        /// <summary>
+        /// A plain lit material from Resources, so every build carries its shader. A primitive's material is not enough:
+        /// in a player it can be the built-in Default-Material, which the render pipeline draws magenta (Web, 23/10).
+        /// Tinted per piece with a property block; its emission lets the embers glow.
+        /// </summary>
+        public static Material DefaultMaterial()
         {
+            if (defaultMaterial != null) return defaultMaterial;
+            defaultMaterial = Resources.Load<Material>(PlainMaterialName);
             if (defaultMaterial != null) return defaultMaterial;
             var probe = GameObject.CreatePrimitive(PrimitiveType.Quad);
             defaultMaterial = probe.GetComponent<MeshRenderer>().sharedMaterial;
