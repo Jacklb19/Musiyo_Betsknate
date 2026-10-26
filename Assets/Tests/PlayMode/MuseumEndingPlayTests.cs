@@ -157,6 +157,13 @@ namespace MusiyoBetsknate.Tests
             var toCard = card.transform.position - camera.transform.position;
             Assert.That(Vector3.Dot(camera.transform.forward, toCard.normalized), Is.GreaterThan(.9f));
             Assert.That(toCard.magnitude, Is.InRange(.6f, 2f));
+            // On a screen it reads: wide in the view, but never past its edges (owner, Web test of 23/10).
+            var corners = new Vector3[4];
+            ((RectTransform)card.transform).GetWorldCorners(corners);
+            float left = camera.WorldToViewportPoint(corners[0]).x, right = camera.WorldToViewportPoint(corners[2]).x;
+            Assert.That(right - left, Is.InRange(.45f, .82f), "The card takes a good part of the view's width.");
+            Assert.That(left, Is.GreaterThan(0), "It stays inside the view.");
+            Assert.That(right, Is.LessThan(1), "It stays inside the view.");
             var words = card.GetComponentsInChildren<TMP_Text>().Select(text => text.text).ToArray();
             Assert.That(words, Has.Member("Has llegado al final del recorrido."));
             Assert.That(words, Has.Member("¿Quieres darlo por finalizado?"));
