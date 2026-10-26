@@ -1,6 +1,13 @@
 // The browser's microphone for spoken questions to the guides. Unity's Microphone class does not exist in a browser
 // build, so the page records: getUserMedia, then mono samples resampled to 16 kHz and kept in memory only until Unity
-// takes them as WAV PCM16 or drops them. Nothing is stored, sent or logged here; the stream is released after each take.
+// takes them as WAV PCM16 or drops them. Nothing is stored or sent here, and only the level of a take is logged (its
+// peak and loudness, never its sound); the stream is released after each take.
+//
+// Unity calls these from its frame loop, never from the visitor's click or key itself, and a browser keeps an audio
+// context started outside a gesture suspended until it is allowed to play: a suspended context records nothing, or
+// silence, which speech recognition turns into a stock phrase (the owner heard «Gracias por ver el video», 25/10/2026).
+// So the context is made together with the stream, as the web page's own recorder does, the take waits until it really
+// runs, and the next click or key on the page resumes it if the browser had held it back.
 var MusiyoVoice = {
   $musiyoVoice: {
     // 0 idle, 1 waiting for permission, 2 ready, 3 recording, 4 denied, 5 unavailable
@@ -13,6 +20,25 @@ var MusiyoVoice = {
     rate: 16000,
     limit: 0,
     taken: null,
+    listening: false,
+
+    // The page's next gesture lets a held-back context run; the listener stays for later takes.
+    resumeOnGesture: function () {
+      var voice = musiyoVoice;
+      if (voice.listening) return;
+      voice.listening = true;
+      var resume = function () {
+        if (voice.context && voice.context.state === 'suspended' && voice.context.resume) voice.context.resume();
+      };
+      ['pointerdown', 'keydown', 'touchstart'].forEach(function (name) { document.addEventListener(name, resume, true); });
+    },
+
+    describe: function () {
+      var voice = musiyoVoice;
+      var track = voice.stream ? voice.stream.getAudioTracks()[0] : null;
+      return 'context ' + (voice.context ? voice.context.state + ' at ' + voice.context.sampleRate + ' Hz' : 'none')
+        + ', microphone ' + (track ? track.readyState + (track.muted ? ' (muted)' : '') + (track.enabled ? '' : ' (disabled)') : 'none');
+    },
 
     release: function () {
       var voice = musiyoVoice;
@@ -24,7 +50,7 @@ var MusiyoVoice = {
     },
 
     encode: function (samples, inputRate) {
-      // Linear resampling to 16 kHz is enough for speech recognition.
+      // Each 16 kHz sample is the average of its window of input samples: a simple low-pass before decimation.
       var ratio = inputRate / musiyoVoice.rate;
       var frames = Math.floor(samples.length / ratio);
       var buffer = new ArrayBuffer(44 + frames * 2);
@@ -36,9 +62,10 @@ var MusiyoVoice = {
       view.setUint16(32, 2, true); view.setUint16(34, 16, true);
       text(36, 'data'); view.setUint32(40, frames * 2, true);
       for (var frame = 0; frame < frames; frame++) {
-        var position = frame * ratio, index = Math.floor(position), fraction = position - index;
-        var next = index + 1 < samples.length ? samples[index + 1] : samples[index];
-        var value = Math.max(-1, Math.min(1, samples[index] + (next - samples[index]) * fraction));
+        var start = Math.floor(frame * ratio), end = Math.max(start + 1, Math.min(samples.length, Math.floor((frame + 1) * ratio)));
+        var sum = 0;
+        for (var j = start; j < end; j++) sum += samples[j];
+        var value = Math.max(-1, Math.min(1, sum / (end - start)));
         view.setInt16(44 + frame * 2, value < 0 ? value * 0x8000 : value * 0x7FFF, true);
       }
       return new Uint8Array(buffer);
@@ -53,30 +80,40 @@ var MusiyoVoice = {
     return musiyoVoice.state;
   },
 
-  // Asks for the microphone; the page's own prompt answers asynchronously.
+  // Asks for the microphone and makes the audio context with it; ready once the context runs.
   MusiyoVoiceRequest: function () {
     var voice = musiyoVoice;
     if (voice.state === 1 || voice.state === 2 || voice.state === 3) return;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { voice.state = 5; return; }
     voice.state = 1;
+    voice.resumeOnGesture();
     navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } })
       .then(function (stream) {
-        if (voice.state !== 1) { stream.getTracks().forEach(function (track) { track.stop(); }); return; }
+        if (voice.state !== 1) { stream.getTracks().forEach(function (track) { track.stop(); }); return null; }
         voice.stream = stream;
+        var Context = window.AudioContext || window.webkitAudioContext;
+        voice.context = new Context();
+        if (voice.context.state === 'running' || !voice.context.resume) return null;
+        // Waits a moment for the browser to let it run; past that the take starts and the next gesture resumes it.
+        return Promise.race([voice.context.resume(), new Promise(function (done) { setTimeout(done, 1500); })]);
+      })
+      .then(function () {
+        if (voice.state !== 1 || !voice.stream) return;
         voice.state = 2;
+        console.log('[MusiyoVoice] microphone ready: ' + voice.describe());
       })
       .catch(function (error) {
+        voice.release();
         voice.state = error && (error.name === 'NotAllowedError' || error.name === 'SecurityError') ? 4 : 5;
+        console.log('[MusiyoVoice] microphone unavailable: ' + (error && error.name));
       });
   },
 
   // Starts a take of at most the given seconds; returns 1 when recording.
   MusiyoVoiceStart: function (maxSeconds) {
     var voice = musiyoVoice;
-    if (voice.state !== 2 || !voice.stream) return 0;
+    if (voice.state !== 2 || !voice.stream || !voice.context) return 0;
     try {
-      var Context = window.AudioContext || window.webkitAudioContext;
-      voice.context = new Context();
       if (voice.context.state === 'suspended' && voice.context.resume) voice.context.resume();
       voice.source = voice.context.createMediaStreamSource(voice.stream);
       voice.processor = voice.context.createScriptProcessor(4096, 1, 1);
@@ -96,10 +133,12 @@ var MusiyoVoice = {
       voice.source.connect(voice.processor);
       voice.processor.connect(voice.context.destination);
       voice.state = 3;
+      console.log('[MusiyoVoice] recording: ' + voice.describe());
       return 1;
     } catch (e) {
       voice.release();
       voice.state = 5;
+      console.log('[MusiyoVoice] could not record: ' + (e && e.name));
       return 0;
     }
   },
@@ -112,6 +151,7 @@ var MusiyoVoice = {
   MusiyoVoiceStop: function () {
     var voice = musiyoVoice;
     var rate = voice.context ? voice.context.sampleRate : 48000;
+    var described = voice.describe();
     var total = 0;
     voice.chunks.forEach(function (chunk) { total += chunk.length; });
     var samples = new Float32Array(total), offset = 0;
@@ -119,6 +159,10 @@ var MusiyoVoice = {
     voice.chunks = [];
     voice.release();
     voice.state = 0;
+    var peak = 0, energy = 0;
+    for (var i = 0; i < total; i++) { var sample = Math.abs(samples[i]); if (sample > peak) peak = sample; energy += sample * sample; }
+    console.log('[MusiyoVoice] take ' + (total / rate).toFixed(2) + ' s, peak ' + peak.toFixed(4) + ', rms '
+      + (total > 0 ? Math.sqrt(energy / total) : 0).toFixed(4) + '; ' + described);
     voice.taken = total > rate * 0.1 ? voice.encode(samples, rate) : null;
     samples.fill(0);
     return voice.taken ? voice.taken.length : 0;

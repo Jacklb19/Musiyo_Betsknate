@@ -261,6 +261,7 @@ namespace MusiyoBetsknate.Museum
             if (Stage != CompanionVoiceStage.Recording) return false;
             var wav = Recorder.End();
             if (wav == null) return Fail("voice_too_short");
+            if (WavAudio.Silent(wav, "MuseumCompanionVoice")) return Fail("voice_not_heard");
             if (!Consented || !voice.Transcribe(wav)) return Fail("voice_failed");
             Set(CompanionVoiceStage.Transcribing);
             return true;

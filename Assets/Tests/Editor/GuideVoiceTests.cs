@@ -21,6 +21,21 @@ namespace MusiyoBetsknate.Tests
         }
 
         [Test]
+        public void ARecordingWithoutVoiceIsToldApartFromSpeech()
+        {
+            Assert.That(WavAudio.Measure(WavAudio.EncodePcm16Mono(Tone(48000, 2), 48000), out var peak, out var rms, out var seconds), Is.True);
+            Assert.That(peak, Is.EqualTo(.5f).Within(.01f));
+            Assert.That(rms, Is.EqualTo(.5f / Mathf.Sqrt(2)).Within(.01f));
+            Assert.That(seconds, Is.EqualTo(2).Within(.01f));
+            Assert.That(WavAudio.Silent(WavAudio.EncodePcm16Mono(Tone(48000, 2), 48000), "test"), Is.False);
+            Assert.That(WavAudio.Silent(WavAudio.EncodePcm16Mono(new float[48000], 48000), "test"), Is.True, "A muted microphone.");
+            var hiss = new float[48000];
+            for (int index = 0; index < hiss.Length; index++) hiss[index] = (index % 7 - 3) * .0005f;
+            Assert.That(WavAudio.Silent(WavAudio.EncodePcm16Mono(hiss, 48000), "test"), Is.True, "Only the faintest hiss.");
+            Assert.That(WavAudio.Measure(new byte[] { 1, 2, 3 }, out _, out _, out _), Is.False);
+        }
+
+        [Test]
         public void ARecordingLeavesAsPcm16MonoAtSixteenKilohertz()
         {
             var wav = WavAudio.EncodePcm16Mono(Tone(48000, 1), 48000);

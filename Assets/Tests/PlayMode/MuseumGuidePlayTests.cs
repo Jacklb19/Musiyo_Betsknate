@@ -271,6 +271,8 @@ namespace MusiyoBetsknate.Tests
         {
             private bool recording;
             public int Takes;
+            /// <summary>Zero for a microphone that records silence.</summary>
+            public float Amplitude = .3f;
             public bool Available => true;
             public bool Recording => recording;
             public float Elapsed => recording ? 1 : 0;
@@ -280,7 +282,7 @@ namespace MusiyoBetsknate.Tests
             {
                 recording = false;
                 var samples = new float[48000];
-                for (int index = 0; index < samples.Length; index++) samples[index] = .3f * Mathf.Sin(2 * Mathf.PI * 300 * index / 48000f);
+                for (int index = 0; index < samples.Length; index++) samples[index] = Amplitude * Mathf.Sin(2 * Mathf.PI * 300 * index / 48000f);
                 return WavAudio.EncodePcm16Mono(samples, 48000);
             }
             public void Discard() => recording = false;
@@ -517,11 +519,34 @@ namespace MusiyoBetsknate.Tests
             Assert.That(voice.Speaking && companion.Speaking, Is.True, "The answer is heard.");
             Assert.That(companion.Figure.Gesture, Is.EqualTo(GuideGesture.Speak));
 
-            // By the hearth guide the button is silent: the guide's own screen takes the questions there.
             panel.Close.onClick.Invoke();
             yield return null;
             Assert.That(voice.Stage, Is.EqualTo(CompanionVoiceStage.Idle));
             Assert.That(voice.Speaking, Is.False);
+
+            // A take that holds no sound is never sent; the companion asks to hear it again (the browser recorded
+            // silence and the recognition made up a phrase, 25/10/2026).
+            int sentBefore = transcriptions;
+            recorder.Amplitude = 0;
+            Press(keyboard.vKey);
+            yield return null;
+            Release(keyboard.vKey);
+            yield return null;
+            Assert.That(voice.Stage, Is.EqualTo(CompanionVoiceStage.Recording), "Consent given, it listens at once.");
+            Press(keyboard.vKey);
+            yield return null;
+            Release(keyboard.vKey);
+            yield return null;
+            Assert.That(voice.Stage, Is.EqualTo(CompanionVoiceStage.Problem));
+            Assert.That(voice.ProblemKey, Is.EqualTo("voice_not_heard"));
+            Assert.That(transcriptions, Is.EqualTo(sentBefore), "Silence is not sent to be transcribed.");
+            yield return null;
+            StringAssert.Contains("No te escuché, ¿puedes repetir?", panel.Body.text);
+            panel.Close.onClick.Invoke();
+            recorder.Amplitude = .3f;
+            yield return null;
+
+            // By the hearth guide the button is silent: the guide's own screen takes the questions there.
             Assert.That(visitor.FocusPoint(runtime.GuidePoint.Anchor), Is.True);
             yield return null;
             Assert.That(guide.Ask(), Is.True);
