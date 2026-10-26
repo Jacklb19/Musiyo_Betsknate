@@ -137,6 +137,10 @@ namespace MusiyoBetsknate.Tests
 
             // Quick changes settle on the last piece; the ones passed over are never downloaded.
             int requests = presenter.RequestCount;
+            // Changing the piece leaves the point's narration alone: it neither stops nor starts again.
+            var narration = flow.GetComponent<MuseumNarration>();
+            int starts = narration.Starts;
+            var narrated = narration.NarratedSlug;
             Assert.That(hud.StepCarousel(1), Is.True);
             yield return null;
             Assert.That(hud.StepCarousel(1), Is.True);
@@ -144,6 +148,8 @@ namespace MusiyoBetsknate.Tests
             Assert.That(interaction.SelectedElement.slug, Is.EqualTo("piece-common"), "The card does not follow the piece.");
             Assert.That(presenter.ModelSlug, Is.EqualTo("piece-a"), "Two steps from B wrap around to A.");
             Assert.That(presenter.RequestCount - requests, Is.LessThanOrEqualTo(1), "Only the piece the visitor stopped on is requested.");
+            Assert.That(narration.Starts, Is.EqualTo(starts), "Stepping the masks does not restart the narration.");
+            Assert.That(narration.NarratedSlug, Is.EqualTo(narrated));
             Assert.That(service.Downloads("piece-c"), Is.EqualTo(0), "The piece passed over is never downloaded.");
             Assert.That(UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsSortMode.None)
                 .Count(item => item.name == "RemoteModelPivot" && item.gameObject.activeInHierarchy), Is.EqualTo(1), "One piece is on show.");
