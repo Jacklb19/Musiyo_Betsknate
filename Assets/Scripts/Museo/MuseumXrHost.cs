@@ -128,6 +128,8 @@ namespace MusiyoBetsknate.Museum
             menuRaycaster.maxDistance = configuration.RayLength;
             menu.SetSpatial(true);
             GetComponent<MuseumHud>()?.RefreshDeviceLabels();
+            // The subtitles cannot stay on the shared canvas, which a headset only draws with a menu.
+            GetComponent<MuseumHud>()?.UseSpatialSubtitles(head);
             var line = new GameObject("ControllerPointer");
             line.transform.SetParent(visitor, false);
             rayLine = line.AddComponent<LineRenderer>();

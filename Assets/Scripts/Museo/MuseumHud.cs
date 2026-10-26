@@ -39,7 +39,7 @@ namespace MusiyoBetsknate.Museum
         private MuseumNarration narration;
         private TMP_Text narrationText;
         private TMP_Text subtitleText;
-        private GameObject subtitleBackground;
+        private MuseumSubtitleView subtitleView;
         private GameObject narrationControls;
         private Button audioPauseButton;
         private Button audioMuteButton;
@@ -188,8 +188,8 @@ namespace MusiyoBetsknate.Museum
             MuseumHudSkin.Choice(returnButton, true);
             MuseumHudSkin.Choice(serviceRetryButton);
             if (panelText != null) panelText.color = MuseumHudSkin.Text;
-            if (subtitleBackground != null) MuseumHudSkin.Pill(subtitleBackground.GetComponent<Image>(), .86f);
-            if (subtitleText != null) subtitleText.color = MuseumHudSkin.Text;
+            // The subtitles have no box: their letters carry their own outline and shadow.
+            if (subtitleText != null) MuseumSubtitleView.Legible(subtitleText);
             focusText.color = MuseumHudSkin.Text;
             focusPill = MuseumHudSkin.PillBehind(focusText);
             stationText.color = MuseumHudSkin.Text;
@@ -343,6 +343,9 @@ namespace MusiyoBetsknate.Museum
             if (panelGroup == null && !panel.TryGetComponent(out panelGroup)) panelGroup = panel.AddComponent<CanvasGroup>();
             return panelGroup;
         }
+
+        /// <summary>On a headset the subtitles stand on a canvas of their own carried by the head.</summary>
+        public void UseSpatialSubtitles(Camera head) => subtitleView?.UseSpatial(head);
 
         /// <summary>A reassigned key changes every caption and prompt that names it.</summary>
         public void RefreshDeviceLabels() => RefreshKeys();
@@ -657,29 +660,12 @@ namespace MusiyoBetsknate.Museum
             // By a stand a single quiet control pauses, resumes or repeats the narration that started by itself.
             narrationToggle = ModelButton("pause_narration_keyboard", elementList.parent, ToggleNarration);
             narrationToggle.name = "NarrationToggle";
+            // Centred at the very bottom of the view, with no box behind (owner, 25/10/2026).
             subtitleText = Instantiate(focusText, transform);
             subtitleText.name = "NarrationSubtitles";
             subtitleText.fontSize = SubtitleSize;
-            subtitleText.overflowMode = TextOverflowModes.Truncate;
-            subtitleText.raycastTarget = false;
-            var rect = subtitleText.rectTransform;
-            rect.anchorMin = new Vector2(0, 0);
-            rect.anchorMax = new Vector2(.7f, 0);
-            rect.pivot = new Vector2(.5f, 0);
-            rect.anchoredPosition = new Vector2(0, 132);
-            rect.sizeDelta = new Vector2(-48, 160);
-            subtitleText.alignment = TextAlignmentOptions.Bottom;
-            subtitleBackground = new GameObject("SubtitleBackground", typeof(RectTransform), typeof(Image));
-            subtitleBackground.transform.SetParent(transform, false);
-            var backgroundRect = (RectTransform)subtitleBackground.transform;
-            backgroundRect.anchorMin = rect.anchorMin;
-            backgroundRect.anchorMax = rect.anchorMax;
-            backgroundRect.pivot = rect.pivot;
-            backgroundRect.anchoredPosition = rect.anchoredPosition;
-            backgroundRect.sizeDelta = rect.sizeDelta;
-            subtitleBackground.GetComponent<Image>().color = new Color(.06f, .12f, .11f, .96f);
-            subtitleBackground.GetComponent<Image>().raycastTarget = false;
-            subtitleBackground.transform.SetSiblingIndex(subtitleText.transform.GetSiblingIndex());
+            subtitleView = gameObject.AddComponent<MuseumSubtitleView>();
+            subtitleView.Configure(subtitleText);
             volumeSlider = Instantiate(sensitivitySlider, elementList.parent);
             volumeSlider.name = "NarrationVolume";
             volumeSlider.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Get("narration_volume");
@@ -820,7 +806,6 @@ namespace MusiyoBetsknate.Museum
             subtitleText.text = narration.Subtitle;
             subtitleText.gameObject.SetActive(preferences.Subtitles && !string.IsNullOrEmpty(narration.Subtitle)
                 && !visitFlow.BlocksInput && interaction.State != InteractionState.Paused);
-            subtitleBackground.SetActive(subtitleText.gameObject.activeSelf);
             subtitlesButton.GetComponentInChildren<TMP_Text>().text = preferences.Subtitles ? MuseumInterfaceText.Get("hide_subtitles") : MuseumInterfaceText.Get("show_subtitles");
         }
 
