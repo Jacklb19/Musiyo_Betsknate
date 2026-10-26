@@ -16,8 +16,13 @@ namespace MusiyoBetsknate.Museum
     /// </summary>
     public sealed class MuseumCreditsRoll : MonoBehaviour
     {
-        /// <summary>Column size in millimetres, and where it stands from the eyes of the set.</summary>
-        public const float Width = 1250, Height = 1250, Distance = 3, Side = -.95f;
+        /// <summary>
+        /// Column size in millimetres, and where it stands from the eyes of the set. On a screen it stands at 2.4 m, not
+        /// 3 m, so its letters read (owner, Web test of 23/10: «el texto de los créditos se ve un poco pequeño»).
+        /// </summary>
+        public const float Width = 1250, Height = 1250, Distance = 2.4f, Side = -.95f;
+        /// <summary>Letter sizes of the roll, in millimetres: a fifth larger than before on every device.</summary>
+        public const float NameSize = 48, ReferenceSize = 37, SectionSize = 66, RoleSize = 28, TitleSize = 104, ThanksSize = 72;
         /// <summary>
         /// In a headset the column stands closer and nearer the middle of the view, so it reads (owner, 22/10): its middle
         /// at this distance and this far to the left of the gaze, a little under the eyes, drawn at this share of its size.
@@ -121,19 +126,19 @@ namespace MusiyoBetsknate.Museum
 
             // The opening: the word, the museum's name and its subtitle, alone.
             var opening = new List<RectTransform>();
-            var kicker = Line("Kicker", MuseumInterfaceText.Get("credits_kicker"), 26, MuseumWorldUi.Accent);
+            var kicker = Line("Kicker", MuseumInterfaceText.Get("credits_kicker"), 30, MuseumWorldUi.Accent);
             kicker.characterSpacing = 18;
             kicker.fontStyle = FontStyles.UpperCase | FontStyles.Bold;
             opening.Add(kicker.rectTransform);
             opening.Add(Gap(28));
-            Title = Line("Title", credits.title, 92, MuseumWorldUi.Text, true);
+            Title = Line("Title", credits.title, TitleSize, MuseumWorldUi.Text, true);
             Title.fontStyle = FontStyles.UpperCase | FontStyles.Bold;
             Title.characterSpacing = 6;
             opening.Add(Title.rectTransform);
             if (!string.IsNullOrWhiteSpace(credits.subtitle))
             {
                 opening.Add(Gap(18));
-                opening.Add(Line("Subtitle", credits.subtitle, 40, MuseumWorldUi.Muted).rectTransform);
+                opening.Add(Line("Subtitle", credits.subtitle, 46, MuseumWorldUi.Muted).rectTransform);
             }
             Gap(Height * .55f);
             // Every section in the published order, each line as it comes.
@@ -141,7 +146,7 @@ namespace MusiyoBetsknate.Museum
             {
                 var lines = section.lines ?? Array.Empty<CreditLineContractV1>();
                 if (Array.TrueForAll(lines, line => string.IsNullOrWhiteSpace(line.text))) continue;
-                var heading = Line("Section_" + section.key, section.title, 56, MuseumWorldUi.Accent, true);
+                var heading = Line("Section_" + section.key, section.title, SectionSize, MuseumWorldUi.Accent, true);
                 heading.characterSpacing = 3;
                 sectionTitles.Add(heading);
                 Gap(44);
@@ -151,13 +156,13 @@ namespace MusiyoBetsknate.Museum
                     if (string.IsNullOrWhiteSpace(line.text)) continue;
                     if (!string.IsNullOrWhiteSpace(line.role))
                     {
-                        var role = Line("Role", line.role, 24, MuseumWorldUi.Muted);
+                        var role = Line("Role", line.role, RoleSize, MuseumWorldUi.Muted);
                         role.fontStyle = FontStyles.UpperCase;
                         role.characterSpacing = 10;
                         Gap(8);
                     }
                     // Long references wrap over two or three lines, a little smaller, aligned like the rest.
-                    var text = Line(references ? "Reference" : "Name", line.text, references ? 31 : 40, MuseumWorldUi.Text);
+                    var text = Line(references ? "Reference" : "Name", line.text, references ? ReferenceSize : NameSize, MuseumWorldUi.Text);
                     if (references) text.lineSpacing = 6;
                     Gap(references ? 30 : 38);
                 }
@@ -170,12 +175,12 @@ namespace MusiyoBetsknate.Museum
             rule.rectTransform.anchorMin = rule.rectTransform.anchorMax = new Vector2(.5f, .5f);
             rule.rectTransform.sizeDelta = new Vector2(120, 3);
             Gap(40);
-            Thanks = Line("Thanks", MuseumInterfaceText.Get("credits_thanks"), 62, MuseumWorldUi.Text, true);
+            Thanks = Line("Thanks", MuseumInterfaceText.Get("credits_thanks"), ThanksSize, MuseumWorldUi.Text, true);
             thanks = Thanks.rectTransform;
             Gap(Height * .5f);
 
             // A discreet way out and a reminder of the controls, under the column.
-            hint = MuseumWorldUi.Label("Hint", transform, "", 22, MuseumWorldUi.Muted);
+            hint = MuseumWorldUi.Label("Hint", transform, "", 26, MuseumWorldUi.Muted);
             hint.alignment = TextAlignmentOptions.Left;
             var hintRect = hint.rectTransform;
             hintRect.anchorMin = new Vector2(0, 0);
@@ -183,7 +188,7 @@ namespace MusiyoBetsknate.Museum
             hintRect.pivot = new Vector2(.5f, 0);
             hintRect.offsetMin = new Vector2(40, 24);
             hintRect.offsetMax = new Vector2(-230, 90);
-            SkipButton = MuseumWorldUi.Choice("Skip", transform, MuseumInterfaceText.Get("credits_skip"), 24, () => skip?.Invoke(), false);
+            SkipButton = MuseumWorldUi.Choice("Skip", transform, MuseumInterfaceText.Get("credits_skip"), 28, () => skip?.Invoke(), false);
             var skipRect = (RectTransform)SkipButton.transform;
             skipRect.anchorMin = skipRect.anchorMax = new Vector2(1, 0);
             skipRect.pivot = new Vector2(1, 0);

@@ -44,13 +44,34 @@ namespace MusiyoBetsknate.Tests
             return (flat.magnitude, Vector3.SignedAngle(Vector3.ProjectOnPlane(eyes.forward, Vector3.up), flat, Vector3.up));
         }
 
+        /// <summary>Owner, Web test of 23/10: on a screen the credits read too small; they stand closer, in larger letters.</summary>
+        [Test]
+        public void OnAScreenTheCreditsStandCloserInLargerLetters()
+        {
+            var roll = Roll();
+            var (distance, angle) = Seen(eyes.transform, roll.transform);
+            Assert.That(distance, Is.LessThan(2.6f), "Closer than the 3 m of before.");
+            Assert.That(angle, Is.LessThan(-5), "Still to the left of the fire.");
+            float before = 40 * 1f / 3, now = MuseumCreditsRoll.NameSize * roll.transform.lossyScale.x / distance;
+            Assert.That(now, Is.GreaterThan(before * 1.4f), "Names look at least 1.4 times as large as before.");
+            var corners = new Vector3[4];
+            ((RectTransform)roll.transform).GetWorldCorners(corners);
+            var camera = view.GetComponent<Camera>();
+            camera.transform.SetPositionAndRotation(eyes.transform.position, eyes.transform.rotation);
+            foreach (var corner in corners)
+            {
+                var seen = camera.WorldToViewportPoint(corner);
+                Assert.That(seen.x, Is.InRange(-.01f, 1.01f), "The column stays inside the window.");
+                Assert.That(seen.y, Is.InRange(-.01f, 1.01f), "The column stays inside the window.");
+            }
+        }
+
         /// <summary>Owner, 22/10: in the headset the credits stood 3 m away and almost 1 m to the left, and could not be read.</summary>
         [Test]
         public void InAHeadsetTheCreditsStandCloserNearerTheMiddleAndLarger()
         {
             var screen = Roll();
-            var (screenDistance, screenAngle) = Seen(eyes.transform, screen.transform);
-            float screenLetters = screen.transform.lossyScale.x / screenDistance;
+            var (_, screenAngle) = Seen(eyes.transform, screen.transform);
             Object.DestroyImmediate(screen.gameObject);
             MuseumInput.Current.SetSpatial(true, set.transform);
             var headset = Roll();
@@ -59,7 +80,8 @@ namespace MusiyoBetsknate.Tests
             Assert.That(angle, Is.InRange(-20f, -5f), "A little to the left of the gaze, so the fire stays in view.");
             Assert.That(Mathf.Abs(angle), Is.LessThan(Mathf.Abs(screenAngle)), "Nearer the middle than before.");
             float letters = headset.transform.lossyScale.x / distance;
-            Assert.That(letters, Is.GreaterThan(screenLetters * 1.3f), "The letters look larger.");
+            // Seen size of a millimetre of the column, against the 3 m placement before 22/10 (scale 1 at 3 m).
+            Assert.That(letters, Is.GreaterThan(1.3f / 3), "The letters look larger than they did at 3 m.");
             Assert.That(headset.transform.position.y, Is.InRange(eyes.transform.position.y - .3f, eyes.transform.position.y), "Just under the eyes.");
             Assert.That(Vector3.Angle(headset.transform.forward, Vector3.ProjectOnPlane(headset.transform.position - eyes.transform.position, Vector3.up)),
                 Is.LessThan(5), "It faces the eyes.");
