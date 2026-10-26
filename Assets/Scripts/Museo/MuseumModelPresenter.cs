@@ -56,6 +56,8 @@ namespace MusiyoBetsknate.Museum
             public bool Resident;
             /// <summary>Description of the piece for those who cannot see it, from its resource.</summary>
             public string Alternative;
+            /// <summary>The piece's own record, for its small label: title, technique and the rest of its description.</summary>
+            public string Title, Technique, Note;
             /// <summary>Compass angle the piece's face is turned to, once known.</summary>
             public float Yaw;
             public bool YawSet;
@@ -205,6 +207,7 @@ namespace MusiyoBetsknate.Museum
             attemptedKey = null;
             preloadPlanned = preloadReported = false;
             preloadedRoom = null;
+            chosenPieces.Clear();
         }
         private void OnInteractionChanged()
         {
@@ -222,7 +225,7 @@ namespace MusiyoBetsknate.Museum
                     if (session == null || session.Point != interaction.ActivePoint)
                     {
                         switchSlug = null; Release(); attemptedKey = null;
-                        var piece = FirstPiece(interaction.ActivePoint);
+                        var piece = ShownPiece(interaction.ActivePoint);
                         if (piece != null) RequestModel(interaction.ActivePoint, piece.slug);
                     }
                 }
@@ -253,7 +256,7 @@ namespace MusiyoBetsknate.Museum
         public void Retry()
         {
             var point = session?.Point ?? interaction.ActivePoint;
-            var slug = session?.Slug ?? interaction.SelectedElement?.slug;
+            var slug = session?.Slug ?? WantedSlug();
             if (point == null || slug == null) return;
             attemptedKey = null;
             RequestModel(point, slug);
@@ -282,7 +285,7 @@ namespace MusiyoBetsknate.Museum
             {
                 var settled = switchSlug;
                 switchSlug = null;
-                if (interaction.SelectedElement?.slug == settled && interaction.State == InteractionState.ElementSelected)
+                if (WantedSlug() == settled && interaction.State == InteractionState.ElementSelected)
                     RequestModel(interaction.ActivePoint, settled);
                 else if (State == ModelLoadState.Loading && session == null) SetState(ModelLoadState.Idle, "");
             }
@@ -305,7 +308,7 @@ namespace MusiyoBetsknate.Museum
             }
             // The piece of the selected record, or on a point's own record the point's first piece, comes back on return.
             var wanted = interaction.State != InteractionState.ElementSelected || interaction.SelectedElement == null ? null
-                : interaction.SelectedElement.has_3d_model ? interaction.SelectedElement : FirstPiece(interaction.ActivePoint);
+                : interaction.SelectedElement.has_3d_model ? interaction.SelectedElement : ShownPiece(interaction.ActivePoint);
             if (wanted != null && session == null && attemptedKey == null && switchSlug == null && visitor != null
                 && Vector3.Distance(visitor.position, interaction.ActivePoint.Anchor.transform.position)
                     <= interaction.ActivePoint.Anchor.ActivationRadius + 4)
@@ -341,6 +344,82 @@ namespace MusiyoBetsknate.Museum
                 RequestModel(point, element.slug);
                 break;
             }
+        }
+
+        /// <summary>
+        /// The description of a piece after its first sentence, which says what the technique line already says; for a
+        /// mask it is the note that its authorship and history are still to be documented. Null when nothing remains.
+        /// </summary>
+        public static string PieceNote(string description)
+        {
+            if (string.IsNullOrWhiteSpace(description)) return null;
+            int end = description.IndexOf(". ", System.StringComparison.Ordinal);
+            if (end < 0) return null;
+            string rest = description.Substring(end + 2).Trim();
+            return rest.Length > 0 ? rest : null;
+        }
+
+        /// <summary>Pieces chosen with the arrows at points whose card stays on their own record, by point.</summary>
+        private readonly Dictionary<string, string> chosenPieces = new Dictionary<string, string>();
+
+        /// <summary>The piece a point's pedestal shows while its own record is read: the one chosen there, or its first.</summary>
+        public ElementSummaryContractV1 ShownPiece(TourPoint point)
+        {
+            if (point == null || !point.HasContent) return null;
+            if (chosenPieces.TryGetValue(point.Anchor.Key, out var slug))
+            {
+                var chosen = point.Content.elements.FirstOrDefault(candidate => candidate.slug == slug && candidate.has_3d_model);
+                if (chosen != null) return chosen;
+            }
+            return FirstPiece(point);
+        }
+
+        /// <summary>Puts a piece of the point on its pedestal, keeping the card on the point's own record.</summary>
+        public bool ChoosePiece(TourPoint point, string slug)
+        {
+            if (point == null || !point.HasContent || !point.Content.elements.Any(candidate => candidate.slug == slug && candidate.has_3d_model)) return false;
+            if (ShownPiece(point)?.slug == slug && session != null && session.Point == point && session.Slug == slug) return true;
+            chosenPieces[point.Anchor.Key] = slug;
+            if (interaction.ActivePoint != point || switchSlug == slug) return true;
+            // As with the arrows on records: drop the piece on show at once, ask for the new one once the choice settles.
+            // The switch is noted before anything is told of it, so a screen refreshed meanwhile finds it under way.
+            attemptedKey = null;
+            switchSlug = slug;
+            switchAt = Time.realtimeSinceStartup + SwitchSettleSeconds;
+            Release();
+            SetState(ModelLoadState.Loading, MuseumInterfaceText.Get("model_loading"));
+            return true;
+        }
+
+        /// <summary>Steps to the previous or next piece of the active point, wrapping around.</summary>
+        public bool StepPiece(int direction)
+        {
+            var point = interaction.ActivePoint;
+            var pieces = point != null && point.HasContent ? MuseumPointRecords.Pieces(point.Content) : new List<ElementSummaryContractV1>();
+            if (pieces.Count < 2) return false;
+            int current = pieces.IndexOf(ShownPiece(point));
+            int next = current < 0 ? 0 : (current + direction + pieces.Count) % pieces.Count;
+            return ChoosePiece(point, pieces[next].slug);
+        }
+
+        /// <summary>The record and label of the piece on show, once it stands ready.</summary>
+        public bool TryPieceLabel(out string slug, out string title, out string technique, out string note)
+        {
+            slug = title = technique = note = null;
+            if (session == null || !session.Ready || session.Pivot == null) return false;
+            slug = session.Slug;
+            title = session.Title;
+            technique = session.Technique;
+            note = session.Note;
+            return !string.IsNullOrEmpty(title);
+        }
+
+        /// <summary>The piece the selected record wants on the pedestal: its own, or the point's shown piece.</summary>
+        private string WantedSlug()
+        {
+            var selected = interaction.SelectedElement;
+            if (selected == null) return null;
+            return selected.has_3d_model ? selected.slug : ShownPiece(interaction.ActivePoint)?.slug;
         }
 
         /// <summary>First record of a point that has a model, the piece its pedestal shows while the point's own record is read.</summary>
@@ -647,6 +726,10 @@ namespace MusiyoBetsknate.Museum
                 pending.ReadyAt = Time.realtimeSinceStartup;
                 pending.Ready = retained = true;
                 pending.Alternative = resource.alternative_text;
+                pending.Title = element.title;
+                pending.Technique = !string.IsNullOrWhiteSpace(element.technique) ? element.technique.Trim()
+                    : element.materials != null && element.materials.Length > 0 ? string.Join(", ", element.materials) : null;
+                pending.Note = PieceNote(element.description);
                 timeline.MemoryAfter = UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong();
                 timeline.Outcome = "ready";
                 if (session != pending)

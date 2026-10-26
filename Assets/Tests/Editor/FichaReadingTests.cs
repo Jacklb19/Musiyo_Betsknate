@@ -100,6 +100,16 @@ namespace MusiyoBetsknate.Tests
                 scrolling.RefreshBar();
                 Assert.That(scrolling.Handle.anchorMin.y, Is.EqualTo(0).Within(.001f));
                 Assert.That(scrolling.Handle.anchorMax.y, Is.EqualTo(.25f).Within(.001f));
+                // The mouse wheel moves the record about three lines a notch: back shows what follows, forward what is above.
+                scroll.verticalNormalizedPosition = 1;
+                Assert.That(scrolling.Wheel(-120, true), Is.True);
+                Assert.That(scroll.verticalNormalizedPosition, Is.EqualTo(1 - MuseumPanelScroll.WheelUnits / 750).Within(.001f));
+                Assert.That(scrolling.Wheel(120, false), Is.False, "A wheel busy with a piece leaves the record alone.");
+                Assert.That(scrolling.Wheel(120, true), Is.True);
+                Assert.That(scroll.verticalNormalizedPosition, Is.EqualTo(1).Within(.001f));
+                Assert.That(scrolling.Wheel(120, true), Is.False, "At the top there is nothing more above.");
+                Assert.That(scrolling.Wheel(-3, true), Is.True, "A browser's fine wheel step moves it too.");
+                Assert.That(scroll.verticalNormalizedPosition, Is.EqualTo(1 - .25f * MuseumPanelScroll.WheelUnits / 750).Within(.001f));
                 content.sizeDelta = new Vector2(0, 200);
                 scrolling.RefreshBar();
                 Assert.That(scrolling.Track.gameObject.activeSelf, Is.False, "A short record needs no bar.");

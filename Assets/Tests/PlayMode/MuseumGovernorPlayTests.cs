@@ -146,6 +146,8 @@ namespace MusiyoBetsknate.Tests
             Assert.That(presenter.State, Is.EqualTo(ModelLoadState.Idle));
             var toggle = display.Surface.GetComponentsInChildren<Transform>(true).FirstOrDefault(item => item.name == "NarrationToggle");
             Assert.That(toggle == null || !toggle.gameObject.activeInHierarchy, Is.True, "No narration control for a record without narration.");
+            var icons = display.Surface.GetComponentsInChildren<Transform>(true).FirstOrDefault(item => item.name == "NarrationButtons");
+            Assert.That(icons == null || !icons.gameObject.activeInHierarchy, Is.True, "No narration icons for a record without narration.");
             var cues = flow.GetComponent<MuseumPieceCues>();
             Assert.That(cues == null || !cues.Surface.gameObject.activeInHierarchy, Is.True);
 

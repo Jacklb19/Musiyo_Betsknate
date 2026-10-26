@@ -16,6 +16,8 @@ namespace MusiyoBetsknate.Museum
         public const float Deadzone = .2f;
         /// <summary>Width of the position bar, in interface units.</summary>
         public const float BarWidth = 7;
+        /// <summary>How far one notch of the mouse wheel moves the text, in interface units: about three lines.</summary>
+        public const float WheelUnits = 96;
         private static int scrolledFrame = -10;
         private ScrollRect scroll;
         private RectTransform track, handle;
@@ -89,6 +91,21 @@ namespace MusiyoBetsknate.Museum
             scroll.velocity = Vector2.zero;
             scroll.verticalNormalizedPosition = Mathf.Clamp01(position + speed * Mathf.Max(0, elapsed) / scrollable);
             return true;
+        }
+
+        /// <summary>
+        /// Moves the text by a mouse wheel reading: forward shows what is above, as on any page. True when the text moved.
+        /// A browser's finer wheel steps move it too (see <see cref="MuseumModelGrab.WheelNotches"/>).
+        /// </summary>
+        public bool Wheel(float wheel, bool allowed)
+        {
+            if (scroll == null || !allowed || wheel == 0 || !scroll.isActiveAndEnabled) return false;
+            float scrollable = Scrollable();
+            if (scrollable <= 1) return false;
+            float position = scroll.verticalNormalizedPosition;
+            scroll.velocity = Vector2.zero;
+            scroll.verticalNormalizedPosition = Mathf.Clamp01(position + MuseumModelGrab.WheelNotches(wheel) * WheelUnits / scrollable);
+            return !Mathf.Approximately(position, scroll.verticalNormalizedPosition);
         }
 
         private float Scrollable()

@@ -262,7 +262,16 @@ namespace MusiyoBetsknate.Tests
                 for (float waited = 0; (interaction.ActivePoint != point || narration.State != NarrationState.Playing) && waited < 20; waited += Time.unscaledDeltaTime) yield return null;
                 Assert.That(narration.State, Is.EqualTo(NarrationState.Playing), "Arriving at a point starts its narration.");
                 float before = narration.ContextSource.volume;
-                Assert.That(interaction.SelectElement(1), Is.True);
+                // Two records without a model share the card as tabs (owner, 25/10/2026), named by their titles here
+                // because the synthetic records have no community.
+                yield return null;
+                var tabs = UnityEngine.Object.FindAnyObjectByType<MuseumRecordTabs>();
+                Assert.That(tabs.Row.gameObject.activeInHierarchy, Is.True, "Two records on the card are chosen with tabs.");
+                Assert.That(tabs.Tabs.Count, Is.EqualTo(2));
+                Assert.That(tabs.Tabs[0].caption.text, Is.EqualTo("Elemento sintético"));
+                Assert.That(tabs.Chosen, Is.EqualTo(0));
+                tabs.Tabs[1].button.onClick.Invoke();
+                Assert.That(interaction.SelectedElement.slug, Is.EqualTo(SecondSlug), "The tab chooses its record.");
                 yield return null;
                 yield return null;
                 Assert.That(narration.Fading, Is.True, "The narration heard does not stop at once.");
@@ -272,13 +281,40 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(narration.NarratedSlug, Is.EqualTo(SecondSlug));
                 Assert.That(narration.ContextSource.isPlaying, Is.False);
                 Assert.That(narration.ContextSource.volume, Is.EqualTo(before).Within(.001f), "Its volume is the visitor's again.");
-                var toggle = UnityEngine.Object.FindObjectsByType<UnityEngine.UI.Button>(FindObjectsInactive.Include, FindObjectsSortMode.None)
-                    .First(button => button.name == "NarrationToggle");
+                // Small icons on the screen's header line, not a caption button over the text (owner, 25/10/2026).
+                var icons = UnityEngine.Object.FindAnyObjectByType<MuseumNarrationButtons>();
                 yield return null;
-                Assert.That(toggle.GetComponentInChildren<TMPro.TMP_Text>().text, Does.StartWith("Escuchar"), "Its button invites to listen.");
-                narration.TogglePause();
+                Assert.That(icons.Row.gameObject.activeInHierarchy, Is.True, "The narration's icons stand on the header line.");
+                Assert.That(icons.ToggleGlyph, Is.EqualTo(MuseumNarrationButtons.Glyph.Play));
+                Assert.That(icons.ToggleLabel, Does.StartWith("Escuchar"), "Its play icon invites to listen.");
+                Assert.That(icons.RestartLabel, Does.StartWith("Reiniciar"));
+                Assert.That(icons.Hint.text, Does.Contain("pausa").And.Contain("reinicia"), "A short hint names the keys.");
+                var big = UnityEngine.Object.FindObjectsByType<UnityEngine.UI.Button>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                    .First(button => button.name == "NarrationToggle");
+                Assert.That(big.gameObject.activeInHierarchy, Is.False, "The big caption button is gone.");
+                // The text starts below the icons and, with nothing in the side column, takes the screen's whole width.
+                var viewport = (RectTransform)transcriptText.GetComponentInParent<UnityEngine.UI.ScrollRect>().viewport;
+                var corners = new Vector3[4];
+                viewport.GetWorldCorners(corners);
+                var rowCorners = new Vector3[4];
+                icons.Row.GetWorldCorners(rowCorners);
+                var page = (RectTransform)viewport.GetComponentInParent<UnityEngine.UI.ScrollRect>().transform;
+                float textTop = page.InverseTransformPoint(corners[1]).y, rowBottom = page.InverseTransformPoint(rowCorners[0]).y;
+                Assert.That(textTop, Is.LessThanOrEqualTo(rowBottom + 1), "The icons never cover the text.");
+                Assert.That(viewport.rect.width, Is.GreaterThan(page.rect.width - 80), "No empty side column narrows the text.");
+                Assert.That(icons.Toggle.GetComponent<RectTransform>().rect.width, Is.LessThanOrEqualTo(MuseumNarrationButtons.ButtonSize + .5f), "Small controls.");
+                icons.Toggle.onClick.Invoke();
                 Assert.That(narration.State, Is.EqualTo(NarrationState.Playing));
                 Assert.That(narration.PlaybackTime, Is.LessThan(.3f), "It starts from the beginning.");
+                yield return null;
+                Assert.That(icons.ToggleGlyph, Is.EqualTo(MuseumNarrationButtons.Glyph.Pause));
+                icons.Toggle.onClick.Invoke();
+                Assert.That(narration.State, Is.EqualTo(NarrationState.Paused), "The same icon pauses.");
+                icons.Toggle.onClick.Invoke();
+                Assert.That(narration.State, Is.EqualTo(NarrationState.Playing), "And resumes.");
+                yield return new WaitForSecondsRealtime(.6f);
+                icons.Restart.onClick.Invoke();
+                Assert.That(narration.PlaybackTime, Is.LessThan(.3f), "Restart goes back to the beginning.");
             }
             finally
             {

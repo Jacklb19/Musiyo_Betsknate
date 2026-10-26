@@ -1,3 +1,4 @@
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -130,25 +131,32 @@ namespace MusiyoBetsknate.Museum
             return text;
         }
 
-        /// <summary>Titles of the neighbouring records and the position on show, rewritten only when they change.</summary>
+        /// <summary>
+        /// Titles of the neighbouring pieces or records and the position on show, rewritten only when they change. Where
+        /// the card stays on the point's own record the arrows step between pieces: they name the pieces and count
+        /// nothing. With only two to choose from, both arrows lead to the same one, so only the next arrow names it.
+        /// </summary>
         private void RefreshLabels()
         {
             var point = interaction != null ? interaction.ActivePoint : null;
-            var elements = point != null && point.HasContent ? point.Content.elements : null;
-            int index = elements != null ? System.Array.IndexOf(elements, interaction.SelectedElement) : -1;
-            string key = point != null ? point.Anchor.Key : null;
+            bool pieces = point != null && point.HasContent && MuseumPointRecords.StepsPieces(point.Content);
+            var items = point == null || !point.HasContent ? null
+                : pieces ? MuseumPointRecords.Pieces(point.Content).ToArray() : point.Content.elements;
+            var current = pieces ? presenter?.ShownPiece(point) : interaction?.SelectedElement;
+            int index = items != null ? System.Array.IndexOf(items, current) : -1;
+            string key = point != null ? point.Anchor.Key + (pieces ? "/pieces" : "") : null;
             if (key == shownPoint && index == shownIndex) return;
             shownPoint = key;
             shownIndex = index;
-            if (elements == null || elements.Length < 2 || index < 0)
+            if (items == null || items.Length < 2 || index < 0)
             {
                 previousLabel.text = nextLabel.text = positionLabel.text = "";
                 return;
             }
-            int count = elements.Length;
-            previousLabel.text = elements[(index - 1 + count) % count].title;
-            nextLabel.text = elements[(index + 1) % count].title;
-            positionLabel.text = MuseumInterfaceText.Format("piece_position", index + 1, count);
+            int count = items.Length;
+            previousLabel.text = count > 2 ? items[(index - 1 + count) % count].title : "";
+            nextLabel.text = items[(index + 1) % count].title;
+            positionLabel.text = pieces ? "" : MuseumInterfaceText.Format("piece_position", index + 1, count);
         }
 
         /// <summary>A soft round disc made once, so the arrows need no texture asset.</summary>

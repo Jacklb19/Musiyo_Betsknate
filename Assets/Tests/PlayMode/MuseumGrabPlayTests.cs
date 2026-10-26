@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Linq;
 using MusiyoBetsknate.Museum;
 using MusiyoBetsknate.Museo;
 using NUnit.Framework;
@@ -15,6 +16,7 @@ namespace MusiyoBetsknate.Tests
     {
         private const string MuseumScene = "Assets/_Musiyo/Scenes/10_Museum_Blockout.unity";
         private const string PointKey = "punto.personajes.pedestal_1";
+        private const string CastleKey = "punto.personajes.castillo";
         private SyntheticMuseumService service;
 
         public override void Setup() { base.Setup(); MuseumInput.Replace(MuseumInput.CreateDefault()); }
@@ -62,6 +64,7 @@ namespace MusiyoBetsknate.Tests
             var cube = Convert.FromBase64String(RemoteModelPlayTests.Cube);
             service.AddModel("piece-a", "Pieza sintética A", cube);
             service.AddModel("piece-b", "Pieza sintética B", cube);
+            service.AddModel("castle", "Castillo sintético", cube);
             yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(MuseumScene,
                 new LoadSceneParameters(LoadSceneMode.Additive));
             var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
@@ -94,6 +97,10 @@ namespace MusiyoBetsknate.Tests
                             new ElementSummaryContractV1 { slug = "piece-a", title = "Pieza sintética A", has_3d_model = true },
                             new ElementSummaryContractV1 { slug = "piece-b", title = "Pieza sintética B", has_3d_model = true },
                         }
+                    }, new PointContractV1
+                    {
+                        key = CastleKey, name = "Castillo sintético", order = 1, activation = new[] { "proximity", "keyboard" },
+                        elements = new[] { new ElementSummaryContractV1 { slug = "castle", title = "Castillo sintético", has_3d_model = true } }
                     }),
                     Room("room.instruments", 3), Room("room.hearth", 4), Room("room.overlook", 5),
                 },
@@ -218,9 +225,22 @@ namespace MusiyoBetsknate.Tests
             yield return Until(() => !grab.Returning, 3);
             AssertAt(piece, home, homeRotation, "A piece carried away returns.");
 
+            // Taking the piece shows a small cue beside it, never a bar across the view.
+            var label = UnityEngine.Object.FindAnyObjectByType<MuseumPieceLabel>();
+            Assert.That(label, Is.Not.Null, "The visit installs the small label of the pieces.");
+            string Bar() => UnityEngine.Object.FindObjectsByType<TMPro.TMP_Text>(FindObjectsSortMode.None)
+                .Where(text => text.isActiveAndEnabled && text.GetComponentInParent<MuseumPieceLabel>() == null)
+                .Select(text => text.text).FirstOrDefault(text => text.Contains("clic derecho") || text.Contains("Rueda"));
+
             // On a desktop, the right button holds the piece; it turns with the mouse while the view stays still.
             Press(mouse.rightButton);
             Assert.That(grab.Take(view.position, view.rotation, true, true), Is.True);
+            label.Advance(1);
+            Assert.That(label.CueShown, Is.True, "Taking the piece shows how to handle it, beside it.");
+            Assert.That(label.Cue.text, Is.EqualTo(MuseumInterfaceText.Get("grab_held_cue")));
+            Assert.That(label.Visibility, Is.EqualTo(1).Within(.001f));
+            Assert.That(label.Title.gameObject.activeSelf, Is.False, "A piece on its own card has no title under it, only the cue.");
+            Assert.That(Bar(), Is.Null, "No bar across the view tells how to take or hold the piece.");
             Assert.That(visitor.LookSuspended, Is.True);
             var viewBefore = view.rotation;
             grab.Turn(new Vector2(30, 0));
@@ -230,12 +250,34 @@ namespace MusiyoBetsknate.Tests
             yield return null;
             Assert.That(grab.Held, Is.True, "Held while the button is down.");
             Assert.That(Quaternion.Angle(view.rotation, viewBefore), Is.LessThan(.01f));
+            // The wheel draws the held piece closer and pushes it away, within limits.
+            float distance = grab.DesktopDistance;
+            grab.MoveDesktopPiece(-MuseumModelGrab.WheelNotches(120));
+            grab.Follow(view.position, view.rotation, 1);
+            Assert.That(grab.DesktopDistance, Is.EqualTo(distance - MuseumModelGrab.WheelStep).Within(.001f), "Wheel forward brings it closer.");
+            Assert.That(Vector3.Distance(piece.position, view.position + view.forward * grab.DesktopDistance), Is.LessThan(.01f));
+            grab.MoveDesktopPiece(-100);
+            Assert.That(grab.DesktopDistance, Is.EqualTo(MuseumModelGrab.DesktopNearest).Within(.001f), "Never into the eyes.");
+            grab.MoveDesktopPiece(100);
+            Assert.That(grab.DesktopDistance, Is.EqualTo(MuseumModelGrab.DesktopFarthest).Within(.001f), "Never out of reach.");
+            Assert.That(MuseumModelGrab.WheelNotches(3), Is.EqualTo(.25f).Within(.001f), "A browser's small wheel steps still move it.");
+            Assert.That(MuseumModelGrab.WheelNotches(-480), Is.EqualTo(-1).Within(.001f));
+            // The cue fades after a moment, while the piece is still held.
+            yield return new WaitForSecondsRealtime(MuseumPieceLabel.CueSeconds + .2f);
+            label.Advance(1);
+            Assert.That(grab.Held, Is.True);
+            Assert.That(label.CueShown, Is.False, "The cue goes after a moment.");
             Release(mouse.rightButton);
             yield return null;
             Assert.That(grab.Held, Is.False, "Releasing the button lets go.");
             Assert.That(visitor.LookSuspended, Is.False);
             yield return Until(() => !grab.Returning, 3);
             AssertAt(piece, home, homeRotation, "Released on a desktop, the piece is back too.");
+            Assert.That(grab.Take(view.position, view.rotation, true, true), Is.True);
+            Assert.That(grab.DesktopDistance, Is.EqualTo(MuseumExperienceConfiguration.Current.GrabDesktopDistance).Within(.001f),
+                "Taken again, the piece comes back at its usual distance.");
+            grab.Release();
+            yield return Until(() => !grab.Returning, 3);
 
             // Changing piece while one is held drops the hold; the new piece takes its own pose.
             Assert.That(grab.Take(hand, Quaternion.identity, false, false), Is.True);
@@ -258,6 +300,22 @@ namespace MusiyoBetsknate.Tests
             interaction.Back();
             yield return null;
             AssertAt(presenter.Model, otherHome, otherRotation, "After the examination the piece is back on show.");
+
+            // The Castle is built into the space: it is never taken, by a hand or on a desktop, and nothing invites to.
+            var castle = runtime.FindPoint(CastleKey);
+            Assert.That(visitor.FocusPoint(castle.Anchor), Is.True);
+            yield return Until(() => interaction.ActivePoint == castle, 5);
+            yield return Until(() => presenter.State == ModelLoadState.Ready && presenter.ModelSlug == "castle", 15);
+            yield return new WaitForSecondsRealtime(MuseumModelPresenter.RevealSeconds + .2f);
+            Assert.That(grab.Fixed, Is.True, "The Castle keeps its natural size in the space.");
+            Assert.That(grab.CanTake, Is.False);
+            Assert.That(presenter.TryExhibitPose(out var castleHome, out _, out _), Is.True);
+            Assert.That(grab.Take(castleHome, Quaternion.identity, false, false), Is.False, "No hand takes the Castle.");
+            Assert.That(grab.Take(view.position, view.rotation, true, true), Is.False, "No desktop takes the Castle.");
+            yield return null;
+            Assert.That(grab.Hovered, Is.False, "Pointing at the Castle offers nothing to take.");
+            label.Advance(1);
+            Assert.That(label.CueShown, Is.False);
         }
 #endif
     }
