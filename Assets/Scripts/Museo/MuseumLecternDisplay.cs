@@ -20,6 +20,7 @@ namespace MusiyoBetsknate.Museum
         private int screenSibling;
         private Vector2 screenAnchorMin, screenAnchorMax, screenPivot, screenPosition, screenSize;
         private ScrollRect scroll;
+        private bool fittedSpatial;
         /// <summary>A floating screen is never shorter than this, so its buttons keep their place.</summary>
         private const float MinimumHeight = 300;
         /// <summary>
@@ -168,7 +169,8 @@ namespace MusiyoBetsknate.Museum
                 panel.SetParent(surface, false);
                 panel.anchorMin = panel.anchorMax = panel.pivot = new Vector2(.5f, 0);
                 panel.anchoredPosition = new Vector2(0, Border);
-                panel.sizeDelta = new Vector2(InWorldWidth, stand != null ? PageHeight(MuseumExperienceConfiguration.Current) : InWorldMaxHeight);
+                panel.sizeDelta = new Vector2(InWorldWidth, stand != null ? PageHeight(MuseumExperienceConfiguration.Current, MuseumLecternFinish.Spatial) : InWorldMaxHeight);
+                fittedSpatial = MuseumLecternFinish.Spatial;
                 surface.sizeDelta = panel.sizeDelta + Vector2.one * (Border * 2);
                 panel.gameObject.SetActive(true);
                 aimMark.SetAsLastSibling();
@@ -283,10 +285,11 @@ namespace MusiyoBetsknate.Museum
         /// Height of the panel on a reading board, in interface units: the page fills the board inside its margin, whatever
         /// it shows; its text scrolls within it.
         /// </summary>
-        public static float PageHeight(MuseumExperienceConfiguration settings)
+        public static float PageHeight(MuseumExperienceConfiguration settings, bool spatial)
         {
-            float width = settings.LecternBoardWidth - settings.LecternBoardMargin * 2;
-            float height = settings.LecternBoardHeight - settings.LecternBoardMargin * 2;
+            var board = settings.LecternBoard(spatial);
+            float width = board.x - settings.LecternBoardMargin * 2;
+            float height = board.y - settings.LecternBoardMargin * 2;
             return height * (InWorldWidth + Border * 2) / width - Border * 2;
         }
 
@@ -307,12 +310,25 @@ namespace MusiyoBetsknate.Museum
             Apply();
         }
 
+        /// <summary>Builds the reading boards again at the size of the current view, and fits the page on its stand to it.</summary>
+        private void Refit()
+        {
+            fittedSpatial = MuseumLecternFinish.Spatial;
+            foreach (var stand in FindObjectsByType<PointLectern>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                MuseumLecternFinish.Apply(stand);
+            if (Host == null) return;
+            panel.sizeDelta = new Vector2(InWorldWidth, PageHeight(MuseumExperienceConfiguration.Current, fittedSpatial));
+            surface.sizeDelta = panel.sizeDelta + Vector2.one * (Border * 2);
+        }
+
         /// <summary>Moves the fold by one time step; tests call it directly.</summary>
         public void Advance(float elapsed)
         {
             if (surface == null) return;
             float target = open && InWorld ? 1 : 0;
             var settings = MuseumExperienceConfiguration.Current;
+            // Putting on or taking off a headset changes the size of the reading boards, and of the page on them.
+            if (MuseumLecternFinish.Spatial != fittedSpatial) Refit();
             Openness = Mathf.MoveTowards(Openness, target, Mathf.Max(0, elapsed) / settings.LecternUnfoldSeconds);
             // A floating screen keeps turning toward the visitor, eased so it does not jitter with every step; a screen
             // resting on a stand stays where it is.
@@ -352,7 +368,7 @@ namespace MusiyoBetsknate.Museum
                 surface.SetPositionAndRotation(centre + toViewer * settings.LecternFloatDistance, Quaternion.LookRotation(-toViewer, Vector3.up));
             }
             float eased = Mathf.SmoothStep(0, 1, Openness);
-            float width = Host != null ? settings.LecternBoardWidth - settings.LecternBoardMargin * 2 : settings.LecternScreenWidth;
+            float width = Host != null ? settings.LecternBoard(MuseumLecternFinish.Spatial).x - settings.LecternBoardMargin * 2 : settings.LecternScreenWidth;
             float scale = width / surface.sizeDelta.x;
             // The screen rises from its lower edge.
             surface.localScale = new Vector3(scale, scale * eased, scale);
