@@ -252,6 +252,7 @@ namespace MusiyoBetsknate.Museum
             if (Stage != GuideVoiceStage.Recording) return false;
             var wav = Recorder.End();
             if (wav == null) { Fail("voice_too_short"); return true; }
+            if (WavAudio.Silent(wav, "MuseumGuideVoice")) { Fail("voice_not_heard"); return true; }
             if (!Consented || !client.Transcribe(wav)) { Fail("voice_failed"); return true; }
             Set(GuideVoiceStage.Transcribing);
             return true;

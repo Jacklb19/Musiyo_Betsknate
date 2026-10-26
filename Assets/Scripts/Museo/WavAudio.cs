@@ -11,6 +11,37 @@ namespace MusiyoBetsknate.Museum
     public static class WavAudio
     {
         public const int RecordingRate = 16000;
+        /// <summary>
+        /// Below this peak (about −40 dBFS) a recording holds no voice at all: a muted, held-back or missing microphone.
+        /// Speech recognition turns such silence into a stock phrase («Gracias por ver el video»), so it is never sent.
+        /// </summary>
+        public const float SilentPeak = .01f;
+
+        /// <summary>Peak and loudness (RMS) of a PCM16 WAV, in [0, 1], and its length in seconds; false for anything else.</summary>
+        public static bool Measure(byte[] wav, out float peak, out float rms, out float seconds)
+        {
+            peak = rms = seconds = 0;
+            if (!TryDecodePcm16(wav, out var samples, out int rate) || samples.Length == 0) return false;
+            double energy = 0;
+            foreach (var sample in samples)
+            {
+                float level = Math.Abs(sample);
+                if (level > peak) peak = level;
+                energy += sample * sample;
+            }
+            rms = (float)Math.Sqrt(energy / samples.Length);
+            seconds = samples.Length / (float)rate;
+            return true;
+        }
+
+        /// <summary>A recording that holds no voice; its length and levels go to the log either way, never its sound.</summary>
+        public static bool Silent(byte[] wav, string who)
+        {
+            if (!Measure(wav, out float peak, out float rms, out float seconds)) return false;
+            UnityEngine.Debug.Log("[" + who + "] take " + wav.Length + " bytes, " + seconds.ToString("F2") + " s, peak " + peak.ToString("F4")
+                + ", rms " + rms.ToString("F4") + (peak < SilentPeak ? ": no voice, not sent" : ""));
+            return peak < SilentPeak;
+        }
 
         /// <summary>Encodes samples in [-1, 1] as PCM16 mono WAV, resampling linearly to <paramref name="targetRate"/>.</summary>
         public static byte[] EncodePcm16Mono(float[] samples, int sourceRate, int targetRate = RecordingRate)
