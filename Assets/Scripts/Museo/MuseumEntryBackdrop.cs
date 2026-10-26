@@ -23,6 +23,14 @@ namespace MusiyoBetsknate.Museum
     public sealed class MuseumEntryBackdrop : MonoBehaviour
     {
         public const string GlowMaterial = "EntryBackdropGlow";
+        /// <summary>
+        /// The night over the fire (owner, Web test of 23/10: «no me gusta que se vea negra toda la parte de atrás de la
+        /// fogata»): the museum's own sky shader with a starry panorama drawn here, as the camera's sky, so the fog that
+        /// hides the edge of the earth leaves it untouched. One texture read per sky pixel on every device.
+        /// </summary>
+        public const string NightSkyMaterial = "EntryNightSky";
+        public const int NightSkyWidth = 2048, NightSkyHeight = 1024, StarCount = 2600;
+        private static Material nightSky;
         /// <summary>Far below the museum terrain, out of every view of the visit.</summary>
         public static readonly Vector3 Origin = new Vector3(0, -400, 0);
         /// <summary>Where the subject stands in the set, to the right of the menu column.</summary>
@@ -123,7 +131,7 @@ namespace MusiyoBetsknate.Museum
                     RenderSettings.fogMode = FogMode.ExponentialSquared;
                     RenderSettings.fogColor = Background;
                     RenderSettings.fogDensity = .13f;
-                    RenderSettings.skybox = null;
+                    RenderSettings.skybox = NightSky();
                     root.gameObject.SetActive(true);
                 }
                 Dress(stage);
@@ -148,7 +156,7 @@ namespace MusiyoBetsknate.Museum
             if (stage == null) return;
             dressedCamera = stage;
             clearFlags = stage.clearFlags; background = stage.backgroundColor; farClip = stage.farClipPlane;
-            stage.clearFlags = CameraClearFlags.SolidColor;
+            stage.clearFlags = RenderSettings.skybox != null ? CameraClearFlags.Skybox : CameraClearFlags.SolidColor;
             stage.backgroundColor = Background;
             stage.farClipPlane = 60;
         }
@@ -180,6 +188,72 @@ namespace MusiyoBetsknate.Museum
                 FireLevel = Mathf.Clamp01(flicker / .85f);
             }
             if (maskAnchor != null) maskAnchor.localRotation = Quaternion.Euler(0, 180 + Mathf.Sin(time * .25f) * 14, 0);
+        }
+
+        /// <summary>The night sky's material, its stars drawn once; null when the build lacks it, and the night stays plain.</summary>
+        public static Material NightSky()
+        {
+            if (nightSky != null) return nightSky;
+            var shared = Resources.Load<Material>(NightSkyMaterial);
+            if (shared == null) return null;
+            // A copy, so drawing the stars never writes into the project's material.
+            nightSky = new Material(shared) { name = NightSkyMaterial + " (stars)" };
+            nightSky.SetTexture("_MainTex", StarPanorama());
+            return nightSky;
+        }
+
+        /// <summary>
+        /// An equirectangular night: a deep blue darker towards the zenith, and stars spread evenly over the upper half,
+        /// most faint, a few bright, some a little warm or cold. The same stars every time; nothing below the horizon.
+        /// </summary>
+        public static Texture2D StarPanorama()
+        {
+            var texture = new Texture2D(NightSkyWidth, NightSkyHeight, TextureFormat.RGB24, false) { name = "NightStars", wrapModeU = TextureWrapMode.Repeat,
+                wrapModeV = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            texture.SetPixels32(StarPixels());
+            // Uploaded and released from memory: only the graphics card keeps it.
+            texture.Apply(false, true);
+            return texture;
+        }
+
+        /// <summary>The panorama's pixels, row by row from the nadir up.</summary>
+        public static Color32[] StarPixels()
+        {
+            const int width = NightSkyWidth, height = NightSkyHeight;
+            var pixels = new Color32[width * height];
+            for (int row = 0; row < height; row++)
+            {
+                float elevation = (row + .5f) / height * 2 - 1;
+                float up = Mathf.Clamp01(elevation);
+                var shade = (Color32)Color.Lerp(new Color(.024f, .03f, .052f), new Color(.006f, .008f, .018f), Mathf.Sqrt(up));
+                for (int column = 0; column < width; column++) pixels[row * width + column] = shade;
+            }
+            var random = new System.Random(20261023);
+            for (int star = 0; star < StarCount; star++)
+            {
+                // Even over the sphere: the sine of the elevation is uniform; the lowest few degrees stay in the haze.
+                float sine = .06f + (float)random.NextDouble() * .94f;
+                int row = Mathf.Clamp(Mathf.RoundToInt((Mathf.Asin(sine) / Mathf.PI + .5f) * height), 0, height - 1);
+                int column = random.Next(width);
+                float brightness = Mathf.Pow((float)random.NextDouble(), 3.2f);
+                float level = .25f + .75f * brightness;
+                float warmth = (float)random.NextDouble() - .5f;
+                var colour = new Color(level * (1 + warmth * .25f), level, level * (1 - warmth * .25f));
+                Plot(pixels, width, height, column, row, colour);
+                // The brightest few spill into their neighbours.
+                if (brightness > .55f)
+                    foreach (var (dx, dy) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                        Plot(pixels, width, height, column + dx, row + dy, colour * .35f);
+            }
+            return pixels;
+        }
+
+        private static void Plot(Color32[] pixels, int width, int height, int column, int row, Color colour)
+        {
+            if (row < 0 || row >= height) return;
+            int index = row * width + (column % width + width) % width;
+            Color under = pixels[index];
+            pixels[index] = new Color(Mathf.Max(under.r, colour.r), Mathf.Max(under.g, colour.g), Mathf.Max(under.b, colour.b));
         }
 
         private void Ground()
