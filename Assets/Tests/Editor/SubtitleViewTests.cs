@@ -66,6 +66,8 @@ namespace MusiyoBetsknate.Tests
             var local = canvas.transform.localPosition;
             Assert.That(local.z, Is.EqualTo(MuseumSubtitleView.SpatialDistance).Within(.001f));
             Assert.That(local.y, Is.LessThan(0), "Below the eyes.");
+            float below = Mathf.Atan2(-local.y, local.z) * Mathf.Rad2Deg;
+            Assert.That(below, Is.InRange(24f, 32f), "Low in the view, under a page read face on, and still well inside a headset's view.");
             Assert.That(local.x, Is.EqualTo(0).Within(.001f), "Centred.");
             float width = ((RectTransform)canvas.transform).sizeDelta.x * canvas.transform.localScale.x;
             Assert.That(width, Is.EqualTo(MuseumSubtitleView.SpatialWidth).Within(.001f));

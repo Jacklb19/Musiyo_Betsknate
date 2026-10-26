@@ -16,8 +16,12 @@ namespace MusiyoBetsknate.Museum
         public const float BottomMargin = 36, SideMargin = 96, Height = 170;
         /// <summary>Outline of the letters and their soft shadow, in the text shader's own units.</summary>
         public const float OutlineWidth = .22f, ShadowSoftness = .55f, ShadowDilate = .35f, ShadowOffset = -.6f;
-        /// <summary>On a headset: distance in front of the eyes, drop below them and width of the subtitle line, in metres.</summary>
-        public const float SpatialDistance = .65f, SpatialDrop = .17f, SpatialWidth = .62f;
+        /// <summary>
+        /// On a headset: distance in front of the eyes, drop below them and width of the subtitle line, in metres. The drop
+        /// puts the line about 28 degrees below the gaze: low in the headset's view and below a reading stand's page read
+        /// face on, so it does not cover the page's text.
+        /// </summary>
+        public const float SpatialDistance = .65f, SpatialDrop = .345f, SpatialWidth = .62f;
         /// <summary>On a headset, metres per interface unit: the shipped size reads about 1.7 cm high at 0.65 m.</summary>
         public const float SpatialUnit = .0007f;
         private TMP_Text text;
