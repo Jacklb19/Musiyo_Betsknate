@@ -19,8 +19,9 @@ namespace MusiyoBetsknate.Museum
         // it comes closer so its text reads comfortably (owner, 25/10/2026: «está muy lejos y no se lee»).
         private static bool Headset => MuseumInput.Current.Spatial;
         private static float Ahead => Headset ? 1.15f : .66f;
-        private static float Aside => Headset ? -.34f : -.2f;
-        private static float Below => Headset ? .08f : .05f;
+        private static float Aside => Headset ? -.34f : -.24f;
+        // On a computer it also hangs lower and further aside, below the line of the pieces and their names.
+        private static float Below => Headset ? .08f : .12f;
         private const float InviteSeconds = 9;
         private MuseumCompanionVoice voice;
         private MuseumInteraction interaction;
@@ -184,7 +185,9 @@ namespace MusiyoBetsknate.Museum
                 registered = true;
             }
             // The invitation: once per visit, as soon as the companion can listen and the visitor is exploring.
-            if (!invited && voice.QuestionsOffered && voice.Listens && voice.CanAsk && flow != null && flow.Phase == VisitPhase.Exploring)
+            // Not over a point's screen, its piece or its arrows: it waits until the visitor walks on.
+            if (!invited && voice.QuestionsOffered && voice.Listens && voice.CanAsk && flow != null && flow.Phase == VisitPhase.Exploring
+                && interaction != null && interaction.State == InteractionState.Exploration && interaction.ActivePoint == null)
             {
                 invited = true;
                 inviteUntil = Time.unscaledTime + InviteSeconds;
