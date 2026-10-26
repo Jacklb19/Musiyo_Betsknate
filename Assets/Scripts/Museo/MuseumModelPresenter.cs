@@ -380,12 +380,13 @@ namespace MusiyoBetsknate.Museum
             if (point == null || !point.HasContent || !point.Content.elements.Any(candidate => candidate.slug == slug && candidate.has_3d_model)) return false;
             if (ShownPiece(point)?.slug == slug && session != null && session.Point == point && session.Slug == slug) return true;
             chosenPieces[point.Anchor.Key] = slug;
-            if (interaction.ActivePoint != point) return true;
+            if (interaction.ActivePoint != point || switchSlug == slug) return true;
             // As with the arrows on records: drop the piece on show at once, ask for the new one once the choice settles.
-            Release();
+            // The switch is noted before anything is told of it, so a screen refreshed meanwhile finds it under way.
             attemptedKey = null;
             switchSlug = slug;
             switchAt = Time.realtimeSinceStartup + SwitchSettleSeconds;
+            Release();
             SetState(ModelLoadState.Loading, MuseumInterfaceText.Get("model_loading"));
             return true;
         }
