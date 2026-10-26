@@ -17,6 +17,8 @@ namespace MusiyoBetsknate.Museum
         [SerializeField] private DesktopPointInput pointInput;
         [SerializeField] private TMP_Text statusText;
         [SerializeField] private TMP_Text focusText;
+        private MuseumHearthQuiz hearthQuiz;
+        private MuseumClosingSurvey closingSurvey;
         [SerializeField] private TMP_Text panelText;
         [SerializeField] private GameObject panel;
         [SerializeField] private Transform elementList;
@@ -151,6 +153,7 @@ namespace MusiyoBetsknate.Museum
             var quiz = interaction.GetComponent<MuseumHearthQuiz>();
             if (quiz == null) quiz = interaction.gameObject.AddComponent<MuseumHearthQuiz>();
             guide.Attach(quiz);
+            hearthQuiz = quiz;
             var voice = interaction.GetComponent<MuseumGuideVoice>();
             if (voice == null) voice = interaction.gameObject.AddComponent<MuseumGuideVoice>();
             guide.Attach(voice);
@@ -412,6 +415,9 @@ namespace MusiyoBetsknate.Museum
         /// <summary>Point whose reading stand carries the service notice, or null.</summary>
         private TourPoint NoticePoint => serviceNotice.Point != null && lectern.Find(serviceNotice.Point) != null ? serviceNotice.Point : null;
 
+        /// <summary>Share of the screen's height the focus sentence stands below its centre.</summary>
+        private const float FocusSentenceDrop = .3f;
+
         private void TogglePause() => interaction.SetPaused(interaction.State != InteractionState.Paused);
         private void OpenDetail() => interaction.OpenDetail();
         private void OnPresenceChanged(bool away) => Refresh();
@@ -423,7 +429,15 @@ namespace MusiyoBetsknate.Museum
             focusText.text = grab != null && (grab.Held || grab.Hovered) ? "."
                 : focus != null && focus.Content != null ? MuseumInterfaceText.Format("focus_point", focus.Content.name)
                 : pointInput.GazeProgress > 0 ? MuseumInterfaceText.Format("gaze_progress", Mathf.RoundToInt(pointInput.GazeProgress * 100)) : ".";
-            if (focusText.text != shownFocus) { shownFocus = focusText.text; MuseumHudSkin.Fit(focusPill, focusText); }
+            if (focusText.text != shownFocus)
+            {
+                shownFocus = focusText.text;
+                // The dot marks the centre of the view, where the visitor aims; a sentence («Guía · G: conversar con el
+                // guía») stands lower, so it never covers what is being looked at.
+                focusText.rectTransform.anchoredPosition = shownFocus == "." ? Vector2.zero
+                    : Vector2.down * ((RectTransform)focusText.transform.parent).rect.height * FocusSentenceDrop;
+                MuseumHudSkin.Fit(focusPill, focusText);
+            }
             ScrollPointPanel();
             if (panel.activeSelf && PanelGroup().alpha < 1)
                 panelGroup.alpha = Mathf.MoveTowards(panelGroup.alpha, 1,
@@ -515,7 +529,12 @@ namespace MusiyoBetsknate.Museum
             }
             if (interaction.State == InteractionState.GuideQuestion)
             {
-                panelText.text = guide != null ? MuseumInterfaceText.Format("guide_panel", guide.Name, guide.Message) : "";
+                // While the visitor talks about the visit (the interview or the opinion questions) writing is set aside,
+                // so its keys leave the header and the question reads right under it.
+                closingSurvey ??= interaction.GetComponent<MuseumClosingSurvey>();
+                bool interview = hearthQuiz != null && (hearthQuiz.Active || hearthQuiz.Done)
+                    || closingSurvey != null && closingSurvey.Stage != ClosingSurveyStage.Off;
+                panelText.text = guide != null ? MuseumInterfaceText.Format(interview ? "guide_panel_interview" : "guide_panel", guide.Name, guide.Message) : "";
                 return;
             }
             var point = interaction.ActivePoint;

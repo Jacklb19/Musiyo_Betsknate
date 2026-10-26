@@ -261,6 +261,19 @@ namespace MusiyoBetsknate.Tests
             }
         }
 
+        /// <summary>Every caption fits inside its button: none runs out of its box (owner, 25/10/2026).</summary>
+        private static void AssertFits(System.Collections.Generic.IEnumerable<UnityEngine.UI.Button> choices)
+        {
+            Canvas.ForceUpdateCanvases();
+            foreach (var choice in choices.Where(choice => choice != null && choice.gameObject.activeInHierarchy))
+            {
+                var caption = choice.GetComponentInChildren<TMPro.TMP_Text>();
+                var box = ((RectTransform)choice.transform).rect;
+                Assert.That(caption.preferredHeight, Is.LessThanOrEqualTo(box.height + 1), "«" + caption.text + "» fits its button's height.");
+                Assert.That(caption.textBounds.size.x, Is.LessThanOrEqualTo(box.width + 1), "«" + caption.text + "» fits its button's width.");
+            }
+        }
+
         private static IEnumerator Until(Func<bool> condition, float seconds)
         {
             for (float waited = 0; !condition() && waited < seconds; waited += Time.unscaledDeltaTime) yield return null;
@@ -867,6 +880,7 @@ namespace MusiyoBetsknate.Tests
             Assert.That(guide.Message, Is.EqualTo("Tu opinión · pregunta 1 de 2"));
             Assert.That(view.SurveyOptions.Select(option => option.GetComponentInChildren<TMPro.TMP_Text>().text), Is.EqualTo(new[] { "Opción A", "Opción B" }));
             yield return AssertSteady(view.SurveyOptions);
+            AssertFits(view.SurveyOptions.Concat(new[] { view.SurveySkip, view.SurveyFinish }));
             view.SurveyOptions[1].onClick.Invoke();
             yield return null;
             StringAssert.Contains("1 = poco", view.SurveyText.text);
@@ -953,6 +967,7 @@ namespace MusiyoBetsknate.Tests
             Assert.That(view.QuizOptions.Select(option => option.GetComponentInChildren<TMPro.TMP_Text>().text),
                 Is.EqualTo(new[] { "Ficha sintética A", "Ficha sintética B", "Ficha sintética C" }), "Options in published order.");
             yield return AssertSteady(view.QuizOptions);
+            AssertFits(view.QuizOptions.Concat(new[] { view.QuizSkip, view.QuizClose }));
             Assert.That(view.QuizSkip.gameObject.activeInHierarchy && view.QuizClose.gameObject.activeInHierarchy, Is.True);
             Assert.That(guide.Message, Does.StartWith("Pregunta 1 de 1"));
 
