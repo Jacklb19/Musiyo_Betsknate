@@ -201,10 +201,11 @@ namespace MusiyoBetsknate.Tests
 
             // Another piece of the point takes the resident's place while it is read, and gives it back afterwards.
             Assert.That(interaction.SelectedElement.slug, Is.EqualTo("piece-common"), "By a stand the point opens on its own record.");
-            Assert.That(hud.StepCarousel(1), Is.True);
+            // One card per point: the arrows change the piece, and the card stays on the point's own record.
             Assert.That(hud.StepCarousel(1), Is.True);
             yield return Until(() => presenter.State == ModelLoadState.Ready && presenter.ModelSlug == "piece-b", 15);
             Assert.That(presenter.ModelSlug, Is.EqualTo("piece-b"));
+            Assert.That(interaction.SelectedElement.slug, Is.EqualTo("piece-common"), "The card stays on the point's record.");
             Assert.That(firstModel.gameObject.activeSelf, Is.False, "The resident piece steps aside.");
             Assert.That(UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsSortMode.None)
                 .Count(item => item.name == "RemoteModelPivot" && item.gameObject.activeInHierarchy && Planar(item.position - first.Anchor.LookTarget.position) < 1),

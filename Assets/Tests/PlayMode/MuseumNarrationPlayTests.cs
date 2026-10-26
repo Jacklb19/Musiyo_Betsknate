@@ -253,7 +253,16 @@ namespace MusiyoBetsknate.Tests
                 for (float waited = 0; (interaction.ActivePoint != point || narration.State != NarrationState.Playing) && waited < 20; waited += Time.unscaledDeltaTime) yield return null;
                 Assert.That(narration.State, Is.EqualTo(NarrationState.Playing), "Arriving at a point starts its narration.");
                 float before = narration.ContextSource.volume;
-                Assert.That(interaction.SelectElement(1), Is.True);
+                // Two records without a model share the card as tabs (owner, 25/10/2026), named by their titles here
+                // because the synthetic records have no community.
+                yield return null;
+                var tabs = UnityEngine.Object.FindAnyObjectByType<MuseumRecordTabs>();
+                Assert.That(tabs.Row.gameObject.activeInHierarchy, Is.True, "Two records on the card are chosen with tabs.");
+                Assert.That(tabs.Tabs.Count, Is.EqualTo(2));
+                Assert.That(tabs.Tabs[0].caption.text, Is.EqualTo("Elemento sintético"));
+                Assert.That(tabs.Chosen, Is.EqualTo(0));
+                tabs.Tabs[1].button.onClick.Invoke();
+                Assert.That(interaction.SelectedElement.slug, Is.EqualTo(SecondSlug), "The tab chooses its record.");
                 yield return null;
                 yield return null;
                 Assert.That(narration.Fading, Is.True, "The narration heard does not stop at once.");

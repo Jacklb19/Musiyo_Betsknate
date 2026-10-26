@@ -107,37 +107,44 @@ namespace MusiyoBetsknate.Tests
             Assert.That(carousel.activeInHierarchy, Is.True, "The arrows stand by the pedestal on the point's own record.");
             yield return Until(() => presenter.State == ModelLoadState.Ready, 15);
             Assert.That(presenter.ModelSlug, Is.EqualTo("piece-a"), "The point's own record brings its first piece.");
-            Assert.That(interaction.SelectElement(1), Is.True);
-            yield return Until(() => presenter.State == ModelLoadState.Ready, 15);
-            Assert.That(presenter.ModelSlug, Is.EqualTo("piece-a"));
             bool Says(string text) => UnityEngine.Object.FindObjectsByType<TMP_Text>(FindObjectsSortMode.None)
                 .Any(item => item.text.Contains(text));
-            yield return null;
-            Assert.That(carousel.activeInHierarchy, Is.True, "A point with several records shows the arrows beside its piece.");
-            Assert.That(Says("2 de 4") && Says("Pieza sintética A"), Is.True, "The screen says which record is on show.");
-            // Beside the piece, apart from the screen, the arrows say where they lead and which record of how many is on show.
+            // One card per point (owner, 25/10/2026): the card stays on the point's own record; the arrows beside the
+            // piece change only the piece, they name the pieces and count nothing.
             var cues = flow.GetComponent<MuseumPieceCues>();
-            Assert.That(cues.PositionLabel.text, Is.EqualTo("2 de 4"));
+            yield return null;
+            Assert.That(carousel.activeInHierarchy, Is.True, "A point with several pieces shows the arrows beside its piece.");
+            Assert.That(cues.PositionLabel.text, Is.Empty, "No «1 de 4»: the pieces are not records on the card.");
             Assert.That(cues.NextLabel.text, Is.EqualTo("Pieza sintética B"));
-            Assert.That(cues.PreviousLabel.text, Is.EqualTo("Registro común"));
+            Assert.That(cues.PreviousLabel.text, Is.EqualTo("Pieza sintética C"));
+            Assert.That(Says("de 4"), Is.False, "The card counts nothing.");
             Assert.That(cues.Surface.IsChildOf(display.Surface), Is.False, "The arrows stand apart from the screen.");
             Assert.That(UnityEngine.Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
                 .Any(item => item.name == "ElementChoice" || item.name == "ModelAction" && item.gameObject.activeInHierarchy
                     && item.GetComponentInChildren<TMP_Text>().text.StartsWith("Examinar")), Is.False,
                 "The screen by the stand has no list of records and no examination button.");
+            Assert.That(flow.GetComponent<MuseumRecordTabs>() == null || !UnityEngine.Object.FindAnyObjectByType<MuseumRecordTabs>().Row.gameObject.activeInHierarchy,
+                Is.True, "A single record on the card needs no tabs.");
+
+            // A piece record chosen some other way (a number key, a link from the Web) puts its piece on the pedestal and
+            // leaves the card on the point's record.
+            Assert.That(interaction.SelectElement(2), Is.True);
+            yield return null;
+            Assert.That(interaction.SelectedElement.slug, Is.EqualTo("piece-common"), "The card stays on the point's record.");
+            yield return Until(() => presenter.State == ModelLoadState.Ready && presenter.ModelSlug == "piece-b", 15);
+            Assert.That(presenter.ModelSlug, Is.EqualTo("piece-b"));
+            Assert.That(presenter.ShownPiece(point).slug, Is.EqualTo("piece-b"));
 
             // Quick changes settle on the last piece; the ones passed over are never downloaded.
             int requests = presenter.RequestCount;
             Assert.That(hud.StepCarousel(1), Is.True);
             yield return null;
             Assert.That(hud.StepCarousel(1), Is.True);
-            yield return Until(() => presenter.State == ModelLoadState.Ready && presenter.ModelSlug == "piece-c", 15);
-            Assert.That(interaction.SelectedElement.slug, Is.EqualTo("piece-c"), "The record follows the piece.");
-            Assert.That(presenter.ModelSlug, Is.EqualTo("piece-c"));
-            Assert.That(presenter.RequestCount - requests, Is.EqualTo(1), "Only the piece the visitor stopped on is requested.");
-            Assert.That(service.Downloads("piece-b"), Is.EqualTo(0));
-            yield return null;
-            Assert.That(Says("4 de 4"), Is.True);
+            yield return Until(() => presenter.State == ModelLoadState.Ready && presenter.ModelSlug == "piece-a", 15);
+            Assert.That(interaction.SelectedElement.slug, Is.EqualTo("piece-common"), "The card does not follow the piece.");
+            Assert.That(presenter.ModelSlug, Is.EqualTo("piece-a"), "Two steps from B wrap around to A.");
+            Assert.That(presenter.RequestCount - requests, Is.LessThanOrEqualTo(1), "Only the piece the visitor stopped on is requested.");
+            Assert.That(service.Downloads("piece-c"), Is.EqualTo(0), "The piece passed over is never downloaded.");
             Assert.That(UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsSortMode.None)
                 .Count(item => item.name == "RemoteModelPivot" && item.gameObject.activeInHierarchy), Is.EqualTo(1), "One piece is on show.");
 
@@ -154,34 +161,28 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(display.Press(), Is.True);
             }
             PressNext();
-            yield return null;
-            Assert.That(interaction.SelectedElement.slug, Is.EqualTo("piece-common"), "Next wraps around to the point's own record.");
-            Assert.That(presenter.ModelSlug, Is.EqualTo("piece-c"), "The record keeps the piece of its point on the pedestal.");
-            yield return null;
-            PressNext();
-            yield return Until(() => presenter.State == ModelLoadState.Ready && presenter.ModelSlug == "piece-a", 15);
-            Assert.That(interaction.SelectedElement.slug, Is.EqualTo("piece-a"));
+            yield return Until(() => presenter.State == ModelLoadState.Ready && presenter.ModelSlug == "piece-b", 15);
+            Assert.That(presenter.ModelSlug, Is.EqualTo("piece-b"));
+            Assert.That(interaction.SelectedElement.slug, Is.EqualTo("piece-common"));
 
             // A failing piece says so and can be retried by hand.
-            service.Failing["piece-b"] = true;
+            service.Failing["piece-c"] = true;
             Assert.That(hud.StepCarousel(1), Is.True);
             yield return Until(() => presenter.State == ModelLoadState.Unavailable, 15);
             Assert.That(presenter.State, Is.EqualTo(ModelLoadState.Unavailable));
-            service.Failing.TryRemove("piece-b", out _);
+            service.Failing.TryRemove("piece-c", out _);
             presenter.Retry();
             yield return Until(() => presenter.State == ModelLoadState.Ready, 15);
-            Assert.That(presenter.ModelSlug, Is.EqualTo("piece-b"));
+            Assert.That(presenter.ModelSlug, Is.EqualTo("piece-c"), "The retry brings the piece shown, not the card's record.");
 
-            // Examining keeps the piece: nothing changes by itself and the carousel steps aside.
-            Assert.That(presenter.Examine(), Is.True);
-            yield return new WaitForSecondsRealtime(1);
-            Assert.That(interaction.State, Is.EqualTo(InteractionState.ModelExamination));
-            Assert.That(interaction.SelectedElement.slug, Is.EqualTo("piece-b"));
-            Assert.That(carousel.activeInHierarchy, Is.False);
-            Assert.That(hud.StepCarousel(1), Is.False);
-            interaction.Back();
-            yield return null;
-            Assert.That(carousel.activeInHierarchy, Is.True);
+            // The piece's small label names it from its own record when the visitor looks at it.
+            var label = flow.GetComponent<MuseumPieceLabel>();
+            Assert.That(label, Is.Not.Null);
+            Assert.That(visitor.FocusPoint(point.Anchor, visitor.transform.position, presenter.Model.position), Is.True);
+            yield return new WaitForSecondsRealtime(MuseumPieceLabel.FadeSeconds + .3f);
+            Assert.That(label.Wanted, Is.True, "Looking at the piece shows its label.");
+            Assert.That(label.Title.text, Is.EqualTo("Pieza sintética C"));
+            Assert.That(label.Surface.gameObject.activeInHierarchy, Is.True);
         }
 
         [UnityTest]
