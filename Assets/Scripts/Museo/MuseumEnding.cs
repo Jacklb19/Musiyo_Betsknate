@@ -29,8 +29,14 @@ namespace MusiyoBetsknate.Museum
         [SerializeField] private float revealSeconds = 2.2f;
         [SerializeField] private float leaveSeconds = 1.4f;
         [SerializeField] private float retrySeconds = 8;
-        /// <summary>Distance of the question card in front of the eyes, on a desktop and on a headset.</summary>
-        public const float CardDistance = 1.25f, CardDistanceHeadset = 1.5f;
+        /// <summary>
+        /// Distance of the question card in front of the eyes, on a desktop and on a headset. On a screen it stands closer
+        /// and larger, so it reads in a browser window too (owner, Web test of 23/10: «está muy lejos y no se lee»).
+        /// </summary>
+        public const float CardDistance = .8f, CardDistanceHeadset = 1.5f;
+        /// <summary>On a screen the card is drawn this much larger, but never wider than this share of the view.</summary>
+        public const float CardScreenScale = 1.15f, CardMostOfView = .8f;
+        private const float CardWidth = 980, CardHeight = 400;
 
         private MuseumVisitFlow flow;
         private MuseumInteraction interaction;
@@ -390,6 +396,13 @@ namespace MusiyoBetsknate.Museum
                 if (body == null || !hit.transform.IsChildOf(body)) distance = Mathf.Min(distance, Mathf.Max(.6f, hit.distance - .2f));
             var position = eyes.position + forward * distance + Vector3.down * .06f;
             card.transform.SetPositionAndRotation(position, Quaternion.LookRotation(forward, Vector3.up));
+            float scale = 1;
+            if (!MuseumInput.Current.Spatial && viewCamera != null)
+            {
+                float viewWidth = 2 * distance * Mathf.Tan(viewCamera.fieldOfView * .5f * Mathf.Deg2Rad) * viewCamera.aspect;
+                scale = Mathf.Min(CardScreenScale, CardMostOfView * viewWidth / (CardWidth * MuseumWorldUi.Millimetre));
+            }
+            card.transform.localScale = Vector3.one * MuseumWorldUi.Millimetre * scale;
             card.worldCamera = viewCamera;
             cardGroup.alpha = 0;
             card.gameObject.SetActive(true);
@@ -406,7 +419,7 @@ namespace MusiyoBetsknate.Museum
 
         private void BuildCard()
         {
-            card = MuseumWorldUi.Canvas("EndingQuestion", transform, new Vector2(980, 400), viewCamera);
+            card = MuseumWorldUi.Canvas("EndingQuestion", transform, new Vector2(CardWidth, CardHeight), viewCamera);
             card.sortingOrder = 20;
             cardGroup = card.GetComponent<CanvasGroup>();
             var surface = MuseumWorldUi.Surface("Card", card.transform, MuseumWorldUi.Panel);
