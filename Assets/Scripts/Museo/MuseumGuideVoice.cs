@@ -179,6 +179,8 @@ namespace MusiyoBetsknate.Museum
             if (client == null) return;
             client.Poll();
             if (Stage == GuideVoiceStage.Permission && !Recorder.AwaitingPermission) StartRecording();
+            // A microphone that sends nothing is told at once, not after the visitor has spoken into it.
+            else if (Stage == GuideVoiceStage.Recording && Recorder.Muted) { Recorder.Discard(); Fail("voice_microphone_muted"); }
             // Reaching the longest allowed question ends the recording by itself, and it is sent as when stopped.
             else if (Stage == GuideVoiceStage.Recording && !Recorder.Recording) StopTalking();
             // The recording time and a rate-limit wait change the line once a second.
@@ -250,6 +252,7 @@ namespace MusiyoBetsknate.Museum
         public bool StopTalking()
         {
             if (Stage != GuideVoiceStage.Recording) return false;
+            if (Recorder.Muted) { Recorder.Discard(); Fail("voice_microphone_muted"); return true; }
             var wav = Recorder.End();
             if (wav == null) { Fail("voice_too_short"); return true; }
             if (WavAudio.Silent(wav, "MuseumGuideVoice")) { Fail("voice_not_heard"); return true; }

@@ -18,6 +18,11 @@ namespace MusiyoBetsknate.Museum
         float Elapsed { get; }
         /// <summary>The microphone permission was asked for and the visitor has not answered yet.</summary>
         bool AwaitingPermission { get; }
+        /// <summary>
+        /// While recording, the device has sent nothing for a moment because its track is muted (a browser that picked a
+        /// silent microphone). Only a browser can tell; elsewhere it is always false.
+        /// </summary>
+        bool Muted { get; }
         /// <summary>Starts recording for at most <paramref name="maxSeconds"/>, asking for the microphone when needed.</summary>
         GuideRecorderStart Begin(int maxSeconds);
         /// <summary>Stops and returns the recording as WAV PCM16 mono at 16 kHz, or null when it is shorter than a tenth of a second.</summary>
@@ -40,6 +45,7 @@ namespace MusiyoBetsknate.Museum
         public bool Recording => page.Recording;
         public float Elapsed => page.Elapsed;
         public bool AwaitingPermission => page.AwaitingPermission;
+        public bool Muted => page.Muted;
         public GuideRecorderStart Begin(int maxSeconds) => page.Begin(maxSeconds);
         public byte[] End() => page.End();
         public void Discard() => page.Discard();
@@ -60,6 +66,7 @@ namespace MusiyoBetsknate.Museum
         public bool Available => Application.platform == RuntimePlatform.Android || Microphone.devices.Length > 0;
         public bool Recording => clip != null && Microphone.IsRecording(null);
         public float Elapsed => clip != null ? Mathf.Min(Time.realtimeSinceStartup - startedAt, clip.length) : 0;
+        public bool Muted => false;
         public bool AwaitingPermission
         {
             get
@@ -165,6 +172,7 @@ namespace MusiyoBetsknate.Museum
         [System.Runtime.InteropServices.DllImport("__Internal")] private static extern void MusiyoVoiceRequest();
         [System.Runtime.InteropServices.DllImport("__Internal")] private static extern int MusiyoVoiceStart(int maxSeconds);
         [System.Runtime.InteropServices.DllImport("__Internal")] private static extern int MusiyoVoiceRecording();
+        [System.Runtime.InteropServices.DllImport("__Internal")] private static extern int MusiyoVoiceMuted();
         [System.Runtime.InteropServices.DllImport("__Internal")] private static extern int MusiyoVoiceStop();
         [System.Runtime.InteropServices.DllImport("__Internal")] private static extern int MusiyoVoiceTake(byte[] buffer, int length);
         [System.Runtime.InteropServices.DllImport("__Internal")] private static extern void MusiyoVoiceDiscard();
@@ -174,6 +182,7 @@ namespace MusiyoBetsknate.Museum
         private static void MusiyoVoiceRequest() { }
         private static int MusiyoVoiceStart(int maxSeconds) => 0;
         private static int MusiyoVoiceRecording() => 0;
+        private static int MusiyoVoiceMuted() => 0;
         private static int MusiyoVoiceStop() => 0;
         private static int MusiyoVoiceTake(byte[] buffer, int length) => 0;
         private static void MusiyoVoiceDiscard() { }
@@ -181,6 +190,7 @@ namespace MusiyoBetsknate.Museum
 
         public bool Available => MusiyoVoiceAvailable() == 1;
         public bool Recording => recording && MusiyoVoiceRecording() == 1;
+        public bool Muted => recording && MusiyoVoiceMuted() == 1;
         public float Elapsed => recording ? Mathf.Min(Time.realtimeSinceStartup - startedAt, limit) : 0;
         public bool AwaitingPermission => asked && MusiyoVoiceState() == Waiting;
 
