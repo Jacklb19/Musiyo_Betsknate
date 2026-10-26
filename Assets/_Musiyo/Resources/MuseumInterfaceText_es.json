@@ -390,6 +390,9 @@
     "controls_mouse_wheel": "Rueda",
     "controls_mouse_wheel_action": "Desplazar listas y fichas",
     "survey_more": "¿Para qué es esto?",
-    "survey_not_stored_note": "(No pudimos guardar tus respuestas esta vez, pero gracias por contarnos.)"
+    "survey_not_stored_note": "(No pudimos guardar tus respuestas esta vez, pero gracias por contarnos.)",
+    "restart_narration": "Reiniciar narración ({input:narration_repeat})",
+    "restart_narration_xr": "Reiniciar narración",
+    "narration_controls_hint": "{input:narration_pause}: pausa · {input:narration_repeat}: reinicia"
   }
 }

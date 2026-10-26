@@ -72,6 +72,11 @@ namespace MusiyoBetsknate.Museum
         private MuseumInput input;
         private MuseumPieceCues pieceCues;
         private Button narrationToggle;
+        /// <summary>Small pause, resume and restart icons on the header line of the point's screen.</summary>
+        private MuseumNarrationButtons narrationButtons;
+        private RectTransform sideColumn, panelViewport;
+        /// <summary>The viewport's right and top offsets with no side column and no header line.</summary>
+        private float viewportRight, viewportTop;
         private MuseumServiceNotice serviceNotice;
         private Button serviceRetryButton;
         private MuseumNarrationReading narrationReading;
@@ -220,6 +225,10 @@ namespace MusiyoBetsknate.Museum
             layout.childControlWidth = layout.childControlHeight = true;
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
+            sideColumn = side;
+            panelViewport = viewport;
+            viewportRight = viewport.offsetMax.x;
+            viewportTop = viewport.offsetMax.y;
             viewport.offsetMax = new Vector2(viewport.offsetMax.x - width - MuseumLecternDisplay.ColumnGap, viewport.offsetMax.y);
             // Reading stays in the scrolling column; everything that is chosen or pressed moves to the side, in order.
             var moved = new System.Collections.Generic.List<Transform>();
@@ -229,6 +238,27 @@ namespace MusiyoBetsknate.Museum
             if (modelControls != null && modelControls.TryGetComponent<GridLayoutGroup>(out var grid))
                 grid.cellSize = new Vector2((width - grid.spacing.x * (grid.constraintCount - 1)) / grid.constraintCount, grid.cellSize.y);
             lectern.SideColumn = side;
+            narrationButtons = gameObject.AddComponent<MuseumNarrationButtons>();
+            narrationButtons.Configure((RectTransform)panel.transform, new Vector2(viewportRight, viewportTop), panelText,
+                ToggleNarration, RestartNarration, () => lectern.Aimed);
+        }
+
+        /// <summary>
+        /// The text takes the whole width of the screen when the side column has nothing to show, and starts below the
+        /// header line while the narration's icons stand on it: nothing covers the text (owner, 25/10/2026).
+        /// </summary>
+        private void LateUpdate()
+        {
+            if (sideColumn == null || panelViewport == null) return;
+            bool used = false;
+            foreach (Transform child in sideColumn) if (child.gameObject.activeSelf) { used = true; break; }
+            bool header = narrationButtons != null && narrationButtons.Row != null && narrationButtons.Row.gameObject.activeSelf;
+            float top = header ? viewportTop - MuseumNarrationButtons.RowHeight : viewportTop;
+            float right = used ? viewportRight - MuseumLecternDisplay.SideColumnWidth - MuseumLecternDisplay.ColumnGap : viewportRight;
+            if (sideColumn.gameObject.activeSelf != used) sideColumn.gameObject.SetActive(used);
+            if (Mathf.Abs(sideColumn.offsetMax.y - top) > .5f) sideColumn.offsetMax = new Vector2(sideColumn.offsetMax.x, top);
+            if (Mathf.Abs(panelViewport.offsetMax.x - right) > .5f || Mathf.Abs(panelViewport.offsetMax.y - top) > .5f)
+                panelViewport.offsetMax = new Vector2(right, top);
         }
 
         private void Start()
@@ -708,7 +738,18 @@ namespace MusiyoBetsknate.Museum
             else narrationReading.Show(narration.Status, narration.Transcription, narration.Attribution);
             bool inWorld = interaction.DetailInWorld;
             narrationControls.SetActive(selected && narration.CanPlay && !inWorld);
-            narrationToggle.gameObject.SetActive(selected && narration.CanPlay && inWorld);
+            // The big caption button gave way to small icons on the header line, on a stand and off it alike.
+            narrationToggle.gameObject.SetActive(false);
+            narrationButtons?.Show(selected && narration.CanPlay,
+                narration.State == NarrationState.Playing ? MuseumNarrationButtons.Glyph.Pause : MuseumNarrationButtons.Glyph.Play,
+                MuseumInterfaceText.Get(narration.State == NarrationState.Playing ? "pause_narration_keyboard"
+                    : narration.State == NarrationState.Paused ? "resume_narration_keyboard"
+                    : narration.State == NarrationState.Ready ? "play_narration" : "repeat_narration"),
+                MuseumInterfaceText.Get("restart_narration"),
+                MuseumInput.Current.Spatial ? "" : MuseumInterfaceText.Get("narration_controls_hint"));
+            foreach (Transform child in narrationControls.transform)
+                if (child.TryGetComponent<Button>(out var control) && control != audioMuteButton && control != followNarrationButton)
+                    child.gameObject.SetActive(false);
             SetCaption(narrationToggle, narration.State == NarrationState.Playing ? "pause_narration_keyboard"
                 : narration.State == NarrationState.Paused ? "resume_narration_keyboard"
                 : narration.State == NarrationState.Ready ? "play_narration" : "repeat_narration");
@@ -724,6 +765,12 @@ namespace MusiyoBetsknate.Museum
         private void ToggleNarration()
         {
             narration.TogglePause();
+            narrationReading?.Resume();
+        }
+
+        private void RestartNarration()
+        {
+            narration.Repeat();
             narrationReading?.Resume();
         }
 
