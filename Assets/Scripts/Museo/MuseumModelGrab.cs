@@ -13,14 +13,17 @@ namespace MusiyoBetsknate.Museum
     /// headset either grip takes it, close by or along the pointer ray; the other grip takes it too, so the piece passes
     /// from hand to hand or turns between both hands, and the right stick turns it. Let go, it stays where it was left and
     /// goes back to its exhibition pose when the visitor walks away, or at once when it is let go on its pedestal. A
-    /// desktop holds the right mouse button over it, turns it with the mouse and sends it back on release. The piece has
-    /// no colliders, so it never pushes the visitor or anything else, and nothing is thrown.
+    /// desktop holds the right mouse button over it, turns it with the mouse, brings it closer or farther with the wheel
+    /// and sends it back on release. A piece shown at its natural size, built into the space (the Castle), is never taken.
+    /// The piece has no colliders, so it never pushes the visitor or anything else, and nothing is thrown.
     /// </summary>
     [RequireComponent(typeof(MuseumInteraction), typeof(MuseumModelPresenter))]
     public sealed class MuseumModelGrab : MonoBehaviour
     {
         /// <summary>A piece taken along the ray comes to the hand over this time instead of jumping.</summary>
         private const float AttachSeconds = .2f;
+        /// <summary>How near and how far from the eyes the wheel brings a piece held on a desktop, and how much one notch moves it, in metres.</summary>
+        public const float DesktopNearest = .4f, DesktopFarthest = 1.5f, WheelStep = .08f;
         private MuseumInteraction interaction;
         private MuseumModelPresenter presenter;
         private MuseumVisitFlow flow;
@@ -65,6 +68,8 @@ namespace MusiyoBetsknate.Museum
         /// <summary>Distance along the pointer to the reached piece, for drawing the pointer up to it.</summary>
         public float HoverDistance { get; private set; }
         public Transform Piece => piece;
+        /// <summary>Distance from the eyes of a piece held on a desktop.</summary>
+        public float DesktopDistance => grips[(int)GrabHand.Desktop].Offset.z;
         public event Action Changed;
 
         public void Configure(Camera camera, DesktopVisitorController visitor)
@@ -88,8 +93,39 @@ namespace MusiyoBetsknate.Museum
             get
             {
                 return presenter.State == ModelLoadState.Ready && presenter.Model != null && presenter.Renderers.Length > 0
-                    && interaction.State != InteractionState.ModelExamination && CanTakeIgnoringHold();
+                    && interaction.State != InteractionState.ModelExamination && !Fixed && CanTakeIgnoringHold();
             }
+        }
+
+        private TourPoint fixedPoint;
+        private bool fixedPiece;
+
+        /// <summary>The piece on show keeps its natural size in the space (the Castle): it stays where it stands.</summary>
+        public bool Fixed
+        {
+            get
+            {
+                var point = presenter.ModelPoint;
+                if (point != fixedPoint)
+                {
+                    fixedPoint = point;
+                    var mount = point != null && point.Anchor != null ? point.Anchor.GetComponentInChildren<PointExhibitMount>() : null;
+                    fixedPiece = mount != null && mount.KeepNaturalScale;
+                }
+                return fixedPiece;
+            }
+        }
+
+        /// <summary>Notches of a wheel reading, the same on a desktop (120 a notch) and in a browser (smaller, finer steps).</summary>
+        public static float WheelNotches(float wheel)
+            => wheel == 0 ? 0 : Mathf.Sign(wheel) * Mathf.Clamp(Mathf.Abs(wheel) / 120, .25f, 1);
+
+        /// <summary>Brings the piece held on a desktop closer (negative) or farther, within reach of the eyes.</summary>
+        public void MoveDesktopPiece(float notches)
+        {
+            var grip = grips[(int)GrabHand.Desktop];
+            if (!grip.Holding || notches == 0) return;
+            grip.Offset = Vector3.forward * Mathf.Clamp(grip.Offset.z + notches * WheelStep, DesktopNearest, DesktopFarthest);
         }
 
         /// <summary>World bounds of the piece on show.</summary>
@@ -475,6 +511,8 @@ namespace MusiyoBetsknate.Museum
                 var delta = input.Look.ReadValue<Vector2>() * settings.GrabDesktopRotation
                     + input.KeyboardLook.ReadValue<Vector2>() * (settings.KeyboardLookSpeed * Time.unscaledDeltaTime);
                 Turn(delta);
+                // Wheel forward draws the piece closer and back pushes it away, within the same limits as the examination.
+                MoveDesktopPiece(-WheelNotches(input.ScrollWheel.ReadValue<Vector2>().y));
                 Follow(GrabHand.Desktop, view.position, view.rotation, Time.unscaledDeltaTime);
                 return;
             }

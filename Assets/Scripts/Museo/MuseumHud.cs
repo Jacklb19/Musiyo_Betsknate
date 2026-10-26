@@ -402,8 +402,8 @@ namespace MusiyoBetsknate.Museum
         private void Update()
         {
             var focus = pointInput.FocusedPoint;
-            focusText.text = grab != null && grab.Held ? MuseumInterfaceText.Get("grab_holding")
-                : grab != null && grab.Hovered ? MuseumInterfaceText.Get("grab_hint")
+            // Taking a piece is told by the small cue beside it (MuseumPieceLabel), not across the view.
+            focusText.text = grab != null && (grab.Held || grab.Hovered) ? "."
                 : focus != null && focus.Content != null ? MuseumInterfaceText.Format("focus_point", focus.Content.name)
                 : pointInput.GazeProgress > 0 ? MuseumInterfaceText.Format("gaze_progress", Mathf.RoundToInt(pointInput.GazeProgress * 100)) : ".";
             if (focusText.text != shownFocus) { shownFocus = focusText.text; MuseumHudSkin.Fit(focusPill, focusText); }
