@@ -364,16 +364,30 @@ namespace MusiyoBetsknate.Museum
 
         /// <summary>
         /// Page keys step through long panels and the right controller stick scrolls them continuously, at a speed that
-        /// follows how far it is pushed; the mouse wheel stays free for model zoom. A bar beside the text shows the place.
+        /// follows how far it is pushed. On a computer or in a browser the mouse wheel scrolls the record too, unless it is
+        /// busy with a piece: one in the hand comes closer or goes farther, one examined zooms. A bar beside the text shows
+        /// the place.
         /// </summary>
         private void ScrollPointPanel()
         {
             if (panelScrolling == null) return;
+            var input = MuseumInput.Current;
             // While a piece is in the hand the stick turns the piece.
-            bool held = grab != null && grab.Held && MuseumInput.Current.Spatial;
-            if (panelScrolling.Step(MuseumInput.Current.ScrollPanel, panel.activeSelf && !held, Time.unscaledDeltaTime))
-                // Scrolling by hand takes the panel away from the narration until the visitor asks to follow it again.
-                narrationReading?.Suspend();
+            bool held = grab != null && grab.Held && input.Spatial;
+            bool scrolled = panelScrolling.Step(input.ScrollPanel, panel.activeSelf && !held, Time.unscaledDeltaTime);
+            scrolled |= panelScrolling.Wheel(input.ScrollWheel.ReadValue<Vector2>().y, WheelScrollsPanel(input));
+            // Scrolling by hand takes the panel away from the narration until the visitor asks to follow it again.
+            if (scrolled) narrationReading?.Suspend();
+        }
+
+        /// <summary>The mouse wheel is free for the record: no piece in the hand or examined, no menu, and no pointer on the
+        /// record itself, which then scrolls under the pointer as any page does.</summary>
+        private bool WheelScrollsPanel(MuseumInput input)
+        {
+            if (input.Spatial || !panel.activeSelf || grab != null && grab.Held) return false;
+            if (interaction.State == InteractionState.ModelExamination) return false;
+            if (input.Context != MuseumInputContext.Visit && input.Context != MuseumInputContext.Panel) return false;
+            return Cursor.lockState == CursorLockMode.Locked || EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject();
         }
 
         private CanvasGroup PanelGroup()
