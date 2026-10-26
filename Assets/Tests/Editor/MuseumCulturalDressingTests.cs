@@ -94,6 +94,21 @@ namespace MusiyoBetsknate.Tests
             });
         }
 
+        /// <summary>Owner, Web test of 23/10: the banners stood in the way beside the castle; they stand aside now.</summary>
+        [Test]
+        public void TheBannersStandAsideFromTheCastle()
+        {
+            WithWorld((scene, decor) =>
+            {
+                var castle = All<Transform>(scene).Single(item => item.name == "CastleLookTarget").position;
+                var rack = (Vector3)EditorType("MuseumCulturalDressing").GetField("BannerRack", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
+                Assert.That(Vector2.Distance(Flat(rack), Flat(castle)), Is.GreaterThan(5), "Well away from the castle.");
+                var rackSolid = decor.Find("Decor_Characters").GetComponentsInChildren<BoxCollider>()
+                    .Single(item => Vector2.Distance(Flat(item.transform.position), Flat(rack)) < .1f);
+                Assert.That(rackSolid.size.x, Is.InRange(1.4f, 1.8f), "The rack keeps its size.");
+            });
+        }
+
         /// <summary>No meal is set before a seat (research, general rule): a low table never stands in front of a bench.</summary>
         [Test]
         public void NoTableStandsBeforeASeat()

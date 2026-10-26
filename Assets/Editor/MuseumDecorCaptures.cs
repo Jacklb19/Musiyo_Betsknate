@@ -30,6 +30,7 @@ namespace MusiyoBetsknate.Editor
             ("2_totora", new Vector3(3.6f, 1.65f, -23.6f), new Vector3(0, .6f, -20f)),
             ("3_castillo_preparacion", new Vector3(1.4f, 1.65f, .4f), new Vector3(3.3f, .25f, 4.1f)),
             ("3_banderas", new Vector3(-.8f, 1.65f, .6f), new Vector3(-3.1f, 1.1f, 3.7f)),
+            ("3_banderas_rincon", new Vector3(-4.9f, 1.65f, 2.4f), new Vector3(-8.3f, 1.1f, 6.8f)),
             ("3_tallador", new Vector3(6f, 1.65f, -3.2f), new Vector3(8.2f, .75f, -3f)),
             ("3_coronas", new Vector3(-10.9f, 1.55f, 5.3f), new Vector3(-12.3f, .45f, 5.4f)),
             ("4_instrumentos", new Vector3(20.6f, 1.45f, -7.6f), new Vector3(20.9f, .45f, -9.4f)),
