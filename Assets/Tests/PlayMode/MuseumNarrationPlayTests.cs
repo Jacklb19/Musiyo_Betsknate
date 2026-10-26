@@ -171,6 +171,15 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(narration.Attribution, Is.Empty, "The narration's credit and provenance belong to the closing credits.");
                 for (float waited = 0; narration.Subtitle != "Audio sintético de prueba." && waited < 5; waited += Time.unscaledDeltaTime) yield return null;
                 Assert.That(narration.Subtitle, Is.EqualTo("Audio sintético de prueba."), "The WebVTT cue in force is shown.");
+                // On the screen the subtitles stand centred at the very bottom with no box behind (owner, 25/10/2026).
+                yield return null;
+                var subtitles = UnityEngine.Object.FindObjectsByType<TMPro.TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                    .First(text => text.name == "NarrationSubtitles");
+                Assert.That(subtitles.gameObject.activeInHierarchy && subtitles.text == "Audio sintético de prueba.", Is.True);
+                Assert.That(subtitles.rectTransform.anchorMin.x == 0 && subtitles.rectTransform.anchorMax.x == 1 && subtitles.rectTransform.anchorMax.y == 0, Is.True,
+                    "Across the bottom of the view.");
+                Assert.That(UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                    .Any(item => item.name == "SubtitleBackground"), Is.False, "No box behind the subtitles.");
 
                 // The panel follows the fragment being heard, found in the transcription from the published cues.
                 var reading = UnityEngine.Object.FindAnyObjectByType<MuseumNarrationReading>();
