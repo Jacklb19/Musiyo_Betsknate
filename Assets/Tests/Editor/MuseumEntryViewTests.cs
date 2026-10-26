@@ -197,7 +197,9 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(Vector3.Distance(stage.transform.position, backdrop.CameraPose.position), Is.LessThan(.001f));
                 Assert.That(backdrop.Shown, Is.True);
                 Assert.That(sun.enabled, Is.False, "The museum's daylight does not reach the set.");
-                Assert.That(stage.clearFlags, Is.EqualTo(CameraClearFlags.SolidColor));
+                // A starry night stands behind the fire instead of black (owner, Web test of 23/10).
+                Assert.That(stage.clearFlags, Is.EqualTo(CameraClearFlags.Skybox));
+                Assert.That(RenderSettings.skybox, Is.SameAs(MuseumEntryBackdrop.NightSky()));
 
                 flow.BeginVisit();
                 Assert.That(flow.Transition, Is.EqualTo(EntryTransition.Glide));
