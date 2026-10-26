@@ -490,8 +490,9 @@ namespace MusiyoBetsknate.Editor
             kit.Cylinder(pole, pole + new Vector3(3.1f, 0, .15f), .09f, .075f, Wood, 8, true, WoodLight);
             for (int coil = 0; coil < 3; coil++) kit.Cylinder(pole + new Vector3(.6f + coil * .05f, .0f, -.1f), pole + new Vector3(.6f + coil * .05f, 0, .1f), .1f, .1f, Fibre, 8, false);
             solids.Add(pole + new Vector3(1.55f, .02f, .07f), Upright, new Vector3(3.2f, .22f, .3f));
-            // Banners on their rack, west of the castle: plain cloth of bright colours, no emblem.
-            var rack = new Vector3(-3.15f, 0, 3.7f);
+            // Banners on their rack, plain cloth of bright colours, no emblem: in the courtyard's north-west corner, beside
+            // the first planter, where they stand clear of the castle and the ways (owner, Web test of 23/10: «estorban»).
+            var rack = BannerRack;
             kit.Box(rack + new Vector3(0, .32f, 0), Upright, new Vector3(1.5f, .06f, .12f), WoodDark);
             kit.Box(rack + new Vector3(0, .05f, 0), Upright, new Vector3(1.6f, .1f, .45f), WoodDark);
             int[] cloths = { Red, Blue, Green, Yellow, Wool };
@@ -537,6 +538,9 @@ namespace MusiyoBetsknate.Editor
             foreach (var (z, threads) in new[] { (5.15f, new[] { Yellow, Blue, Red }), (5.7f, new[] { Red, Yellow, Blue }) })
                 Crown(kit, new Vector3(-12.3f, .46f, z), threads);
         }
+
+        /// <summary>Where the rack of banners stands in the characters' courtyard.</summary>
+        internal static readonly Vector3 BannerRack = new Vector3(-8.3f, 0, 6.85f);
 
         /// <summary>Where a bench's seat ends going one way from a point on it, read from the bench's own collider.</summary>
         private static float SeatEdge(Vector3 seat, Vector3 outward, float fallback)
