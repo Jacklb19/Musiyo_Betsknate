@@ -16,6 +16,11 @@ namespace MusiyoBetsknate.Museum
         /// Speech recognition turns such silence into a stock phrase («Gracias por ver el video»), so it is never sent.
         /// </summary>
         public const float SilentPeak = .01f;
+        /// <summary>
+        /// Below this loudness (about −48 dBFS) a recording holds no voice either, even with a click or a knock in it: a
+        /// muted microphone gave peak 0.014 and rms 0.0009 for three seconds (26/10/2026).
+        /// </summary>
+        public const float SilentRms = .004f;
 
         /// <summary>Peak and loudness (RMS) of a PCM16 WAV, in [0, 1], and its length in seconds; false for anything else.</summary>
         public static bool Measure(byte[] wav, out float peak, out float rms, out float seconds)
@@ -39,8 +44,8 @@ namespace MusiyoBetsknate.Museum
         {
             if (!Measure(wav, out float peak, out float rms, out float seconds)) return false;
             UnityEngine.Debug.Log("[" + who + "] take " + wav.Length + " bytes, " + seconds.ToString("F2") + " s, peak " + peak.ToString("F4")
-                + ", rms " + rms.ToString("F4") + (peak < SilentPeak ? ": no voice, not sent" : ""));
-            return peak < SilentPeak;
+                + ", rms " + rms.ToString("F4") + (peak < SilentPeak || rms < SilentRms ? ": no voice, not sent" : ""));
+            return peak < SilentPeak || rms < SilentRms;
         }
 
         /// <summary>Encodes samples in [-1, 1] as PCM16 mono WAV, resampling linearly to <paramref name="targetRate"/>.</summary>

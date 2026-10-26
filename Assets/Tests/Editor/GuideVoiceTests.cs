@@ -32,6 +32,14 @@ namespace MusiyoBetsknate.Tests
             var hiss = new float[48000];
             for (int index = 0; index < hiss.Length; index++) hiss[index] = (index % 7 - 3) * .0005f;
             Assert.That(WavAudio.Silent(WavAudio.EncodePcm16Mono(hiss, 48000), "test"), Is.True, "Only the faintest hiss.");
+            // As the owner's muted microphone recorded: near silence with one click (peak 0.014, rms 0.0009).
+            var click = new float[48000 * 3];
+            for (int index = 0; index < click.Length; index++) click[index] = (index % 5 - 2) * .0004f;
+            click[click.Length / 2] = .014f;
+            Assert.That(WavAudio.Silent(WavAudio.EncodePcm16Mono(click, 48000), "test"), Is.True, "A click in silence is no voice.");
+            var quietSpeech = new float[48000];
+            for (int index = 0; index < quietSpeech.Length; index++) quietSpeech[index] = .03f * Mathf.Sin(2 * Mathf.PI * 220 * index / 48000f);
+            Assert.That(WavAudio.Silent(WavAudio.EncodePcm16Mono(quietSpeech, 48000), "test"), Is.False, "Quiet speech still goes.");
             Assert.That(WavAudio.Measure(new byte[] { 1, 2, 3 }, out _, out _, out _), Is.False);
         }
 

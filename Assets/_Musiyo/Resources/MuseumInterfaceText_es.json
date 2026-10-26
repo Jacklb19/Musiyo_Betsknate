@@ -317,6 +317,7 @@
     "voice_review": "¿Es esta tu pregunta?\n«{0}»",
     "voice_too_short": "No se oyó ninguna pregunta. Vuelve a intentarlo hablando cerca del micrófono.",
     "voice_not_heard": "No te escuché, ¿puedes repetir?",
+    "voice_microphone_muted": "Tu micrófono no está enviando sonido. Revisa qué micrófono usa el navegador e inténtalo de nuevo.",
     "voice_not_understood": "No se pudo entender la grabación. Vuelve a intentarlo.",
     "voice_rejected": "La grabación era demasiado larga o no se pudo leer. Prueba con una pregunta más corta.",
     "voice_rate_limited": "Has hecho muchas consultas seguidas. Podrás volver a hablar en {0} s.",

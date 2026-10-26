@@ -66,6 +66,7 @@ namespace MusiyoBetsknate.Tests
             public bool Available => true;
             public bool Recording => recording;
             public float Elapsed => recording ? 3 : 0;
+            public bool Muted => false;
             public bool AwaitingPermission => false;
             public GuideRecorderStart Begin(int maxSeconds) { recording = true; return GuideRecorderStart.Started; }
             public byte[] End() { recording = false; return null; }

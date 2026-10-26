@@ -156,6 +156,8 @@ namespace MusiyoBetsknate.Museum
             if (Conversing && !CanAsk) End();
             ReadButton();
             if (Stage == CompanionVoiceStage.Permission && !Recorder.AwaitingPermission) StartRecording();
+            // A microphone that sends nothing is told at once, not after the visitor has spoken into it.
+            else if (Stage == CompanionVoiceStage.Recording && Recorder.Muted) Fail("voice_microphone_muted");
             // Reaching the longest allowed question ends the recording by itself, and it is sent as when stopped.
             else if (Stage == CompanionVoiceStage.Recording && !Recorder.Recording) StopTalking();
             if ((Stage == CompanionVoiceStage.Answer || Stage == CompanionVoiceStage.Problem) && !Speaking && Time.unscaledTime >= answerUntil
@@ -259,6 +261,7 @@ namespace MusiyoBetsknate.Museum
         public bool StopTalking()
         {
             if (Stage != CompanionVoiceStage.Recording) return false;
+            if (Recorder.Muted) return Fail("voice_microphone_muted");
             var wav = Recorder.End();
             if (wav == null) return Fail("voice_too_short");
             if (WavAudio.Silent(wav, "MuseumCompanionVoice")) return Fail("voice_not_heard");

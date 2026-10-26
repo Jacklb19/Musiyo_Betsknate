@@ -21,6 +21,19 @@ var MusiyoVoice = {
     limit: 0,
     taken: null,
     listening: false,
+    // When the microphone track went quiet at the browser's end: a muted track sends only silence. A browser may pick a
+    // silent device, such as a headset's virtual microphone while the headset is away (owner's PC, 26/10/2026).
+    mutedSince: 0,
+
+    // Follows the track's own mute and unmute, so a later take works as soon as the device sends sound again.
+    watch: function (stream) {
+      var voice = musiyoVoice;
+      var track = stream.getAudioTracks()[0];
+      if (!track) return;
+      voice.mutedSince = track.muted ? performance.now() : 0;
+      track.onmute = function () { if (voice.stream === stream) voice.mutedSince = performance.now(); };
+      track.onunmute = function () { if (voice.stream === stream) voice.mutedSince = 0; };
+    },
 
     // The page's next gesture lets a held-back context run; the listener stays for later takes.
     resumeOnGesture: function () {
@@ -91,6 +104,7 @@ var MusiyoVoice = {
       .then(function (stream) {
         if (voice.state !== 1) { stream.getTracks().forEach(function (track) { track.stop(); }); return null; }
         voice.stream = stream;
+        voice.watch(stream);
         var Context = window.AudioContext || window.webkitAudioContext;
         voice.context = new Context();
         if (voice.context.state === 'running' || !voice.context.resume) return null;
@@ -145,6 +159,15 @@ var MusiyoVoice = {
 
   MusiyoVoiceRecording: function () {
     return musiyoVoice.state === 3 ? 1 : 0;
+  },
+
+  // 1 while a take's microphone has sent nothing for 300 ms because the browser muted its track.
+  MusiyoVoiceMuted: function () {
+    var voice = musiyoVoice;
+    var track = voice.stream ? voice.stream.getAudioTracks()[0] : null;
+    if (voice.state !== 3 || !track || !track.muted) return 0;
+    if (!voice.mutedSince) voice.mutedSince = performance.now();
+    return performance.now() - voice.mutedSince >= 300 ? 1 : 0;
   },
 
   // Ends the take and prepares the WAV; returns its size in bytes, 0 when nothing was recorded.
