@@ -38,6 +38,13 @@ namespace MusiyoBetsknate.Museum
         /// </summary>
         [JsonProperty("lectern_board_width")] public float LecternBoardWidth;
         [JsonProperty("lectern_board_height")] public float LecternBoardHeight;
+        /// <summary>
+        /// On a computer or browser screen the same page is seen much smaller than in a headset, so the reading board grows
+        /// by this factor there and the visitor taken to a stand stands this close (owner, 25/10/2026: "la ficha se ve
+        /// pequeña y lejos"). A headset keeps the board and the distance above. Missing or zero: 1, and the headset's distance.
+        /// </summary>
+        [JsonProperty("lectern_screen_board_scale")] public float LecternScreenBoardScale;
+        [JsonProperty("lectern_screen_viewing_distance")] public float LecternScreenViewingDistance;
         /// <summary>Margin between the edges of the reading board and the page that lies on it, in metres.</summary>
         [JsonProperty("lectern_board_margin")] public float LecternBoardMargin;
         /// <summary>Gap between a stand's reading board and the page lying on it, in metres.</summary>
@@ -45,6 +52,14 @@ namespace MusiyoBetsknate.Museum
         /// <summary>Finish of the reading stands: the wood of the stand and the face of its board.</summary>
         [JsonProperty("lectern_wood_color")] public string LecternWoodColor;
         [JsonProperty("lectern_board_color")] public string LecternBoardColor;
+
+        /// <summary>Size of the reading board, in metres, in a headset or on a screen.</summary>
+        public Vector2 LecternBoard(bool spatial)
+            => new Vector2(LecternBoardWidth, LecternBoardHeight) * (spatial || LecternScreenBoardScale <= 0 ? 1 : LecternScreenBoardScale);
+
+        /// <summary>How far in front of a stand a visitor taken there stands, in metres, in a headset or on a screen.</summary>
+        public float ViewingDistance(bool spatial)
+            => spatial || LecternScreenViewingDistance <= 0 ? LecternViewingDistance : LecternScreenViewingDistance;
         [JsonProperty("default_sensitivity")] public float DefaultSensitivity;
         [JsonProperty("minimum_sensitivity")] public float MinimumSensitivity;
         [JsonProperty("maximum_sensitivity")] public float MaximumSensitivity;
@@ -132,6 +147,8 @@ namespace MusiyoBetsknate.Museum
                 || result.LecternBoardHeight > 2 || !Finite(result.LecternBoardMargin) || result.LecternBoardMargin < 0
                 || result.LecternBoardMargin * 4 >= Mathf.Min(result.LecternBoardWidth, result.LecternBoardHeight)
                 || !Finite(result.LecternScreenGap) || result.LecternScreenGap < 0 || result.LecternScreenGap > .2f
+                || !Finite(result.LecternScreenBoardScale) || result.LecternScreenBoardScale < 0 || result.LecternScreenBoardScale > 1.6f
+                || !Finite(result.LecternScreenViewingDistance) || result.LecternScreenViewingDistance < 0
                 || !Positive(result.KeyboardLookSpeed) || !Positive(result.MaximumPitch) || result.MaximumPitch >= 90
                 || !Positive(result.MinimumSensitivity) || !Positive(result.MaximumSensitivity)
                 || !Finite(result.DefaultSensitivity) || result.DefaultSensitivity < result.MinimumSensitivity

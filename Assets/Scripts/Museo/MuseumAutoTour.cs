@@ -229,7 +229,7 @@ namespace MusiyoBetsknate.Museum
             var spots = new List<Vector3>();
             var display = GetComponent<MuseumLecternDisplay>();
             var stand = display != null ? display.Find(stop) : null;
-            if (stand != null) spots.Add(stand.ViewingSpot(Mathf.Min(settings.LecternViewingDistance, anchor.ActivationRadius * .7f)));
+            if (stand != null) spots.Add(stand.ViewingSpot(Mathf.Min(settings.ViewingDistance(MuseumInput.Current.Spatial), anchor.ActivationRadius * .7f)));
             float ring = Mathf.Min(anchor.ActivationRadius * .6f, 1.4f);
             for (int step = 0; step < 8; step++)
                 spots.Add(anchor.transform.position + Quaternion.Euler(0, step * 45, 0) * -anchor.transform.forward * ring);

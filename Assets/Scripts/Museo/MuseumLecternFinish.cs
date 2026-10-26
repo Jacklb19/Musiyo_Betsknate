@@ -24,7 +24,13 @@ namespace MusiyoBetsknate.Museum
         public const float FaceOffset = .012f;
         private static readonly Dictionary<(Material source, bool board), Material> finishes = new Dictionary<(Material, bool), Material>();
 
-        /// <summary>Gives a stand its finish; a stand already finished is left as it is.</summary>
+        /// <summary>The visit is seen through a headset; the reading boards are larger on a screen otherwise.</summary>
+        public static bool Spatial => MuseumInput.Current.Spatial;
+
+        /// <summary>
+        /// Gives a stand its finish; a stand already finished is left as it is, but for its reading board, which is built
+        /// again at the size of a headset or a screen when the visit moves from one to the other.
+        /// </summary>
         public static void Apply(PointLectern stand)
         {
             if (stand == null) return;
@@ -55,7 +61,7 @@ namespace MusiyoBetsknate.Museum
         {
             var board = stand.Board;
             var rotation = Quaternion.LookRotation(board.forward, board.up);
-            return (board.position - board.forward * FaceOffset, rotation, new Vector2(settings.LecternBoardWidth, settings.LecternBoardHeight));
+            return (board.position - board.forward * FaceOffset, rotation, settings.LecternBoard(Spatial));
         }
 
         /// <summary>The page that lies on the reading board, inside its margin: the middle of its lower edge and its size.</summary>
@@ -70,8 +76,16 @@ namespace MusiyoBetsknate.Museum
 
         private static void BuildReadingBoard(PointLectern stand, MuseumExperienceConfiguration settings)
         {
-            if (stand.Board == null || stand.transform.Find(ReadingBoardName) != null) return;
+            if (stand.Board == null) return;
             var (bottom, rotation, size) = ReadingFace(stand, settings);
+            var built = stand.transform.Find(ReadingBoardName);
+            if (built != null)
+            {
+                var builtFace = built.Find("Face");
+                if (builtFace != null && Mathf.Abs(builtFace.lossyScale.x - size.x) < .001f) return;
+                built.SetParent(null);
+                if (Application.isPlaying) Object.Destroy(built.gameObject); else Object.DestroyImmediate(built.gameObject);
+            }
             var up = rotation * Vector3.up;
             var forward = rotation * Vector3.forward;
             Material face = null, wood = null;

@@ -98,7 +98,8 @@ namespace MusiyoBetsknate.Tests
             display.Advance(seconds);
             Assert.That(display.Openness, Is.EqualTo(1));
             // It is a page lying on the stand's reading board: the board's slope, inside its edges, read from the board's side.
-            float boardWidth = settings.LecternBoardWidth, boardHeight = settings.LecternBoardHeight, margin = settings.LecternBoardMargin;
+            var boardSize = settings.LecternBoard(MuseumLecternFinish.Spatial);
+            float boardWidth = boardSize.x, boardHeight = boardSize.y, margin = settings.LecternBoardMargin;
             float width = display.Surface.sizeDelta.x * display.Surface.localScale.x;
             float height = display.Surface.sizeDelta.y * display.Surface.localScale.y;
             Assert.That(width, Is.EqualTo(boardWidth - margin * 2).Within(.001f), "It is as wide as the board inside its margin.");
@@ -194,16 +195,53 @@ namespace MusiyoBetsknate.Tests
             foreach (Transform child in stand.transform) if (child.name == MuseumLecternFinish.ReadingBoardName) boards++;
             Assert.That(boards, Is.EqualTo(1), "Finishing twice builds one board.");
             var face = board.Find("Face");
-            Assert.That(face.lossyScale.x, Is.EqualTo(settings.LecternBoardWidth).Within(.001f));
-            Assert.That(face.lossyScale.y, Is.EqualTo(settings.LecternBoardHeight).Within(.001f));
+            var size = settings.LecternBoard(MuseumLecternFinish.Spatial);
+            Assert.That(face.lossyScale.x, Is.EqualTo(size.x).Within(.001f));
+            Assert.That(face.lossyScale.y, Is.EqualTo(size.y).Within(.001f));
             Assert.That(face.GetComponent<MeshRenderer>().sharedMaterial, Is.SameAs(finished[1]));
             Assert.That(board.Find("Rim").GetComponent<MeshRenderer>().sharedMaterial, Is.SameAs(finished[0]));
             Assert.That(face.GetComponent<Collider>(), Is.Null, "The stand's own collider is enough.");
             Assert.That(Vector3.Angle(face.up, stand.Board.up), Is.LessThan(.1f), "It has the stand's slope.");
-            var lower = face.position - face.up * (settings.LecternBoardHeight * .5f);
+            var lower = face.position - face.up * (size.y * .5f);
             Assert.That(Vector3.Distance(Vector3.ProjectOnPlane(lower - stand.Board.position, stand.Board.forward), Vector3.zero), Is.LessThan(.001f),
                 "Its lower edge is the lower edge of the stand's own board, and it is centred across it.");
             Assert.That(settings.LecternBoardWidth, Is.GreaterThan(stand.BoardSize.x), "It is larger than the delivered board.");
+        }
+
+        [Test]
+        public void OnAScreenTheReadingBoardIsLargerAndTheVisitorStandsCloserThanInAHeadset()
+        {
+            var settings = MuseumExperienceConfiguration.Current;
+            var headset = settings.LecternBoard(true);
+            var screen = settings.LecternBoard(false);
+            Assert.That(headset.x, Is.EqualTo(settings.LecternBoardWidth).Within(.0001f), "A headset keeps the board it reads well on.");
+            Assert.That(headset.y, Is.EqualTo(settings.LecternBoardHeight).Within(.0001f));
+            Assert.That(screen.x / headset.x, Is.EqualTo(settings.LecternScreenBoardScale).Within(.0001f));
+            Assert.That(screen.y / headset.y, Is.EqualTo(settings.LecternScreenBoardScale).Within(.0001f), "It keeps its proportions.");
+            Assert.That(settings.LecternScreenBoardScale, Is.InRange(1.2f, 1.6f), "On a screen the board is clearly larger.");
+            Assert.That(settings.ViewingDistance(true), Is.EqualTo(settings.LecternViewingDistance));
+            Assert.That(settings.ViewingDistance(false), Is.LessThan(settings.ViewingDistance(true)), "On a screen the visitor stands closer.");
+            // The page keeps its layout: only its size in the museum changes.
+            Assert.That(MuseumLecternDisplay.PageHeight(settings, false), Is.EqualTo(MuseumLecternDisplay.PageHeight(settings, true)).Within(15));
+
+            // The board follows the view the visit is seen through, once built.
+            var input = MuseumInput.Current;
+            bool spatial = input.Spatial;
+            try
+            {
+                input.SetSpatial(false);
+                MuseumLecternFinish.Apply(stand);
+                var face = stand.transform.Find(MuseumLecternFinish.ReadingBoardName).Find("Face");
+                Assert.That(face.lossyScale.x, Is.EqualTo(screen.x).Within(.001f));
+                input.SetSpatial(true);
+                MuseumLecternFinish.Apply(stand);
+                int boards = 0;
+                foreach (Transform child in stand.transform) if (child.name == MuseumLecternFinish.ReadingBoardName) boards++;
+                Assert.That(boards, Is.EqualTo(1), "The board is built again, not doubled.");
+                face = stand.transform.Find(MuseumLecternFinish.ReadingBoardName).Find("Face");
+                Assert.That(face.lossyScale.x, Is.EqualTo(headset.x).Within(.001f));
+            }
+            finally { input.SetSpatial(spatial); }
         }
 
         private Button AddControl(Transform parent, Vector2 position, Vector2 size)
