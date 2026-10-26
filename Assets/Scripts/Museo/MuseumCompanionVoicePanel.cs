@@ -15,7 +15,12 @@ namespace MusiyoBetsknate.Museum
     public sealed class MuseumCompanionVoicePanel : MonoBehaviour
     {
         public const float Width = 540;
-        private const float Ahead = 1.15f, Aside = -.34f, Below = .08f;
+        // On a headset it floats an arm's length away; on a computer screen, whose view is small and far from the eyes,
+        // it comes closer so its text reads comfortably (owner, 25/10/2026: «está muy lejos y no se lee»).
+        private static bool Headset => MuseumInput.Current.Spatial;
+        private static float Ahead => Headset ? 1.15f : .66f;
+        private static float Aside => Headset ? -.34f : -.2f;
+        private static float Below => Headset ? .08f : .05f;
         private const float InviteSeconds = 9;
         private MuseumCompanionVoice voice;
         private MuseumInteraction interaction;

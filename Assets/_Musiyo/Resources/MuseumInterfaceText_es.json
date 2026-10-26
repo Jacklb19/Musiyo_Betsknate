@@ -41,6 +41,7 @@
     "pause": "Pausa",
     "pause_description": "Visita en pausa. Ajusta la sensibilidad del ratón o reanuda para continuar.",
     "guide_panel": "{0}\n{1}\n{input:guide}: escribir · {input:back}: volver a la visita",
+    "guide_panel_interview": "{0}\n{1}",
     "element_choice": "{0}\nElige un elemento:",
     "element_choice_item": "{0}. {1}",
     "examination_controls": "\nFlechas: rotar · + / −: acercar o alejar · Inicio: restablecer\n{input:detail}: ficha · {input:back}: salir del examen · Re Pág / Av Pág: desplazar",
