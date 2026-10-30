@@ -37,6 +37,8 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("tutorial_done")] public bool TutorialDone { get; private set; }
         /// <summary>Small labels by the controls of the Quest controllers, during the tutorial and when looked at.</summary>
         [JsonProperty("controller_labels")] public bool ControllerLabels { get; private set; } = true;
+        /// <summary>Speed the narrations are heard at: 1 or 1.5 (owner, 28/10/2026). Older saves without it hear 1.</summary>
+        [JsonProperty("narration_speed")] public float NarrationSpeed { get; private set; } = MuseumNarrationSpeed.Normal;
         [JsonIgnore] private MuseumExperienceConfiguration configuration;
         public event Action Changed;
 
@@ -68,6 +70,7 @@ namespace MusiyoBetsknate.Museum
             if (MuseumComfort.ParseVignette(result.Vignette) == null) result.Vignette = MuseumComfort.Name(MuseumVignette.Soft);
             if (!MuseumExperienceConfiguration.Finite(result.HeightOffset) || Mathf.Abs(result.HeightOffset) > MuseumComfort.MaxHeightOffset)
                 result.HeightOffset = 0;
+            if (!MuseumNarrationSpeed.IsSpeed(result.NarrationSpeed)) result.NarrationSpeed = MuseumNarrationSpeed.Normal;
             result.schemaVersion = Version;
             result.configuration = settings;
             return result;
@@ -134,6 +137,12 @@ namespace MusiyoBetsknate.Museum
         }
         public void SetTutorialDone(bool value) { TutorialDone = value; Changed?.Invoke(); }
         public void SetControllerLabels(bool value) { ControllerLabels = value; Changed?.Invoke(); }
+        public void SetNarrationSpeed(float value)
+        {
+            if (!MuseumNarrationSpeed.IsSpeed(value)) return;
+            NarrationSpeed = value;
+            Changed?.Invoke();
+        }
         /// <summary>Turning the visitor chose, or the shipped default.</summary>
         public MuseumTurnMode Turn(MuseumTurnMode fallback) => MuseumTurning.ParseMode(TurnMode) ?? fallback;
         /// <summary>The vignette the visitor chose; soft until they choose.</summary>
@@ -150,6 +159,7 @@ namespace MusiyoBetsknate.Museum
             Vignette = MuseumComfort.Name(MuseumVignette.Soft);
             HeightOffset = 0;
             ControllerLabels = true;
+            NarrationSpeed = MuseumNarrationSpeed.Normal;
             Changed?.Invoke();
         }
         public string Serialize() => JsonConvert.SerializeObject(this);

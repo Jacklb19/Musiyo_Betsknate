@@ -247,7 +247,8 @@ namespace MusiyoBetsknate.Museum
             lectern.SideColumn = side;
             narrationButtons = gameObject.AddComponent<MuseumNarrationButtons>();
             narrationButtons.Configure((RectTransform)panel.transform, new Vector2(viewportRight, viewportTop), panelText,
-                ToggleNarration, RestartNarration, () => lectern.Aimed);
+                ToggleNarration, RestartNarration, () => lectern.Aimed,
+                MuseumNarrationSpeed.Offered(MuseumExperienceConfiguration.Current) ? ToggleNarrationSpeed : (System.Action)null);
             recordTabs = gameObject.AddComponent<MuseumRecordTabs>();
             recordTabs.Configure((RectTransform)panel.transform, new Vector2(viewport.offsetMin.x, viewportTop), panelText,
                 record => interaction.SelectElement(record));
@@ -801,6 +802,9 @@ namespace MusiyoBetsknate.Museum
                     : narration.State == NarrationState.Ready ? "play_narration" : "repeat_narration"),
                 MuseumInterfaceText.Get("restart_narration"),
                 MuseumInput.Current.Spatial ? "" : MuseumInterfaceText.Get("narration_controls_hint"));
+            narrationButtons?.ShowSpeed(selected && narration.CanPlay && narration.SpeedAvailable,
+                narration.Speed > MuseumNarrationSpeed.Normal,
+                MuseumInterfaceText.Get(narration.Speed > MuseumNarrationSpeed.Normal ? "narration_speed_normal" : "narration_speed_faster"));
             foreach (Transform child in narrationControls.transform)
                 if (child.TryGetComponent<Button>(out var control) && control != audioMuteButton && control != followNarrationButton)
                     child.gameObject.SetActive(false);
@@ -826,6 +830,13 @@ namespace MusiyoBetsknate.Museum
         {
             narration.Repeat();
             narrationReading?.Resume();
+        }
+
+        /// <summary>Hears the narrations at 1.5x or back at 1x, and remembers it for the next visit.</summary>
+        private void ToggleNarrationSpeed()
+        {
+            preferences.SetNarrationSpeed(MuseumNarrationSpeed.Next(preferences.NarrationSpeed));
+            preferences.Save();
         }
 
         /// <summary>Gives a control made by <see cref="ModelButton"/> another caption that still follows the visitor's keys.</summary>
@@ -931,6 +942,9 @@ namespace MusiyoBetsknate.Museum
             volumeSlider?.SetValueWithoutNotify(preferences.Volume);
             // The general volume stands over every voice; each one keeps its own share under it.
             narration?.SetVolume(preferences.Volume * preferences.NarrationLevel);
+            // A platform that hides the speed control hears the narrations at 1x, whatever an earlier visit chose.
+            narration?.SetSpeed(MuseumNarrationSpeed.Offered(MuseumExperienceConfiguration.Current)
+                ? preferences.NarrationSpeed : MuseumNarrationSpeed.Normal);
             interaction.GetComponent<MuseumGuideVoice>()?.SetVolume(preferences.Volume * preferences.GuideLevel);
             var music = FindAnyObjectByType<MuseumMusic>();
             if (music != null) { music.SetMasterVolume(preferences.Volume); music.SetMusicLevel(preferences.MusicLevel); }
