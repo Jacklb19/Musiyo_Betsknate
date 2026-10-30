@@ -39,6 +39,10 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("controller_labels")] public bool ControllerLabels { get; private set; } = true;
         /// <summary>Speed the narrations are heard at: 1 or 1.5 (owner, 28/10/2026). Older saves without it hear 1.</summary>
         [JsonProperty("narration_speed")] public float NarrationSpeed { get; private set; } = MuseumNarrationSpeed.Normal;
+        /// <summary>The museum's sky: day as delivered, or night (owner, 28/10/2026).</summary>
+        [JsonProperty("sky")] public string Sky { get; private set; } = DaySky;
+        public const string DaySky = "day", NightSky = "night";
+        public bool Night => Sky == NightSky;
         [JsonIgnore] private MuseumExperienceConfiguration configuration;
         public event Action Changed;
 
@@ -71,6 +75,7 @@ namespace MusiyoBetsknate.Museum
             if (!MuseumExperienceConfiguration.Finite(result.HeightOffset) || Mathf.Abs(result.HeightOffset) > MuseumComfort.MaxHeightOffset)
                 result.HeightOffset = 0;
             if (!MuseumNarrationSpeed.IsSpeed(result.NarrationSpeed)) result.NarrationSpeed = MuseumNarrationSpeed.Normal;
+            if (result.Sky != NightSky) result.Sky = DaySky;
             result.schemaVersion = Version;
             result.configuration = settings;
             return result;
@@ -129,6 +134,7 @@ namespace MusiyoBetsknate.Museum
             Changed?.Invoke();
         }
         public void SetVignette(MuseumVignette vignette) { Vignette = MuseumComfort.Name(vignette); Changed?.Invoke(); }
+        public void SetNight(bool night) { Sky = night ? NightSky : DaySky; Changed?.Invoke(); }
         public void SetHeightOffset(float metres)
         {
             if (!MuseumExperienceConfiguration.Finite(metres)) return;
@@ -160,6 +166,7 @@ namespace MusiyoBetsknate.Museum
             HeightOffset = 0;
             ControllerLabels = true;
             NarrationSpeed = MuseumNarrationSpeed.Normal;
+            Sky = DaySky;
             Changed?.Invoke();
         }
         public string Serialize() => JsonConvert.SerializeObject(this);
