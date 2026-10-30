@@ -395,6 +395,11 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(narration.PlaybackTime, Is.GreaterThanOrEqualTo(before - .1f), "It goes on from the same words.");
                 Assert.That(narration.ContextSource.pitch, Is.EqualTo(1), "Never a raised voice.");
                 Assert.That(narration.Duration, Is.EqualTo(8).Within(.3f), "The recording's own length.");
+                Assert.That(narration.PreparationFrameMs, Is.LessThan(10), "Preparing 1.5x never holds a frame up.");
+                Assert.That(narration.FastClipBytes, Is.GreaterThan(0).And.LessThan(8 * 48000 * 2 * 4 / 1.5f + 4096),
+                    "Two thirds of the original's samples beside it.");
+                Debug.Log($"[NarrationSpeed] test narration: ready in {narration.PreparationSeconds:0.00} s, main thread at most "
+                    + $"{narration.PreparationFrameMs:0.00} ms a frame, {narration.FastClipBytes} bytes");
                 yield return null;
                 Assert.That(icons.SpeedLit, Is.True, "Lit while heard faster.");
                 Assert.That(icons.SpeedLabel, Does.Contain("normal"));
@@ -456,6 +461,8 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(rate, Is.EqualTo(1).Within(.2f));
                 yield return null;
                 Assert.That(icons.SpeedLit, Is.False);
+                narration.Clear();
+                Assert.That(narration.FastClipBytes, Is.Zero, "Leaving the record frees its faster version.");
             }
             finally
             {

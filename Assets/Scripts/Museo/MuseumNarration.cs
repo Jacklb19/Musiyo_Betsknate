@@ -252,30 +252,77 @@ namespace MusiyoBetsknate.Museum
             return browserOpen = true;
         }
 
-        /// <summary>Starts the stretch of the narration for 1.5x, off the main thread, when it is wanted and not yet made.</summary>
+        /// <summary>Seconds of the narration read or written on the main thread in one frame while 1.5x is prepared.</summary>
+        public const int PreparationChunkSeconds = 4;
+        /// <summary>Longest time, in milliseconds, preparing 1.5x took on the main thread in one frame, for the last narration.</summary>
+        public float PreparationFrameMs { get; private set; }
+        /// <summary>Seconds the last narration took to be ready at 1.5x, from the visitor's choice or its arrival.</summary>
+        public float PreparationSeconds { get; private set; }
+        /// <summary>Bytes of samples the faster version of the narration keeps, beside the original.</summary>
+        public long FastClipBytes => fastClip != null ? (long)fastClip.samples * fastClip.channels * sizeof(float) : 0;
+
+        /// <summary>Starts preparing the narration for 1.5x when it is wanted and not yet made; it is heard at 1x meanwhile.</summary>
         private void PrepareFast()
         {
             if (InBrowserBuild || speed <= MuseumNarrationSpeed.Normal || narrationClip == null || fastClip != null || stretching) return;
-            var clip = narrationClip;
-            int channels = clip.channels, frequency = clip.frequency;
-            var samples = new float[clip.samples * channels];
-            // A clip whose samples cannot be read cannot be stretched: the control then hides for this narration.
-            if (!clip.GetData(samples, 0)) { stretchFailed = true; Changed?.Invoke(); return; }
             stretching = true;
-            var work = System.Threading.Tasks.Task.Run(() => NarrationTimeStretch.Stretch(samples, channels, frequency, MuseumNarrationSpeed.Fast));
-            StartCoroutine(AwaitFast(work, stretchGeneration, channels, frequency));
+            StartCoroutine(Stretch(narrationClip, stretchGeneration));
         }
 
-        private IEnumerator AwaitFast(System.Threading.Tasks.Task<float[]> work, int generation, int channels, int frequency)
+        /// <summary>
+        /// Reads the narration a few seconds per frame, stretches it on a worker thread and writes the faster version a few
+        /// seconds per frame, so the view never waits for it; then moves what is heard to it from the same words.
+        /// </summary>
+        private IEnumerator Stretch(AudioClip clip, int generation)
         {
+            float began = Time.realtimeSinceStartup;
+            PreparationFrameMs = 0;
+            int channels = clip.channels, frequency = clip.frequency, frames = clip.samples;
+            int step = Mathf.Max(1, frequency * PreparationChunkSeconds);
+            var clock = new System.Diagnostics.Stopwatch();
+            bool Current() => generation == stretchGeneration && clip == narrationClip;
+            void Measure() { clock.Stop(); PreparationFrameMs = Mathf.Max(PreparationFrameMs, (float)clock.Elapsed.TotalMilliseconds); clock.Reset(); }
+
+            var samples = new float[frames * channels];
+            // One buffer for every whole chunk, so reading and writing leave no garbage frame after frame.
+            var chunk = new float[step * channels];
+            for (int offset = 0; offset < frames; offset += step)
+            {
+                clock.Start();
+                int count = Mathf.Min(step, frames - offset);
+                var part = count == step ? chunk : new float[count * channels];
+                bool read = clip.GetData(part, offset);
+                if (read) Array.Copy(part, 0, samples, offset * channels, part.Length);
+                Measure();
+                // A clip whose samples cannot be read cannot be stretched: the control then hides for this narration.
+                if (!read) { stretching = false; stretchFailed = true; Changed?.Invoke(); yield break; }
+                yield return null;
+                if (!Current()) yield break;
+            }
+            var work = System.Threading.Tasks.Task.Run(() => NarrationTimeStretch.Stretch(samples, channels, frequency, MuseumNarrationSpeed.Fast));
+            samples = null;
             while (!work.IsCompleted) yield return null;
-            if (generation != stretchGeneration) yield break;
-            stretching = false;
-            if (narrationClip == null) yield break;
-            if (work.IsFaulted || work.IsCanceled) { stretchFailed = true; Changed?.Invoke(); yield break; }
+            if (!Current()) yield break;
+            if (work.IsFaulted || work.IsCanceled) { stretching = false; stretchFailed = true; Changed?.Invoke(); yield break; }
             var data = work.Result;
-            fastClip = AudioClip.Create(narrationClip.name + " 1.5x", data.Length / channels, channels, frequency, false);
-            fastClip.SetData(data, 0);
+            int fastFrames = data.Length / channels;
+            var fast = AudioClip.Create(clip.name + " 1.5x", fastFrames, channels, frequency, false);
+            for (int offset = 0; offset < fastFrames; offset += step)
+            {
+                clock.Start();
+                int count = Mathf.Min(step, fastFrames - offset);
+                var part = count == step ? chunk : new float[count * channels];
+                Array.Copy(data, offset * channels, part, 0, part.Length);
+                fast.SetData(part, offset);
+                Measure();
+                yield return null;
+                if (!Current()) { Destroy(fast); yield break; }
+            }
+            stretching = false;
+            fastClip = fast;
+            PreparationSeconds = Time.realtimeSinceStartup - began;
+            Debug.Log($"[NarrationSpeed] {clip.length:0.0} s ready at 1.5x in {PreparationSeconds:0.00} s; main thread at most "
+                + $"{PreparationFrameMs:0.0} ms a frame; {FastClipBytes / 1048576f:0.0} MB beside the original");
             ApplySpeed();
             Changed?.Invoke();
         }
