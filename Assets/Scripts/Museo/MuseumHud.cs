@@ -89,6 +89,7 @@ namespace MusiyoBetsknate.Museum
         private Button followNarrationButton;
         private MuseumModelGrab grab;
         private MuseumAutoTour autoTour;
+        private MuseumNight night;
         private readonly System.Collections.Generic.List<(TMP_Text caption, string textKey)> keyedCaptions = new();
         private RectTransform focusPill;
         private RectTransform stationPill;
@@ -143,6 +144,10 @@ namespace MusiyoBetsknate.Museum
             if (wayfinding == null) wayfinding = interaction.gameObject.AddComponent<MuseumWayfinding>();
             wayfinding.Configure(visitor != null ? visitor.transform : null);
             gameObject.AddComponent<MuseumWayfindingHud>().Configure(wayfinding, interaction, detailButton, focusText);
+            // Day or night over the museum, as the visitor chose in the settings.
+            night = interaction.GetComponent<MuseumNight>();
+            if (night == null) night = interaction.gameObject.AddComponent<MuseumNight>();
+            night.Configure(wayfinding, visitFlow);
             var visitorTransform = visitor != null ? visitor.transform : null;
             arrival = interaction.GetComponent<MuseumArrival>();
             if (arrival == null) arrival = interaction.gameObject.AddComponent<MuseumArrival>();
@@ -935,6 +940,7 @@ namespace MusiyoBetsknate.Museum
             var music = FindAnyObjectByType<MuseumMusic>();
             if (music != null) { music.SetMasterVolume(preferences.Volume); music.SetMusicLevel(preferences.MusicLevel); }
             if (Application.isPlaying) MuseumUiSounds.Current.SetVolume(preferences.Volume);
+            night?.Set(preferences.Night);
             // Sizes: the subtitles on the screen and the reading on a stand follow the visitor's choice.
             if (subtitleText != null) subtitleText.fontSize = SubtitleSize * preferences.SubtitleScale;
             float reading = MuseumLecternDisplay.TextSize * preferences.ReadingScale;

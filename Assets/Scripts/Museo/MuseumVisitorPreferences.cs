@@ -33,6 +33,10 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("vignette")] public string Vignette { get; private set; } = MuseumComfort.Name(MuseumVignette.Soft);
         /// <summary>Metres added to the height of the eyes on a headset, for a seated visitor or a tall one.</summary>
         [JsonProperty("height_offset")] public float HeightOffset { get; private set; }
+        /// <summary>The museum's sky: day as delivered, or night (owner, 28/10/2026).</summary>
+        [JsonProperty("sky")] public string Sky { get; private set; } = DaySky;
+        public const string DaySky = "day", NightSky = "night";
+        public bool Night => Sky == NightSky;
         [JsonIgnore] private MuseumExperienceConfiguration configuration;
         public event Action Changed;
 
@@ -64,6 +68,7 @@ namespace MusiyoBetsknate.Museum
             if (MuseumComfort.ParseVignette(result.Vignette) == null) result.Vignette = MuseumComfort.Name(MuseumVignette.Soft);
             if (!MuseumExperienceConfiguration.Finite(result.HeightOffset) || Mathf.Abs(result.HeightOffset) > MuseumComfort.MaxHeightOffset)
                 result.HeightOffset = 0;
+            if (result.Sky != NightSky) result.Sky = DaySky;
             result.schemaVersion = Version;
             result.configuration = settings;
             return result;
@@ -122,6 +127,7 @@ namespace MusiyoBetsknate.Museum
             Changed?.Invoke();
         }
         public void SetVignette(MuseumVignette vignette) { Vignette = MuseumComfort.Name(vignette); Changed?.Invoke(); }
+        public void SetNight(bool night) { Sky = night ? NightSky : DaySky; Changed?.Invoke(); }
         public void SetHeightOffset(float metres)
         {
             if (!MuseumExperienceConfiguration.Finite(metres)) return;
@@ -143,6 +149,7 @@ namespace MusiyoBetsknate.Museum
             TurnSpeed = 0;
             Vignette = MuseumComfort.Name(MuseumVignette.Soft);
             HeightOffset = 0;
+            Sky = DaySky;
             Changed?.Invoke();
         }
         public string Serialize() => JsonConvert.SerializeObject(this);

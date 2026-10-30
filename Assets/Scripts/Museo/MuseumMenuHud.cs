@@ -62,6 +62,10 @@ namespace MusiyoBetsknate.Museum
         private TMP_Text subtitleSizeValue;
         private TMP_Text readingSizeValue;
         private TMP_Text vignetteValue;
+        /// <summary>Day or night over the museum, under a heading of its own (owner, 28/10/2026).</summary>
+        private TMP_Text headingSky;
+        private Button sky;
+        private TMP_Text skyValue;
         private MuseumMenuMotion motion;
         private float openSeconds = OpenSeconds;
         private MenuPage page;
@@ -109,6 +113,8 @@ namespace MusiyoBetsknate.Museum
         public Button SubtitleSizeButton => subtitleSize;
         public Button ReadingSizeButton => readingSize;
         public Button VignetteButton => vignette;
+        public Button SkyButton => sky;
+        public TMP_Text SkyValue => skyValue;
         public TMP_Text TurnModeValue => turnModeValue;
         public TMP_Text TurnSpeedValue => turnSpeedValue;
         /// <summary>True where the application can be left from the menu: everywhere but a Web page.</summary>
@@ -182,6 +188,8 @@ namespace MusiyoBetsknate.Museum
             turnModeValue ??= AddValue(turnMode);
             turnSpeed ??= AddOption(turnMode, "TurnSpeed", "turn_speed_option");
             turnSpeedValue ??= AddValue(turnSpeed);
+            sky ??= AddOption(subtitles, "Sky", "sky_option");
+            skyValue ??= AddValue(sky);
             autoTour ??= AddOption(view.Pause.Primary, "AutoTour", "auto_tour_start");
             orientation ??= AddOption(autoTour, "Orientation", "wayfinding_open");
             quitPause ??= AddOption(mainMenu, "Quit", "quit_museum");
@@ -190,6 +198,7 @@ namespace MusiyoBetsknate.Museum
             headingReading ??= AddHeading(subtitles, "heading_reading");
             headingControl ??= AddHeading(sensitivity, "heading_control");
             headingComfort ??= AddHeading(vignette, "heading_comfort");
+            headingSky ??= AddHeading(sky, "heading_sky");
             OrderSettings();
             // The controls page opens on a drawing of the controls in use, above its lists.
             if (diagram == null) diagram = MuseumControlsDiagram.Ensure(view.Controls);
@@ -238,6 +247,7 @@ namespace MusiyoBetsknate.Museum
             Listen(subtitleSize, NextSubtitleSize, MuseumUiSound.Step);
             Listen(readingSize, NextReadingSize, MuseumUiSound.Step);
             Listen(vignette, NextVignette, MuseumUiSound.Step);
+            Listen(sky, ToggleSky, MuseumUiSound.Step);
             sensitivity.onValueChanged.AddListener(preferences.SetSensitivity);
             volume.onValueChanged.AddListener(preferences.SetVolume);
             musicLevel.onValueChanged.AddListener(preferences.SetMusicLevel);
@@ -307,6 +317,7 @@ namespace MusiyoBetsknate.Museum
         private void NextSubtitleSize() => preferences.SetSubtitleScale(MuseumComfort.NextScale(MuseumComfort.SubtitleScales, preferences.SubtitleScale));
         private void NextReadingSize() => preferences.SetReadingScale(MuseumComfort.NextScale(MuseumComfort.ReadingScales, preferences.ReadingScale));
         private void NextVignette() => preferences.SetVignette(MuseumComfort.NextVignette(preferences.VignetteChoice));
+        private void ToggleSky() => preferences.SetNight(!preferences.Night);
 
         /// <summary>The comfort of a headset is offered only on a headset; the subtitles of a screen only on a screen.</summary>
         private void ShowComfort(bool value)
@@ -362,7 +373,7 @@ namespace MusiyoBetsknate.Museum
         {
             var order = new Component[] { headingSound, volume, musicLevel, narrationLevel, guideLevel, headingReading, subtitles,
                 subtitleSize, readingSize, headingControl, sensitivity, turnMode, turnSpeed, headingComfort, vignette, heightOffset,
-                view.Settings.Reset };
+                headingSky, sky, view.Settings.Reset };
             int index = view.Settings.Description.transform.GetSiblingIndex() + 1;
             foreach (var item in order)
                 if (item != null && item.transform.parent == view.Settings.Description.transform.parent) item.transform.SetSiblingIndex(index++);
@@ -509,6 +520,7 @@ namespace MusiyoBetsknate.Museum
             subtitleSizeValue.text = MuseumInterfaceText.Get(MuseumComfort.ScaleKey(MuseumComfort.SubtitleScales, preferences.SubtitleScale));
             readingSizeValue.text = MuseumInterfaceText.Get(MuseumComfort.ScaleKey(MuseumComfort.ReadingScales, preferences.ReadingScale));
             vignetteValue.text = MuseumInterfaceText.Get(MuseumComfort.TextKey(preferences.VignetteChoice));
+            skyValue.text = MuseumInterfaceText.Get(preferences.Night ? "sky_night" : "sky_day");
             var music = FindAnyObjectByType<MuseumMusic>();
             if (music != null) { music.SetMusicLevel(preferences.MusicLevel); music.SetMasterVolume(preferences.Volume); }
             subtitlesValue.text = MuseumInterfaceText.Get(preferences.Subtitles ? "option_on" : "option_off");
