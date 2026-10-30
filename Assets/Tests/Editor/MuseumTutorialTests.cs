@@ -115,6 +115,12 @@ namespace MusiyoBetsknate.Tests
             Assert.That(progress.Observe(Moment(call: true)), Is.Empty, "Nothing is done twice.");
         }
 
+        [TestCase(TutorialEnding.Finished, true)]
+        [TestCase(TutorialEnding.Skipped, true)]
+        [TestCase(TutorialEnding.LeftHalfway, false)]
+        public void OnlyAFinishedOrSkippedTutorialIsRemembered(TutorialEnding ending, bool remembered)
+            => Assert.That(MuseumTutorialProgress.Remembered(ending), Is.EqualTo(remembered));
+
         [TestCase("{\"schema_version\":2}")]
         [TestCase("{\"schema_version\":1,\"steps\":[]}")]
         [TestCase("{\"schema_version\":1,\"steps\":[{\"id\":\"fly\",\"text_key\":\"tutorial_turn\"}]}")]

@@ -11,18 +11,21 @@ namespace MusiyoBetsknate.Museum
     /// to a stand, take a piece, call it) and each one is done when the visitor does it, in any order. The texts name the
     /// real controls of the device in use: the Quest's controllers, the hands alone, or a keyboard and mouse. It never
     /// blocks the visit: it can be ignored, skipped by holding the back control or from the pause menu, and repeated from
-    /// there. That it ran is remembered in the visitor's preferences. It opens no panel of its own: its bubble is a twin of
+    /// there. That it was finished or skipped is remembered in the visitor's preferences; one left halfway comes back. It opens no panel of its own: its bubble is a twin of
     /// the companion's, at the same place, while the companion's own remarks keep quiet.
     /// </summary>
     public sealed class MuseumFirstVisitTutorial : MonoBehaviour
     {
         /// <summary>
-        /// True while the tutorial speaks. Other in-world notices of the arrival (such as a room's name) can wait for it;
-        /// <see cref="ActiveChanged"/> tells when it starts and ends.
+        /// True while the tutorial speaks, its last word included. Other in-world notices of the arrival (such as a room's
+        /// name) can wait for it; <see cref="ActiveChanged"/> tells when it starts and ends.
         /// </summary>
         public static bool Active { get; private set; }
         public static event Action<bool> ActiveChanged;
-        /// <summary>True on a first visit until the tutorial starts: it is about to speak in the arrival.</summary>
+        /// <summary>
+        /// True while the tutorial is neither running nor finished or skipped: on a first visit, or after one left halfway,
+        /// it is about to speak in the arrival.
+        /// </summary>
         public static bool Pending { get; private set; }
 
         private MuseumTutorialSettings settings;
@@ -73,7 +76,7 @@ namespace MusiyoBetsknate.Museum
 
         private void OnDisable()
         {
-            if (Running) Finish(false, "");
+            if (Running) End(TutorialEnding.LeftHalfway);
             Pending = false;
         }
 
@@ -94,7 +97,7 @@ namespace MusiyoBetsknate.Museum
                 if (Pending && exploring && ReadyToStart()) Begin();
                 return;
             }
-            if (!exploring && flow.Phase != VisitPhase.Entering) { Finish(false, ""); return; }
+            if (!exploring && flow.Phase != VisitPhase.Entering) { End(TutorialEnding.LeftHalfway); return; }
             Follow();
             Observe();
             CheckSkip();
@@ -114,7 +117,8 @@ namespace MusiyoBetsknate.Museum
 
         /// <summary>
         /// Starts the tutorial from its first step, on a first visit or when asked again from the menu. It counts as done
-        /// at once, so it never starts again by itself.
+        /// only once it ends or is skipped (owner, 30/10/2026): a tutorial left halfway starts again the next time the
+        /// visitor comes into the arrival.
         /// </summary>
         public void Begin(bool fromMenu = false)
         {
@@ -134,8 +138,6 @@ namespace MusiyoBetsknate.Museum
             skipHeld = 0;
             Running = true;
             Pending = false;
-            var preferences = menu != null ? menu.Preferences : null;
-            if (preferences != null) { preferences.SetTutorialDone(true); preferences.Save(); }
             SetActive(true);
         }
 
@@ -143,19 +145,30 @@ namespace MusiyoBetsknate.Museum
         public void Skip()
         {
             if (!Running) return;
-            Finish(true, MuseumInterfaceText.Get("tutorial_skipped"));
+            End(TutorialEnding.Skipped);
         }
 
-        private void Finish(bool sayLastWord, string word)
+        /// <summary>
+        /// Ends the tutorial. Finished or skipped, it is remembered now and says its last word a moment; left halfway, it
+        /// goes quiet and is not remembered, so it starts again in the arrival.
+        /// </summary>
+        private void End(TutorialEnding ending)
         {
-            if (sayLastWord && !string.IsNullOrEmpty(word))
+            if (MuseumTutorialProgress.Remembered(ending))
             {
-                // The last word stays a moment; the steps are over.
-                closing = word;
+                var preferences = menu != null ? menu.Preferences : null;
+                if (preferences != null && !preferences.TutorialDone) { preferences.SetTutorialDone(true); preferences.Save(); }
+                closing = MuseumInterfaceText.Get(ending == TutorialEnding.Finished ? "tutorial_end" : "tutorial_skipped");
                 endUntil = Time.unscaledTime + settings.EndSeconds;
                 progress = null;
                 return;
             }
+            Close();
+        }
+
+        /// <summary>The bubble goes, the companion speaks again and others hear that the tutorial is over.</summary>
+        private void Close()
+        {
             Running = false;
             closing = "";
             if (companion != null) companion.Muted = companionWasMuted;
@@ -214,7 +227,7 @@ namespace MusiyoBetsknate.Museum
             var completed = progress.Observe(new TutorialSignals(turned, moved, state == InteractionState.Paused, pointOpen,
                 grab != null && grab.Held, called));
             if (shown != null && completed.Contains(MuseumTutorialSettings.Ids[shown.Id])) doneUntil = Time.unscaledTime + settings.DoneSeconds;
-            if (progress.Finished && doneUntil <= Time.unscaledTime) Finish(true, MuseumInterfaceText.Get("tutorial_end"));
+            if (progress.Finished && doneUntil <= Time.unscaledTime) End(TutorialEnding.Finished);
         }
 
         /// <summary>Holding the back control while walking skips the tutorial.</summary>
@@ -235,7 +248,7 @@ namespace MusiyoBetsknate.Museum
             string text = "";
             if (progress == null)
             {
-                if (now >= endUntil) { Finish(false, ""); return; }
+                if (now >= endUntil) { Close(); return; }
                 text = closing;
             }
             else if (now < doneUntil) text = MuseumInterfaceText.Get("tutorial_step_done");

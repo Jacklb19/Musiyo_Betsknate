@@ -102,6 +102,17 @@ namespace MusiyoBetsknate.Museum
         { Turned = turned; Moved = moved; MenuOpen = menuOpen; PointOpen = pointOpen; Holding = holding; CalledCompanion = calledCompanion; }
     }
 
+    /// <summary>How a tutorial came to an end.</summary>
+    public enum TutorialEnding
+    {
+        /// <summary>Every step was done.</summary>
+        Finished,
+        /// <summary>The visitor skipped it, holding the back control or from the pause menu.</summary>
+        Skipped,
+        /// <summary>The visit left the museum, or the app closed, before it ended.</summary>
+        LeftHalfway
+    }
+
     /// <summary>
     /// Which steps of the tutorial the visitor has done, in any order: whatever they do counts at once, and the step
     /// proposed is always the first one still undone.
@@ -123,6 +134,12 @@ namespace MusiyoBetsknate.Museum
         public int CurrentNumber => Current == null ? settings.Steps.Count : settings.Steps.IndexOf(Current) + 1;
 
         public void MarkDone(TutorialStep step) => done.Add(step);
+
+        /// <summary>
+        /// A finished or skipped tutorial is remembered and never starts again by itself; one left halfway starts again the
+        /// next time the visitor comes into the arrival (owner, 30/10/2026).
+        /// </summary>
+        public static bool Remembered(TutorialEnding ending) => ending != TutorialEnding.LeftHalfway;
 
         /// <summary>Takes in a moment of the visit; returns the steps that it completed.</summary>
         public List<TutorialStep> Observe(TutorialSignals signals)

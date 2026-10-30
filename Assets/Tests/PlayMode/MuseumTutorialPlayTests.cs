@@ -71,7 +71,8 @@ namespace MusiyoBetsknate.Tests
                 for (float waited = 0; !tutorial.Running && waited < settings.StartAtLatest + 3; waited += Time.deltaTime) yield return null;
                 Assert.That(tutorial.Running, Is.True, "It starts in the arrival (zone " + companion.Zone + ").");
                 Assert.That(MuseumFirstVisitTutorial.Active && announced, Is.True, "Others hear that it speaks (room names wait for it).");
-                Assert.That(flow.Menu.Preferences.TutorialDone, Is.True, "It is remembered at once: it never starts by itself again.");
+                Assert.That(flow.Menu.Preferences.TutorialDone, Is.False, "It is remembered only once it ends or is skipped.");
+                Assert.That(MuseumFirstVisitTutorial.Pending, Is.False, "Started, it is no longer pending.");
                 Assert.That(companion.Muted, Is.True, "The companion's own remarks keep quiet meanwhile.");
                 for (float waited = 0; !tutorial.Showing && waited < 2; waited += Time.deltaTime) yield return null;
                 Assert.That(tutorial.Text, Does.Contain(MuseumInterfaceText.Get("tutorial_turn")), "Step one, in the companion's bubble: " + tutorial.Text);
@@ -105,8 +106,11 @@ namespace MusiyoBetsknate.Tests
                 tutorial.Skip();
                 for (float waited = 0; waited < .5f; waited += Time.deltaTime) yield return null;
                 Assert.That(tutorial.Text, Does.Contain(MuseumInterfaceText.Get("tutorial_skipped")));
+                Assert.That(flow.Menu.Preferences.TutorialDone, Is.True, "Skipped, it is remembered: it never starts by itself again.");
+                Assert.That(MuseumFirstVisitTutorial.Active && !MuseumFirstVisitTutorial.Pending, Is.True,
+                    "Its last word still holds back other notices (the room's name comes after it).");
                 for (float waited = 0; tutorial.Running && waited < settings.EndSeconds + 2; waited += Time.deltaTime) yield return null;
-                Assert.That(tutorial.Running || MuseumFirstVisitTutorial.Active, Is.False);
+                Assert.That(tutorial.Running || MuseumFirstVisitTutorial.Active || MuseumFirstVisitTutorial.Pending, Is.False);
                 Assert.That(companion.Muted, Is.False, "The companion speaks again.");
 
                 // Asked again from the pause menu, it starts over, the menu already known.
@@ -120,6 +124,55 @@ namespace MusiyoBetsknate.Tests
                 tutorial.Skip();
             }
             finally { MuseumFirstVisitTutorial.ActiveChanged -= Heard; }
+        }
+
+        /// <summary>
+        /// A tutorial left halfway (the visit went back to the menu) is not remembered and starts again on the next entry
+        /// into the arrival; one finished to its last step is remembered and does not.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ATutorialLeftHalfwayStartsAgainButAFinishedOneDoesNot()
+        {
+            yield return OpenMuseum(true);
+            var flow = Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var tutorial = flow.GetComponent<MuseumFirstVisitTutorial>();
+            var body = Object.FindAnyObjectByType<DesktopVisitorController>().GetComponent<CharacterController>();
+            var settings = MuseumTutorialSettings.Current;
+            IEnumerator Enter()
+            {
+                flow.EnterImmediately();
+                Place(body, new Vector3(0, .05f, -48));
+                body.transform.rotation = Quaternion.identity;
+                for (float waited = 0; !tutorial.Running && waited < settings.StartAtLatest + 3; waited += Time.deltaTime) yield return null;
+            }
+            yield return Enter();
+            Assert.That(tutorial.Running, Is.True);
+            tutorial.Progress.MarkDone(TutorialStep.Turn);
+            yield return null;
+
+            // Back to the menu halfway: nothing is remembered and it waits for the next entry.
+            flow.ReturnToMenu();
+            yield return null;
+            yield return null;
+            Assert.That(tutorial.Running || MuseumFirstVisitTutorial.Active, Is.False, "Leaving the museum ends it quietly.");
+            Assert.That(flow.Menu.Preferences.TutorialDone, Is.False, "Left halfway, it is not remembered.");
+            Assert.That(MuseumFirstVisitTutorial.Pending, Is.True, "It is about to speak again.");
+            yield return Enter();
+            Assert.That(tutorial.Running, Is.True, "It starts again in the arrival.");
+            Assert.That(tutorial.Progress.CurrentNumber, Is.EqualTo(1), "From its first step.");
+
+            // Done to its last step: remembered, with its last word.
+            foreach (var step in new[] { TutorialStep.Turn, TutorialStep.Move, TutorialStep.Menu, TutorialStep.Approach, TutorialStep.Grab, TutorialStep.Companion })
+                tutorial.Progress.MarkDone(step);
+            for (float waited = 0; !flow.Menu.Preferences.TutorialDone && waited < settings.DoneSeconds + 2; waited += Time.deltaTime) yield return null;
+            Assert.That(flow.Menu.Preferences.TutorialDone, Is.True, "Finished, it is remembered.");
+            Assert.That(MuseumFirstVisitTutorial.Active, Is.True, "Its last word is still being said.");
+            for (float waited = 0; tutorial.Running && waited < settings.EndSeconds + 2; waited += Time.deltaTime) yield return null;
+            Assert.That(MuseumFirstVisitTutorial.Active || MuseumFirstVisitTutorial.Pending, Is.False);
+            flow.ReturnToMenu();
+            yield return null;
+            yield return Enter();
+            Assert.That(tutorial.Running, Is.False, "Finished once, it does not start by itself again.");
         }
 
         [UnityTest]
