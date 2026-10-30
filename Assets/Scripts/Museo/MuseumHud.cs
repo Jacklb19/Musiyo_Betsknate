@@ -89,6 +89,7 @@ namespace MusiyoBetsknate.Museum
         private Button followNarrationButton;
         private MuseumModelGrab grab;
         private MuseumAutoTour autoTour;
+        private MuseumRoomTitle roomTitle;
         private readonly System.Collections.Generic.List<(TMP_Text caption, string textKey)> keyedCaptions = new();
         private RectTransform focusPill;
         private RectTransform stationPill;
@@ -181,6 +182,11 @@ namespace MusiyoBetsknate.Museum
             // Over the hearth set the entry menu reads as a title screen.
             gameObject.AddComponent<MuseumTitleScreen>().Configure(menu.View, visitFlow, backdrop);
             CreateStationInterface();
+            // The room's name on its first entry, in the upper third; it takes the place of the orientation's arrival line.
+            roomTitle = gameObject.AddComponent<MuseumRoomTitle>();
+            roomTitle.Configure(wayfinding, visitFlow, interaction, narration, focusText);
+            var orientationHud = GetComponent<MuseumWayfindingHud>();
+            if (orientationHud != null) orientationHud.RoomTitle = roomTitle;
             var header = statusText.transform.parent as RectTransform;
             var controlBar = header != null && header.parent != null ? header.parent.Find("Controls") as RectTransform : null;
             gameObject.AddComponent<MuseumHudPresence>().Configure(visitFlow, interaction, loader, header, controlBar);
@@ -399,8 +405,18 @@ namespace MusiyoBetsknate.Museum
             return panelGroup;
         }
 
-        /// <summary>On a headset the subtitles stand on a canvas of their own carried by the head.</summary>
-        public void UseSpatialSubtitles(Camera head) => subtitleView?.UseSpatial(head);
+        /// <summary>
+        /// On a headset the subtitles stand on a canvas of their own carried by the head, and the room's title on one of
+        /// its own ahead of the eyes: the screen's canvas is only drawn with a menu.
+        /// </summary>
+        public void UseSpatialSubtitles(Camera head)
+        {
+            subtitleView?.UseSpatial(head);
+            if (roomTitle != null) roomTitle.UseSpatial(head);
+        }
+
+        /// <summary>The room's title on its first entry; a tutorial or anything else may keep it waiting with Hold and Release.</summary>
+        public MuseumRoomTitle RoomTitle => roomTitle;
 
         /// <summary>A reassigned key changes every caption and prompt that names it.</summary>
         public void RefreshDeviceLabels() => RefreshKeys();
