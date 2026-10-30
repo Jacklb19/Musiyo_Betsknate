@@ -7,8 +7,12 @@ using UnityEngine.UI;
 namespace MusiyoBetsknate.Museum
 {
     /// <summary>
-    /// The guide's figure walking the visit with the visitor. It keeps a comfortable distance behind, along the way the
-    /// visitor actually walked, steps aside instead of blocking, keeps out of the line to the exhibit being read, waits at
+    /// The guide's figure going through the visit with the visitor. It keeps itself in sight (owner, 28/10/2026): with the
+    /// visitor standing, once it has been out of sight a moment it flies to a free spot in front of them and to one side of
+    /// their gaze, at about the height of their eyes; while they walk it goes a little ahead and aside, never on their way;
+    /// after a jump it reappears in sight. It never chases a glance, never passes through the visitor or a wall, and where
+    /// no clear way leads into sight it follows the way the visitor actually walked. It steps aside instead of blocking,
+    /// keeps out of the line to the exhibit being read, waits at
     /// its own anchor by the hearth, and is never drawn against the visitor's eyes. It has no collider, never moves the
     /// visitor or the camera. The visitor can ask it a spoken question anywhere (<see cref="MuseumCompanionVoice"/>); the
     /// conversation about the visit stays with <see cref="MuseumGuide"/> at the guide anchor. While the visitor is in the
@@ -50,6 +54,22 @@ namespace MusiyoBetsknate.Museum
         private float walkPhase;
         private float figureHeight = 1.5f;
         private float speed;
+        /// <summary>Height of the bird's middle above the companion's floor spot, before the lift toward the visitor's eyes.</summary>
+        private float floatCentre = 1.35f;
+        private float lift;
+        private float stepBob;
+        private Vector3 heading;
+        private Vector3 lastFloor;
+        private bool hasLastFloor;
+        private Vector3 visitorVelocity;
+        private bool walking;
+        private float stillFor;
+        private Vector3? viewSpot;
+        private Vector3? leadSpot;
+        private float viewSearchAt;
+        private float leadAt;
+        private float sightAt;
+        private bool seen = true;
 
         /// <summary>
         /// Where a worn mask would go. The guides wear no mask (D5, 22/10/2026), so there is none and the scene's mask
@@ -79,8 +99,20 @@ namespace MusiyoBetsknate.Museum
         public float FigureHeight => figureHeight;
         /// <summary>State of the walk, for diagnostics: points of the visitor's way kept, the one aimed at, current speed.</summary>
         public string WalkState => "trail " + trail.Count + ", target " + target + ", speed " + speed.ToString("F2") + ", zone " + Zone
-            + ", last obstacle " + lastObstacle;
+            + ", mode " + Mode + ", seen " + InSight + ", out of sight " + OutOfSightFor.ToString("F1") + ", last obstacle " + lastObstacle;
         private string lastObstacle = "";
+        /// <summary>What the companion is doing: lead (ahead while the visitor walks), view (moving into sight), settle, trail, home.</summary>
+        public string Mode { get; private set; } = "";
+        /// <summary>The visitor can see the companion: within the width of their view and with no wall between.</summary>
+        public bool InSight => seen;
+        /// <summary>Seconds the companion has been out of the visitor's sight.</summary>
+        public float OutOfSightFor { get; private set; }
+        /// <summary>The visitor is walking (or being carried), as the companion judges from their smoothed speed.</summary>
+        public bool VisitorWalking => walking;
+        /// <summary>Metres the bird rises or sinks from its own flying height toward the visitor's eyes.</summary>
+        public float Lift => lift;
+        /// <summary>World position of the middle of the bird.</summary>
+        public Vector3 BirdCentre => transform.position + Vector3.up * (floatCentre + lift);
 
         public void Configure(TMP_FontAsset fontAsset) => font = fontAsset;
 
@@ -127,6 +159,8 @@ namespace MusiyoBetsknate.Museum
             figure = Figure.transform;
             figureRenderers = Figure.Renderers;
             figureHeight = Figure.Height;
+            var definition = GuideFigureSettings.Current.For(GuideFigureSettings.Companion);
+            floatCentre = definition != null && Figure.Floats ? definition.FloatHeight : figureHeight * .7f;
         }
 
         /// <summary>Hides the provisional guide pieces of the museum model; the guides' own figures stand in for them.</summary>
@@ -194,13 +228,16 @@ namespace MusiyoBetsknate.Museum
             if (inside && !Waiting) BeginWaiting(floor);
             else if (!inside && Waiting) EndWaiting(floor);
             // A jump (a teleport, sitting down or standing up) starts the way afresh: the old target is gone with it.
-            if (!Waiting && !trail.Record(floor)) { rejoinPending = true; target = -1; }
+            if (!Waiting && !trail.Record(floor)) { rejoinPending = true; target = -1; viewSpot = leadSpot = null; hasLastFloor = false; }
+            TrackVisitor(floor);
             if (!Waiting && rejoinPending && Rejoin(floor, eyes)) rejoinPending = false;
+            Watch(floor);
             if (Waiting) WaitAtDoor();
             else Move(floor);
             Face(floor);
+            Hover(eyes, floor);
             Gesture(eyes);
-            float distance = Vector3.Distance(eyes, transform.position + Vector3.up * figureHeight * .7f);
+            float distance = Vector3.Distance(eyes, BirdCentre);
             Show(distance > settings.HideWithin);
             UpdateRemark(exploring, eyes);
         }
@@ -294,31 +331,41 @@ namespace MusiyoBetsknate.Museum
             if (step.sqrMagnitude > 1e-6f) position += step.normalized * travel;
             position.y = Mathf.Lerp(position.y, WaitSpot.y, Time.deltaTime * 6);
             transform.position = position;
+            stepBob = 0;
             Figure.Stride = travel / Mathf.Max(Time.deltaTime, 1e-4f) / settings.WalkSpeed;
         }
 
-        /// <summary>At the start of the visit the companion stands a little ahead and aside, facing the visitor.</summary>
+        /// <summary>At the start of the visit the companion is in sight, a little ahead and aside, facing the visitor.</summary>
         private void Arrive(Vector3 floor, Vector3 eyes)
         {
-            var forward = Flat(head != null ? head.transform.forward : visitor.forward);
+            var forward = Gaze();
             var right = Vector3.Cross(Vector3.up, forward);
+            var inSight = settings.InView.Enabled ? FindViewSpot(floor, floor, false) : null;
             foreach (var offset in new[] { forward * 2.2f + right * .9f, forward * 2.2f - right * .9f, forward * 1.8f, -forward * settings.FollowDistance })
             {
-                if (!Free(floor + offset, floor.y, out var spot) || !Clear(floor, spot)) continue;
+                Vector3 spot;
+                if (inSight.HasValue) spot = inSight.Value;
+                else if (!Free(floor + offset, floor.y, out spot) || !Clear(floor, spot)) continue;
                 transform.position = spot;
                 transform.rotation = Quaternion.LookRotation(Flat(floor - spot), Vector3.up);
                 placed = true;
                 trail.Clear();
                 trail.Record(floor);
+                lastFloor = floor;
+                hasLastFloor = true;
                 Show(true);
                 return;
             }
         }
 
-        /// <summary>After the visitor is taken somewhere at once, the companion joins out of sight behind them.</summary>
+        /// <summary>
+        /// After the visitor is taken somewhere at once, the companion reappears in sight, in front and aside; where no such
+        /// spot is free, out of sight behind them, as before.
+        /// </summary>
         private bool Rejoin(Vector3 floor, Vector3 eyes)
         {
-            var forward = Flat(head != null ? head.transform.forward : visitor.forward);
+            if (settings.InView.Enabled && Reappear(floor)) return true;
+            var forward = Gaze();
             var right = Vector3.Cross(Vector3.up, forward);
             foreach (var offset in new[] { -forward * settings.FollowDistance, -forward * settings.FollowDistance + right, -forward * settings.FollowDistance - right })
                 if (Free(floor + offset, floor.y, out var spot) && Clear(floor, spot) && !InView(spot, eyes))
@@ -330,49 +377,290 @@ namespace MusiyoBetsknate.Museum
             return false;
         }
 
+        /// <summary>Puts the companion at once on a spot in sight; false where none is free.</summary>
+        private bool Reappear(Vector3 floor)
+        {
+            var spot = FindViewSpot(floor, floor, false);
+            if (!spot.HasValue) return false;
+            transform.position = spot.Value;
+            transform.rotation = Quaternion.LookRotation(Flat(floor - spot.Value) == Vector3.zero ? Vector3.forward : Flat(floor - spot.Value), Vector3.up);
+            target = -1;
+            viewSpot = leadSpot = null;
+            speed = 0;
+            seen = true;
+            OutOfSightFor = 0;
+            return true;
+        }
+
+        /// <summary>The visitor's speed over the floor, smoothed, and whether they walk or stand, with some hysteresis.</summary>
+        private void TrackVisitor(Vector3 floor)
+        {
+            float elapsed = Mathf.Max(Time.deltaTime, 1e-4f);
+            if (hasLastFloor)
+            {
+                var velocity = (floor - lastFloor) / elapsed;
+                velocity.y = 0;
+                visitorVelocity = Vector3.Lerp(visitorVelocity, velocity, 1 - Mathf.Exp(-elapsed * 6));
+            }
+            else visitorVelocity = Vector3.zero;
+            lastFloor = floor;
+            hasLastFloor = true;
+            var view = settings.InView;
+            float pace = visitorVelocity.magnitude;
+            if (pace > view.WalkThreshold) { walking = true; stillFor = 0; }
+            else if (pace < view.StandSpeed)
+            {
+                stillFor += elapsed;
+                if (stillFor >= view.StandSeconds) walking = false;
+            }
+        }
+
+        /// <summary>Whether the visitor can see the companion now, checked a few times a second, and for how long they cannot.</summary>
+        private void Watch(Vector3 floor)
+        {
+            if (Time.unscaledTime >= sightAt)
+            {
+                sightAt = Time.unscaledTime + .1f;
+                seen = Sees(transform.position, floor, settings.InView.SightMargin);
+            }
+            OutOfSightFor = seen || Waiting ? 0 : OutOfSightFor + Time.deltaTime;
+        }
+
+        /// <summary>
+        /// A spot within the width of the visitor's view (with <paramref name="margin"/> degrees more) and with no wall
+        /// between it and them.
+        /// </summary>
+        private bool Sees(Vector3 spot, Vector3 floor, float margin)
+        {
+            if (head == null) return true;
+            var toSpot = Flat(spot - floor);
+            if (toSpot == Vector3.zero) return true;
+            float half = Mathf.Atan(Mathf.Tan(head.fieldOfView * .5f * Mathf.Deg2Rad) * Mathf.Max(head.aspect, .5f)) * Mathf.Rad2Deg;
+            return Vector3.Angle(Gaze(), toSpot) <= half + margin && Clear(floor, spot);
+        }
+
         private void Move(Vector3 floor)
         {
             var position = transform.position;
             Vector3 goal;
+            float least = settings.WalkSpeed * .5f;
             var home = Zone == settings.HomeRoom ? HomeAnchor(floor.y) : null;
-            if (home != null && Clear(position, home.Value)) goal = home.Value;
-            else
-            {
-                if (Time.unscaledTime >= retargetAt)
-                {
-                    retargetAt = Time.unscaledTime + RetargetSeconds;
-                    target = trail.FarthestReachable(position, Clear, 20);
-                }
-                if (target >= trail.Count) target = trail.Count - 1;
-                float along = trail.LengthFrom(position, Mathf.Max(target, 0), floor);
-                goal = target >= 0 ? trail[target] : trail.Count > 0 ? trail[0] : position;
-                float wanted = settings.FollowDistance;
-                if (along <= wanted)
-                {
-                    goal = Settle(position, floor);
-                    speed = Mathf.MoveTowards(speed, 0, Time.deltaTime * Deceleration);
-                }
-                else
-                {
-                    if (target > 0) trail.DropBefore(target);
-                    if (target > 0) target = 0;
-                    float top = along > settings.CatchUpBeyond ? settings.CatchUpSpeed : settings.WalkSpeed;
-                    speed = Mathf.MoveTowards(speed, top, Time.deltaTime * (top > speed ? Acceleration : Deceleration));
-                }
-            }
+            if (home != null && Clear(position, home.Value)) { goal = home.Value; Mode = "home"; }
+            else if (settings.InView.Enabled && InViewGoal(position, floor, out goal)) least = .3f;
+            else goal = FollowTrail(position, floor);
             var step = goal - position;
             step.y = 0;
-            float travel = Mathf.Min(step.magnitude, Mathf.Max(speed, settings.WalkSpeed * .5f) * Time.deltaTime);
+            // Into sight it slows down as it arrives instead of stopping short.
+            float pace = Mathf.Max(speed, least);
+            if (Mode == "view") pace = Mathf.Min(pace, Mathf.Max(.25f, step.magnitude * 1.5f));
+            float travel = Mathf.Min(step.magnitude, pace * Time.deltaTime);
             if (step.sqrMagnitude > 1e-6f)
             {
-                position += step.normalized * travel;
+                heading = step.normalized;
+                position += heading * travel;
                 walkPhase += travel * 6;
             }
             position.y = Mathf.Lerp(position.y, goal.y, Time.deltaTime * 6);
             transform.position = position;
             // A slight step, not a bounce.
-            figure.localPosition = Vector3.up * (Mathf.Abs(Mathf.Sin(walkPhase)) * .015f * Mathf.Clamp01(speed));
+            stepBob = Mathf.Abs(Mathf.Sin(walkPhase)) * .015f * Mathf.Clamp01(speed);
             Figure.Stride = travel / Mathf.Max(Time.deltaTime, 1e-4f) / settings.WalkSpeed;
+        }
+
+        /// <summary>Follows the way the visitor walked until it is close enough, then settles out of the way.</summary>
+        private Vector3 FollowTrail(Vector3 position, Vector3 floor)
+        {
+            Mode = "trail";
+            if (Time.unscaledTime >= retargetAt)
+            {
+                retargetAt = Time.unscaledTime + RetargetSeconds;
+                target = trail.FarthestReachable(position, Clear, 20);
+            }
+            if (target >= trail.Count) target = trail.Count - 1;
+            float along = trail.LengthFrom(position, Mathf.Max(target, 0), floor);
+            var goal = target >= 0 ? trail[target] : trail.Count > 0 ? trail[0] : position;
+            if (along <= settings.FollowDistance)
+            {
+                Mode = "settle";
+                goal = Settle(position, floor);
+                Accelerate(0);
+            }
+            else
+            {
+                if (target > 0) trail.DropBefore(target);
+                if (target > 0) target = 0;
+                Accelerate(along > settings.CatchUpBeyond ? settings.CatchUpSpeed : settings.WalkSpeed);
+            }
+            return goal;
+        }
+
+        private void Accelerate(float top) =>
+            speed = Mathf.MoveTowards(speed, top, Time.deltaTime * (top > speed ? Acceleration : Deceleration));
+
+        /// <summary>
+        /// Where the companion goes to stay in sight, or false to follow the visitor's way instead. Walking, a spot ahead and
+        /// aside of their way. Standing, it stays where it is while it is seen; out of sight a moment (or far off), it flies
+        /// to a spot in front and to one side of the gaze. A spot is only taken with a clear way to it, round the visitor
+        /// rather than through them.
+        /// </summary>
+        private bool InViewGoal(Vector3 position, Vector3 floor, out Vector3 goal)
+        {
+            var view = settings.InView;
+            goal = position;
+            float now = Time.unscaledTime;
+            float distance = CompanionTrail.Planar(position - floor);
+            float pace = visitorVelocity.magnitude;
+            if (walking)
+            {
+                viewSpot = null;
+                if (now >= leadAt) { leadAt = now + RetargetSeconds; leadSpot = LeadSpot(floor, position); }
+                if (!leadSpot.HasValue) return false;
+                var next = Route(position, leadSpot.Value, floor);
+                if (!Clear(position, next)) return false;
+                goal = next;
+                Mode = "lead";
+                float remaining = CompanionTrail.Planar(leadSpot.Value - position);
+                Accelerate(remaining > .2f ? Mathf.Clamp(pace + remaining, settings.WalkSpeed * .5f, settings.CatchUpSpeed * 1.25f) : pace);
+                return true;
+            }
+            leadSpot = null;
+            if (viewSpot.HasValue && CompanionTrail.Planar(viewSpot.Value - position) < .05f) viewSpot = null;
+            bool wanted = OutOfSightFor >= view.OutOfSightSeconds || distance > view.Distance * 1.8f;
+            if (!viewSpot.HasValue && wanted && now >= viewSearchAt)
+            {
+                viewSearchAt = now + .25f;
+                viewSpot = FindViewSpot(floor, position, true);
+                // Out of sight with no clear way back for long, it reappears in sight as after a jump.
+                if (!viewSpot.HasValue && OutOfSightFor >= view.ReappearAfter && Reappear(floor))
+                {
+                    goal = transform.position;
+                    Mode = "reappear";
+                    return true;
+                }
+            }
+            if (viewSpot.HasValue)
+            {
+                var next = Route(position, viewSpot.Value, floor);
+                if (Clear(position, next))
+                {
+                    goal = next;
+                    Mode = "view";
+                    Accelerate(view.MoveSpeed);
+                    return true;
+                }
+                viewSpot = null;
+            }
+            // Far along the way with no spot in sight to fly to, it follows the way the visitor walked.
+            if (distance > settings.FollowDistance + 1) return false;
+            Mode = "settle";
+            goal = Settle(position, floor);
+            Accelerate(0);
+            return true;
+        }
+
+        /// <summary>
+        /// A free spot in sight: at the distance of the settings, to one side of the gaze (the side the companion is on
+        /// first), with a clear line from the visitor, never between them and the exhibit being read; with
+        /// <paramref name="needWay"/>, only one the companion can reach from <paramref name="from"/> without a wall.
+        /// </summary>
+        private Vector3? FindViewSpot(Vector3 floor, Vector3 from, bool needWay)
+        {
+            var view = settings.InView;
+            var forward = Gaze();
+            var right = Vector3.Cross(Vector3.up, forward);
+            float current = Vector3.Dot(from - floor, right) >= 0 ? 1 : -1;
+            foreach (var (distance, angle, side) in ViewCandidates(view, current))
+            {
+                var candidate = floor + Quaternion.AngleAxis(side * angle, Vector3.up) * forward * distance;
+                if (!Free(candidate, floor.y, out var spot) || !Clear(floor, spot) || Blocking(floor, spot)) continue;
+                if (needWay && !Clear(from, Route(from, spot, floor))) continue;
+                return spot;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// The spots in sight tried in order: the set distance and angle first, on the side given first, then a little
+        /// nearer or farther and a little nearer the gaze or wider.
+        /// </summary>
+        public static IEnumerable<(float distance, float angle, float side)> ViewCandidates(CompanionInViewSettings view, float firstSide)
+        {
+            float first = firstSide >= 0 ? 1 : -1;
+            foreach (float distance in new[] { view.Distance, view.Distance * .8f, view.Distance * 1.2f })
+                foreach (float angle in new[] { view.Angle, view.Angle - 8, view.Angle + 8 })
+                    foreach (float side in new[] { first, -first })
+                        yield return (distance, Mathf.Clamp(angle, 5, 80), side);
+        }
+
+        /// <summary>While the visitor walks: ahead along their way and aside of it, on the companion's side first.</summary>
+        private Vector3? LeadSpot(Vector3 floor, Vector3 position)
+        {
+            var view = settings.InView;
+            var along = Flat(visitorVelocity);
+            if (along == Vector3.zero) return null;
+            var right = Vector3.Cross(Vector3.up, along);
+            float current = Vector3.Dot(position - floor, right) >= 0 ? 1 : -1;
+            foreach (float side in new[] { current, -current })
+                foreach (float reach in new[] { 1, .7f })
+                {
+                    var candidate = floor + along * view.LeadAhead * reach + right * side * view.LeadAside;
+                    if (Free(candidate, floor.y, out var spot) && Clear(floor, spot) && !Blocking(floor, spot)) return spot;
+                }
+            return null;
+        }
+
+        /// <summary>
+        /// The next point toward a goal: the goal itself, or where the straight way would pass too near the visitor, a free
+        /// point round them on the goal's side.
+        /// </summary>
+        private Vector3 Route(Vector3 from, Vector3 goal, Vector3 floor)
+        {
+            float clearance = settings.InView.PassClearance;
+            if (!PassesNear(from, goal, floor, clearance)) return goal;
+            var across = Vector3.Cross(Vector3.up, Flat(goal - from));
+            float side = Vector3.Dot(goal - floor, across) >= 0 ? 1 : -1;
+            foreach (float turn in new[] { side, -side })
+                if (Free(floor + across * turn * (clearance + .35f), floor.y, out var round)) return round;
+            return goal;
+        }
+
+        /// <summary>True when the straight way between two floor spots passes within <paramref name="clearance"/> of a third.</summary>
+        public static bool PassesNear(Vector3 from, Vector3 to, Vector3 visitor, float clearance)
+        {
+            if (CompanionTrail.Planar(from - visitor) < clearance) return false;
+            var way = to - from;
+            way.y = 0;
+            float length = way.sqrMagnitude;
+            if (length < 1e-6f) return false;
+            var offset = visitor - from;
+            offset.y = 0;
+            float share = Mathf.Clamp01(Vector3.Dot(offset, way) / length);
+            return CompanionTrail.Planar(from + way * share - visitor) < clearance;
+        }
+
+        /// <summary>True when a spot stands between the visitor and the exhibit being read.</summary>
+        private bool Blocking(Vector3 floor, Vector3 spot)
+        {
+            var point = interaction.ActivePoint != null && interaction.State != InteractionState.Exploration ? interaction.ActivePoint.Anchor : null;
+            return point != null && Blocks(floor, spot, point.LookTarget.position);
+        }
+
+        /// <summary>The bird flies at about the visitor's eyes, a little below them, within limits from its own height.</summary>
+        private void Hover(Vector3 eyes, Vector3 floor)
+        {
+            var view = settings.InView;
+            float wanted = view.Enabled && Figure != null && Figure.Floats
+                ? Mathf.Clamp(eyes.y - transform.position.y - view.EyeDrop - floatCentre, view.LiftMin, view.LiftMax) : 0;
+            lift = Mathf.MoveTowards(lift, wanted, view.LiftSpeed * Time.deltaTime);
+            figure.localPosition = Vector3.up * (lift + stepBob);
+            if (bubble != null) bubble.localPosition = Vector3.up * (figureHeight + .32f + lift);
+        }
+
+        /// <summary>The visitor's gaze over the floor; their body's facing when they look straight up or down.</summary>
+        private Vector3 Gaze()
+        {
+            var forward = Flat(head != null ? head.transform.forward : visitor.forward);
+            return forward != Vector3.zero ? forward : Flat(visitor.forward) != Vector3.zero ? Flat(visitor.forward) : Vector3.forward;
         }
 
         /// <summary>
@@ -426,8 +714,9 @@ namespace MusiyoBetsknate.Museum
 
         private void Face(Vector3 floor)
         {
-            var moving = speed > .2f && trail.Count > 0;
-            var look = moving && target >= 0 && target < trail.Count ? Flat(trail[target] - transform.position) : Flat(floor - transform.position);
+            // Moving, it looks where it goes; once there, at the visitor.
+            var moving = speed > .2f && heading != Vector3.zero && !Waiting;
+            var look = moving ? heading : Flat(floor - transform.position);
             if (look.sqrMagnitude < 1e-4f) return;
             transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(look, Vector3.up),
                 settings.TurnSpeed * Time.deltaTime);

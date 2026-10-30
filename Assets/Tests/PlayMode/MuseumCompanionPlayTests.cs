@@ -64,6 +64,7 @@ namespace MusiyoBetsknate.Tests
             var log = new System.Text.StringBuilder();
             int sample = 0;
             float nearest = float.MaxValue, farthest = 0;
+            int walked = 0, ahead = 0, onTheWay = 0;
             // Walk north along the arrival path at an ordinary pace.
             for (float z = -56; z <= -30; z += 1.4f * Mathf.Min(Time.deltaTime, .1f))
             {
@@ -74,6 +75,12 @@ namespace MusiyoBetsknate.Tests
                 var offset = companion.transform.position - body.transform.position;
                 offset.y = 0;
                 if (z > -50) { nearest = Mathf.Min(nearest, offset.magnitude); farthest = Mathf.Max(farthest, offset.magnitude); }
+                // Once it had time to pass the visitor: ahead along the way (north), and then aside of it.
+                if (z > -44)
+                {
+                    walked++;
+                    if (offset.z > .3f) { ahead++; if (Mathf.Abs(offset.x) < .45f) onTheWay++; }
+                }
                 Assert.That(companion.Free(companion.transform.position, companion.transform.position.y, out _), Is.True,
                     "The companion stands on free floor at " + companion.transform.position);
             }
@@ -90,13 +97,86 @@ namespace MusiyoBetsknate.Tests
                 "It keeps a comfortable distance once the visitor stops (" + companion.WalkState + ", at " + companion.transform.position + ").");
             Assert.That(farthest, Is.LessThan(MuseumCompanionSettings.Current.CatchUpBeyond + 1.5f), "It keeps up while the visitor walks.");
             Assert.That(nearest, Is.GreaterThan(.4f), "It never walks into the visitor.");
+            Assert.That(ahead, Is.GreaterThan(walked * .5f), "Walking, it goes ahead of the visitor (" + ahead + " of " + walked + " frames).");
+            Assert.That(onTheWay, Is.EqualTo(0), "Ahead, it is never on the visitor's way.");
 
-            // Taken at once to the courtyard, the visitor is rejoined from behind.
+            // Taken at once to the courtyard, the visitor finds the companion in sight, in front of them.
             Place(body, new Vector3(0, .05f, -6));
-            for (float waited = 0; waited < 4; waited += Time.deltaTime) yield return null;
+            for (int frame = 0; frame < 5; frame++) yield return null;
             var joined = companion.transform.position - body.transform.position;
             joined.y = 0;
             Assert.That(joined.magnitude, Is.LessThan(MuseumCompanionSettings.Current.FollowDistance + 1.5f), "The companion rejoins after a jump.");
+            Assert.That(companion.InSight, Is.True, "After a jump it reappears in sight, not behind (" + companion.WalkState + ").");
+            Assert.That(Vector3.Dot(joined, Gaze(body)), Is.GreaterThan(0), "In front of the visitor.");
+        }
+
+        private static Vector3 Gaze(CharacterController body)
+        {
+            var forward = body.GetComponentInChildren<Camera>().transform.forward;
+            forward.y = 0;
+            return forward.normalized;
+        }
+
+        /// <summary>
+        /// Standing, the companion stays where it is while the visitor glances away and back; turned away for longer than a
+        /// moment, it flies round them, never through them, to a free spot in front and aside of the gaze at about eye
+        /// height (owner, 28/10/2026).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheCompanionComesBackIntoSightWithoutChasingEveryGlance()
+        {
+            yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(MuseumScene,
+                new LoadSceneParameters(LoadSceneMode.Additive));
+            var flow = Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var settings = new UnityEditor.SerializedObject(flow.GetComponent<TourLoader>());
+            settings.FindProperty("apiBase").stringValue = "http://127.0.0.1:9/api/v1";
+            settings.ApplyModifiedPropertiesWithoutUndo();
+            flow.GetComponent<MuseumEntryView>().HeadsetActive = () => false;
+            var companion = Object.FindAnyObjectByType<MuseumCompanion>();
+            var body = Object.FindAnyObjectByType<DesktopVisitorController>().GetComponent<CharacterController>();
+            var view = MuseumCompanionSettings.Current.InView;
+            yield return null;
+            flow.EnterImmediately();
+            Place(body, new Vector3(0, .05f, -48));
+            body.transform.rotation = Quaternion.identity;
+            for (float waited = 0; waited < 3; waited += Time.deltaTime) yield return null;
+            Assert.That(companion.Placed, Is.True);
+            Assert.That(companion.InSight, Is.True, "It starts in sight: " + companion.WalkState);
+
+            // A glance away and back, shorter than the delay: it stays where it is.
+            var before = companion.transform.position;
+            body.transform.rotation = Quaternion.Euler(0, 180, 0);
+            for (float waited = 0; waited < view.OutOfSightSeconds * .6f; waited += Time.deltaTime) yield return null;
+            body.transform.rotation = Quaternion.identity;
+            for (float waited = 0; waited < 1; waited += Time.deltaTime) yield return null;
+            Assert.That(CompanionTrail.Planar(companion.transform.position - before), Is.LessThan(.1f), "A glance is not chased: " + companion.WalkState);
+
+            // Turned away for good: after the delay it comes round into sight.
+            body.transform.rotation = Quaternion.Euler(0, 180, 0);
+            float nearest = float.MaxValue;
+            bool movedEarly = false;
+            for (float waited = 0; waited < 7; waited += Time.deltaTime)
+            {
+                yield return null;
+                if (waited < view.OutOfSightSeconds * .8f) movedEarly |= CompanionTrail.Planar(companion.transform.position - before) > .1f;
+                nearest = Mathf.Min(nearest, CompanionTrail.Planar(companion.transform.position - body.transform.position));
+                Assert.That(companion.Free(companion.transform.position, companion.transform.position.y, out _), Is.True,
+                    "It moves over free floor: " + companion.transform.position);
+            }
+            Assert.That(movedEarly, Is.False, "It waits a moment before moving.");
+            Assert.That(companion.InSight, Is.True, "Back in sight: " + companion.WalkState);
+            var offset = companion.transform.position - body.transform.position;
+            offset.y = 0;
+            Assert.That(offset.magnitude, Is.InRange(view.Distance * .7f, view.Distance * 1.3f), "At about the set distance.");
+            float angle = Vector3.Angle(Gaze(body), offset);
+            Assert.That(angle, Is.InRange(view.Angle - 12, view.Angle + 12), "In front and aside of the gaze, not in its middle.");
+            Assert.That(nearest, Is.GreaterThan(view.PassClearance - .25f), "It went round the visitor, not through them.");
+            var eyes = body.GetComponentInChildren<Camera>().transform.position;
+            float own = companion.BirdCentre.y - companion.Lift;
+            float wanted = Mathf.Clamp(eyes.y - view.EyeDrop, own + view.LiftMin, own + view.LiftMax);
+            Assert.That(companion.BirdCentre.y, Is.EqualTo(wanted).Within(.1f), "At about the height of the eyes.");
+            var bounds = companion.Figure.WorldBounds();
+            Assert.That(Mathf.Abs(bounds.center.y - companion.BirdCentre.y), Is.LessThan(.2f), "The bird flies where the companion says it is.");
         }
 
         /// <summary>
