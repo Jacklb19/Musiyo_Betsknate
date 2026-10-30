@@ -352,6 +352,12 @@ namespace MusiyoBetsknate.Tests
                 const int crop = 360;
                 var area = new Rect(Mathf.Clamp(at.x - crop / 2, 0, EyeWidth - crop), Mathf.Clamp(at.y - crop / 2, 0, EyeHeight - crop), crop, crop);
                 Shot(spectator, RoundTwo, "luna_visor_detalle_pixeles_reales", EyeWidth, EyeHeight, area);
+                // Facing the valley itself, west, as the overlook and its bench are turned.
+                spectator.transform.rotation = Quaternion.LookRotation(Vector3.left, Vector3.up);
+                Shot(spectator, RoundTwo, "luna_visor_mirando_al_valle", EyeWidth, EyeHeight);
+                var valley = spectator.WorldToViewportPoint(standing + moon * 500);
+                notes.Add("mirando al valle (oeste) la luna queda en " + new Vector2(valley.x * EyeWidth, valley.y * EyeHeight).ToString("F0")
+                    + (valley.z > 0 && valley.x is > 0 and < 1 && valley.y is > 0 and < 1 ? ", dentro de la vista" : ", fuera de la vista"));
                 UnityEngine.Object.Destroy(spectator.gameObject);
             }
             // From the arrival's path, turning to where the moon stands.

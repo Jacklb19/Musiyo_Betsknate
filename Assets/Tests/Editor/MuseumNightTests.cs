@@ -201,14 +201,18 @@ namespace MusiyoBetsknate.Tests
             var settings = MuseumNightAtmosphere.Current;
             var moon = settings.MoonDirection();
             Assert.That(moon.magnitude, Is.EqualTo(1).Within(.001f));
-            Assert.That(moon.x, Is.LessThan(-.8f), "Over the valley the overlook looks out on, to the west.");
-            Assert.That(Mathf.Asin(moon.y) * Mathf.Rad2Deg, Is.InRange(18f, 32f), "High enough over the forest, low enough for a level gaze.");
+            // The overlook looks west over the valley; the forest hides the sky there below about 29 degrees, and is open
+            // above it towards the north-west (the survey in the night captures, 30/10/2026).
+            float azimuth = Mathf.Atan2(moon.x, moon.z) * Mathf.Rad2Deg;
+            Assert.That(azimuth, Is.InRange(-70f, -50f), "West-north-west, over the valley the overlook looks out on.");
+            Assert.That(Mathf.Asin(moon.y) * Mathf.Rad2Deg, Is.InRange(28f, 32f), "Above the forest, low enough for a level gaze.");
             Assert.That(settings.MoonSize, Is.InRange(2f, 4f), "Larger than the real half degree, still a moon in the sky.");
             var north = MuseumNightAtmosphere.Parse(Resources.Load<TextAsset>(MuseumNightAtmosphere.ResourceName).text
-                .Replace("\"moon_azimuth_degrees\": 270", "\"moon_azimuth_degrees\": 0").Replace("\"moon_elevation_degrees\": 24", "\"moon_elevation_degrees\": 30"));
+                .Replace("\"moon_azimuth_degrees\": 302", "\"moon_azimuth_degrees\": 0").Replace("\"moon_elevation_degrees\": 31", "\"moon_elevation_degrees\": 30"));
             Assert.That(Vector3.Angle(north.MoonDirection(), Quaternion.Euler(-30, 0, 0) * Vector3.forward), Is.LessThan(.01f));
             Assert.Throws<InvalidOperationException>(() => MuseumNightAtmosphere.Parse(Resources.Load<TextAsset>(MuseumNightAtmosphere.ResourceName).text
-                .Replace("\"moon_elevation_degrees\": 24", "\"moon_elevation_degrees\": -10")), "Never under the horizon.");
+                .Replace("\"moon_elevation_degrees\": 31", "\"moon_elevation_degrees\": -10")), "Never under the horizon.");
+            Assert.That(settings.MoonGlints, Is.Empty, "Seen from the overlook the moon stands north-west of its lagoon: no reflection could be there.");
         }
 
         [Test]
@@ -257,7 +261,7 @@ namespace MusiyoBetsknate.Tests
             try
             {
                 var settings = MuseumNightAtmosphere.Parse(Resources.Load<TextAsset>(MuseumNightAtmosphere.ResourceName).text
-                    .Replace("{ \"x\": -27.5, \"z\": 19.0 }", "{ \"x\": -5, \"z\": -5 }"));
+                    .Replace("\"moon_glints\": []", "\"moon_glints\": [{ \"x\": -5, \"z\": -5 }]"));
                 var night = Museum();
                 night.Configure(null, null, settings);
                 Physics.SyncTransforms();
@@ -269,7 +273,7 @@ namespace MusiyoBetsknate.Tests
                 var vertices = mesh.vertices;
                 var colours = mesh.colors;
                 var onWall = vertices.Skip(4).Take(4).ToArray();
-                Assert.That(onWall.All(vertex => Mathf.Abs(vertex.z - 3.63f) < .01f), Is.True, "Upright on the wall's face, just in front of it.");
+                Assert.That(onWall.All(vertex => Mathf.Abs(vertex.z - 3.58f) < .01f), Is.True, "Upright before the wall's face, just in front of it.");
                 Assert.That(onWall.Max(vertex => vertex.y) - onWall.Min(vertex => vertex.y), Is.EqualTo(settings.LampWallSize).Within(.01f));
                 Assert.That(mesh.normals[4].z, Is.LessThan(-.99f), "Facing the lamp.");
                 Assert.That(colours[4].a, Is.EqualTo(settings.LampWallAlpha).Within(.001f), "Softer than the pool on the floor.");
@@ -279,8 +283,9 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(centre.x, Is.EqualTo(-5).Within(.01f));
                 Assert.That(centre.z, Is.EqualTo(-5).Within(.01f));
                 Assert.That(centre.y, Is.EqualTo(.08f).Within(.01f), "Just above the water.");
-                Assert.That(streak.Max(vertex => vertex.x) - streak.Min(vertex => vertex.x), Is.EqualTo(settings.MoonGlintLength).Within(.01f),
-                    "Lying towards the moon in the west.");
+                var towards = Vector3.ProjectOnPlane(settings.MoonDirection(), Vector3.up).normalized;
+                Assert.That(streak.Max(vertex => Vector3.Dot(vertex, towards)) - streak.Min(vertex => Vector3.Dot(vertex, towards)),
+                    Is.EqualTo(settings.MoonGlintLength).Within(.01f), "Lying towards where the moon stands.");
                 Assert.That(colours[8].b, Is.GreaterThan(colours[8].r), "Cold moonlight, not a lamp's.");
                 var block = new MaterialPropertyBlock();
                 night.Pools.GetPropertyBlock(block);

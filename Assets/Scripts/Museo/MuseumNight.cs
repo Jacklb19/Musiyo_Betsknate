@@ -470,9 +470,10 @@ namespace MusiyoBetsknate.Museum
                 glows.Add(new Glow(foot, Vector3.right * half, Vector3.forward * half, Alpha(poolColour, night.LampPoolAlpha)));
                 if (night.LampWallAlpha > 0 && night.LampWallSize > 0 && Wall(renderer.bounds.center, night.LampWallReach, out var wall, out var facing))
                 {
-                    // Across the wall and up it, facing the lamp: the same winding as a pool facing up.
+                    // Across the wall and up it, facing the lamp: the same winding as a pool facing up. A little off the
+                    // wall, so a round room's wall does not cut the glow's sides.
                     float wallHalf = night.LampWallSize * .5f;
-                    glows.Add(new Glow(wall + facing * .02f, Vector3.Cross(facing, Vector3.up) * wallHalf, Vector3.up * wallHalf,
+                    glows.Add(new Glow(wall + facing * .07f, Vector3.Cross(facing, Vector3.up) * wallHalf, Vector3.up * wallHalf,
                         Alpha(poolColour, night.LampWallAlpha)));
                     WallGlows++;
                 }
