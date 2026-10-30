@@ -439,12 +439,20 @@ namespace MusiyoBetsknate.Museum
             if (session?.Pivot == null || !session.Ready) return false;
             var mount = session.Point.Anchor.GetComponentInChildren<PointExhibitMount>();
             var parent = mount != null ? mount.transform : session.Point.Anchor.LookTarget;
-            var fit = mount != null ? mount.ScaleFor(session.Size, session.NaturalScale) : Vector3.one;
+            var fit = Fit(session, mount);
             position = parent.TransformPoint(mount != null ? Vector3.up * (session.Size.y * fit.y * .5f) : Vector3.zero);
             rotation = Turns(session, mount) ? Quaternion.Euler(0, session.Yaw, 0) : parent.rotation;
             localScale = fit;
             return true;
         }
+
+        /// <summary>
+        /// Exhibition scale of a piece: fitted to its pedestal's mount, or, floating at its point, the size set for it in
+        /// <see cref="MuseumPieceSizes"/>, such as the masks at the size they were digitised at.
+        /// </summary>
+        private static Vector3 Fit(LoadSession piece, PointExhibitMount mount)
+            => mount != null ? mount.ScaleFor(piece.Size, piece.NaturalScale)
+                : Vector3.one * MuseumPieceSizes.Current.ScaleFor(piece.Slug, piece.NaturalScale);
 
         /// <summary>A piece turns to the visitor unless it stands at its natural size, like the Castle built into the courtyard.</summary>
         private static bool Turns(LoadSession piece, PointExhibitMount mount) => piece.YawSet && (mount == null || !mount.KeepNaturalScale);
@@ -499,7 +507,7 @@ namespace MusiyoBetsknate.Museum
             var parent = examining ? viewCamera.transform : mount != null ? mount.transform : piece.Point.Anchor.LookTarget;
             if (pivot.parent != parent) pivot.SetParent(parent, false);
             float reveal = Mathf.SmoothStep(.85f, 1, Mathf.Clamp01((Time.realtimeSinceStartup - piece.ReadyAt) / RevealSeconds));
-            var fit = mount != null ? mount.ScaleFor(piece.Size, piece.NaturalScale) : Vector3.one;
+            var fit = Fit(piece, mount);
             pivot.localPosition = examining ? Vector3.forward * pose.Distance
                 : mount != null ? Vector3.up * (piece.Size.y * fit.y * reveal * .5f) : Vector3.zero;
             pivot.localRotation = examining ? pose.Rotation : Quaternion.identity;
