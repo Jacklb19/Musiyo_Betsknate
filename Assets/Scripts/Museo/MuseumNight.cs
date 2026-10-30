@@ -127,6 +127,8 @@ namespace MusiyoBetsknate.Museum
         private bool dayKept;
         private bool automatic;
         private bool asked;
+        /// <summary>The museum's sun while it shines as the moon.</summary>
+        private Light moon;
         private readonly List<(Renderer renderer, int index, Color emission)> lamps = new();
         private readonly List<(Renderer renderer, bool lagoon)> waters = new();
         private readonly Dictionary<(Renderer, int), MaterialPropertyBlock> keptBlocks = new();
@@ -246,7 +248,14 @@ namespace MusiyoBetsknate.Museum
             Find();
             if (level <= 0)
             {
-                // The day exactly as delivered.
+                // The day exactly as delivered. The light that was the moon gets its daylight first, so the day finds it
+                // again as its brightest directional light.
+                if (moon != null)
+                {
+                    moon.color = MuseumExperienceConfiguration.ColorValue(day.SunColor);
+                    moon.intensity = day.SunIntensity;
+                    moon = null;
+                }
                 day.Apply();
                 if (dayKept) RenderSettings.reflectionIntensity = dayReflection;
                 Restore();
@@ -267,9 +276,10 @@ namespace MusiyoBetsknate.Museum
             RenderSettings.ambientEquatorColor = MuseumNightAtmosphere.Mix(MuseumExperienceConfiguration.ColorValue(day.AmbientEquator), equator, t);
             RenderSettings.ambientGroundColor = MuseumNightAtmosphere.Mix(MuseumExperienceConfiguration.ColorValue(day.AmbientGround), ground, t);
             RenderSettings.reflectionIntensity = MuseumNightAtmosphere.Mix(dayReflection, night.ReflectionIntensity, t);
-            var sun = RenderSettings.sun;
+            var sun = moon != null ? moon : RenderSettings.sun;
             if (sun != null)
             {
+                moon = sun;
                 sun.color = MuseumNightAtmosphere.Mix(MuseumExperienceConfiguration.ColorValue(day.SunColor), MuseumExperienceConfiguration.ColorValue(night.MoonColor), t);
                 sun.intensity = MuseumNightAtmosphere.Mix(day.SunIntensity, night.MoonIntensity, t);
             }
