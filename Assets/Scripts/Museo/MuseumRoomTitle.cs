@@ -25,6 +25,7 @@ namespace MusiyoBetsknate.Museum
         /// <summary>Seconds a title waits for a record, a narration or the companion before it shows smaller anyway.</summary>
         public const float BusyWaitSeconds = 6;
         public const float CompactScale = .72f;
+        public const float ShrinkSeconds = .3f;
         /// <summary>On a screen: distance from the top edge, in interface units.</summary>
         public const float ScreenTop = 40;
         public const float NameSize = 40, PositionSize = 19;
@@ -193,6 +194,7 @@ namespace MusiyoBetsknate.Museum
         /// <summary>One moment of the title's life at the given time; Update calls it with the real time, tests with their own.</summary>
         public void Tick(float time)
         {
+            float step = Mathf.Max(0, time - now);
             now = time;
             bool exploring = flow == null || flow.Phase == VisitPhase.Exploring && !flow.BlocksInput;
             if (!exploring) exploringSince = -1;
@@ -210,6 +212,10 @@ namespace MusiyoBetsknate.Museum
                 float total = FadeInSeconds + HoldSeconds + FadeOutSeconds;
                 group.alpha = age < FadeInSeconds ? Mathf.SmoothStep(0, 1, age / FadeInSeconds)
                     : age < FadeInSeconds + HoldSeconds ? 1 : Mathf.SmoothStep(1, 0, (age - FadeInSeconds - HoldSeconds) / FadeOutSeconds);
+                // A record or a narration that starts while the title shows sends it smaller, out of their way.
+                if (!Compact && Busy != null && Busy()) Compact = true;
+                float scale = Mathf.MoveTowards(card.localScale.x, Compact ? CompactScale : 1, step * (1 - CompactScale) / ShrinkSeconds);
+                card.localScale = Vector3.one * scale;
                 if (age >= total) Hide();
                 return;
             }

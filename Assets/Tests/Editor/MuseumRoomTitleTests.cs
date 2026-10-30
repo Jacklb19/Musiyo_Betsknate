@@ -133,6 +133,18 @@ namespace MusiyoBetsknate.Tests
             Assert.That(title.ShownRoomKey, Is.EqualTo("room.3"));
             Assert.That(title.Compact, Is.True, "Still busy: it shows smaller instead of waiting for ever.");
             Assert.That(title.Card.localScale.x, Is.EqualTo(MuseumRoomTitle.CompactScale));
+            // A record opened while a title is in view: it stays, shrinking out of the way.
+            busy = false;
+            Run(10 + MuseumRoomTitle.BusyWaitSeconds + .2f, 25);
+            room = "room.4";
+            Run(25, 26.2f);
+            Assert.That(title.ShownRoomKey, Is.EqualTo("room.4"));
+            Assert.That(title.Card.localScale.x, Is.EqualTo(1));
+            busy = true;
+            Run(26.25f, 26.25f + MuseumRoomTitle.ShrinkSeconds + .1f);
+            Assert.That(title.ShownRoomKey, Is.EqualTo("room.4"), "It does not vanish under the record.");
+            Assert.That(title.Compact, Is.True);
+            Assert.That(title.Card.localScale.x, Is.EqualTo(MuseumRoomTitle.CompactScale).Within(.001f));
         }
 
         [Test]
