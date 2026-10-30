@@ -21,7 +21,10 @@ namespace MusiyoBetsknate.Museum
             return Mathf.Min(1, .8f * Mathf.Sin(angle) / radius);
         }
 
-        public static bool Normalize(Transform model, float size = .6f)
+        /// <summary>Longest side, in metres, every piece of the exhibition is brought to before its own size is applied.</summary>
+        public const float ExhibitSize = .6f;
+
+        public static bool Normalize(Transform model, float size = ExhibitSize)
         {
             var renderers = model.GetComponentsInChildren<Renderer>();
             if (renderers.Length == 0) return false;

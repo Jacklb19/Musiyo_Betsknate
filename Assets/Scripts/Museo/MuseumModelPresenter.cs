@@ -61,6 +61,8 @@ namespace MusiyoBetsknate.Museum
             /// <summary>Compass angle the piece's face is turned to, once known.</summary>
             public float Yaw;
             public bool YawSet;
+            /// <summary>Height of the pedestal or floor below a floating piece's point, once measured.</summary>
+            public float? Below;
             private bool cancelled;
             public void Cancel()
             {
@@ -439,11 +441,42 @@ namespace MusiyoBetsknate.Museum
             if (session?.Pivot == null || !session.Ready) return false;
             var mount = session.Point.Anchor.GetComponentInChildren<PointExhibitMount>();
             var parent = mount != null ? mount.transform : session.Point.Anchor.LookTarget;
-            var fit = mount != null ? mount.ScaleFor(session.Size, session.NaturalScale) : Vector3.one;
-            position = parent.TransformPoint(mount != null ? Vector3.up * (session.Size.y * fit.y * .5f) : Vector3.zero);
+            var fit = Fit(session, mount);
+            position = parent.TransformPoint(Vector3.up * (mount != null ? session.Size.y * fit.y * .5f : LiftFor(session, fit)));
             rotation = Turns(session, mount) ? Quaternion.Euler(0, session.Yaw, 0) : parent.rotation;
             localScale = fit;
             return true;
+        }
+
+        /// <summary>
+        /// Exhibition scale of a piece: fitted to its pedestal's mount, or, floating at its point, the size set for it in
+        /// <see cref="MuseumPieceSizes"/>, such as the masks at the size they were digitised at.
+        /// </summary>
+        private static Vector3 Fit(LoadSession piece, PointExhibitMount mount)
+            => mount != null ? mount.ScaleFor(piece.Size, piece.NaturalScale)
+                : Vector3.one * MuseumPieceSizes.Current.ScaleFor(piece.Slug, piece.NaturalScale);
+
+        /// <summary>Space a floating piece keeps above the pedestal or floor below its point, in metres.</summary>
+        public const float FloatClearance = .08f;
+
+        /// <summary>
+        /// Height a floating piece rises above its point so its lowest part keeps <see cref="FloatClearance"/> above what
+        /// stands below: nothing for a piece of the usual size, a few centimetres for a mask at its real size over its
+        /// pedestal. What stands below is measured once per piece, by one ray down past the piece itself.
+        /// </summary>
+        private static float LiftFor(LoadSession piece, Vector3 fit)
+        {
+            // Pieces at the usual size float where they always did.
+            if (fit.y <= 1.001f) return 0;
+            var from = piece.Point.Anchor.LookTarget.position;
+            if (!piece.Below.HasValue)
+            {
+                float surface = float.NegativeInfinity;
+                foreach (var hit in Physics.RaycastAll(from, Vector3.down, 3, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                    if (piece.Pivot == null || !hit.transform.IsChildOf(piece.Pivot.transform)) surface = Mathf.Max(surface, hit.point.y);
+                piece.Below = surface;
+            }
+            return Mathf.Max(0, piece.Below.Value + FloatClearance - (from.y - piece.Size.y * fit.y * .5f));
         }
 
         /// <summary>A piece turns to the visitor unless it stands at its natural size, like the Castle built into the courtyard.</summary>
@@ -499,9 +532,9 @@ namespace MusiyoBetsknate.Museum
             var parent = examining ? viewCamera.transform : mount != null ? mount.transform : piece.Point.Anchor.LookTarget;
             if (pivot.parent != parent) pivot.SetParent(parent, false);
             float reveal = Mathf.SmoothStep(.85f, 1, Mathf.Clamp01((Time.realtimeSinceStartup - piece.ReadyAt) / RevealSeconds));
-            var fit = mount != null ? mount.ScaleFor(piece.Size, piece.NaturalScale) : Vector3.one;
+            var fit = Fit(piece, mount);
             pivot.localPosition = examining ? Vector3.forward * pose.Distance
-                : mount != null ? Vector3.up * (piece.Size.y * fit.y * reveal * .5f) : Vector3.zero;
+                : mount != null ? Vector3.up * (piece.Size.y * fit.y * reveal * .5f) : Vector3.up * LiftFor(piece, fit);
             pivot.localRotation = examining ? pose.Rotation : Quaternion.identity;
             if (!examining && Turns(piece, mount)) pivot.rotation = Quaternion.Euler(0, piece.Yaw, 0);
             pivot.localScale = examining ? Vector3.one * piece.ExaminationScale : fit * reveal;

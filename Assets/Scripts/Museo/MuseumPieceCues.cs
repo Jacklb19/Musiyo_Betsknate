@@ -182,10 +182,11 @@ namespace MusiyoBetsknate.Museum
         }
 
         /// <summary>Where the arrows stand: beside the piece on show, or above the pedestal while no piece is there.</summary>
-        private bool TryPlace(out Vector3 centre, out float halfWidth)
+        private bool TryPlace(out Vector3 centre, out float halfWidth, out Vector3 extents)
         {
             centre = default;
             halfWidth = .15f;
+            extents = Vector3.zero;
             var point = interaction != null ? interaction.ActivePoint : null;
             if (point == null || point.Anchor == null) return false;
             var renderers = presenter != null && presenter.ModelPoint == point ? presenter.Renderers : null;
@@ -195,6 +196,7 @@ namespace MusiyoBetsknate.Museum
                 foreach (var item in renderers) if (item != null) bounds.Encapsulate(item.bounds);
                 centre = bounds.center;
                 halfWidth = Mathf.Max(bounds.extents.x, bounds.extents.z);
+                extents = bounds.extents;
                 return true;
             }
             if (presenter != null && presenter.TryExhibitPose(out var position, out _, out _))
@@ -226,7 +228,8 @@ namespace MusiyoBetsknate.Museum
             // While the piece is in the hand there is nothing beside the pedestal to step from.
             var centre = Vector3.zero;
             float halfWidth = 0;
-            bool visible = Shown && (grab == null || !grab.Held) && TryPlace(out centre, out halfWidth);
+            var extents = Vector3.zero;
+            bool visible = Shown && (grab == null || !grab.Held) && TryPlace(out centre, out halfWidth, out extents);
             if (surface.gameObject.activeSelf != visible) surface.gameObject.SetActive(visible);
             if (!visible) return;
             RefreshLabels();
@@ -234,8 +237,10 @@ namespace MusiyoBetsknate.Museum
             toViewer.y = 0;
             if (toViewer.sqrMagnitude > .01f) heading = Mathf.Atan2(toViewer.x, toViewer.z) * Mathf.Rad2Deg;
             var facing = Quaternion.Euler(0, heading, 0) * Vector3.forward;
-            // The arrows stand a little in front of the piece, on the visitor's side, so the piece never hides them.
-            surface.SetPositionAndRotation(centre + facing * Mathf.Min(halfWidth, .2f), Quaternion.LookRotation(-facing, Vector3.up));
+            // The arrows stand a little in front of the piece, on the visitor's side, so the piece never hides them; before
+            // the front of a large one, such as a mask at its real size.
+            float front = Mathf.Abs(facing.x) * extents.x + Mathf.Abs(facing.z) * extents.z;
+            surface.SetPositionAndRotation(centre + facing * Mathf.Max(Mathf.Min(halfWidth, .2f), front), Quaternion.LookRotation(-facing, Vector3.up));
             surface.sizeDelta = new Vector2((halfWidth + Gap + Diameter) * 2 * UnitsPerMetre, Diameter * UnitsPerMetre * 1.4f);
             // The position stands just below the piece, where it does not cover it.
             float below = Mathf.Max(0, (centre.y - Bottom(centre)) * UnitsPerMetre - surface.sizeDelta.y * .5f);
