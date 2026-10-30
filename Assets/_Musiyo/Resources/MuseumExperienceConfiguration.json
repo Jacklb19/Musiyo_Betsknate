@@ -61,6 +61,8 @@
   "grab_desktop_rotation": 0.35,
   "reading_follow_line": 0.3,
   "reading_follow_seconds": 0.35,
+  "narration_speed_headset": true,
+  "narration_speed_web": true,
   "auto_tour_speed": 0.7,
   "auto_tour_acceleration": 0.8,
   "auto_tour_stop_seconds": 6,

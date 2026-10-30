@@ -33,6 +33,8 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("vignette")] public string Vignette { get; private set; } = MuseumComfort.Name(MuseumVignette.Soft);
         /// <summary>Metres added to the height of the eyes on a headset, for a seated visitor or a tall one.</summary>
         [JsonProperty("height_offset")] public float HeightOffset { get; private set; }
+        /// <summary>Speed the narrations are heard at: 1 or 1.5 (owner, 28/10/2026). Older saves without it hear 1.</summary>
+        [JsonProperty("narration_speed")] public float NarrationSpeed { get; private set; } = MuseumNarrationSpeed.Normal;
         [JsonIgnore] private MuseumExperienceConfiguration configuration;
         public event Action Changed;
 
@@ -64,6 +66,7 @@ namespace MusiyoBetsknate.Museum
             if (MuseumComfort.ParseVignette(result.Vignette) == null) result.Vignette = MuseumComfort.Name(MuseumVignette.Soft);
             if (!MuseumExperienceConfiguration.Finite(result.HeightOffset) || Mathf.Abs(result.HeightOffset) > MuseumComfort.MaxHeightOffset)
                 result.HeightOffset = 0;
+            if (!MuseumNarrationSpeed.IsSpeed(result.NarrationSpeed)) result.NarrationSpeed = MuseumNarrationSpeed.Normal;
             result.schemaVersion = Version;
             result.configuration = settings;
             return result;
@@ -128,6 +131,12 @@ namespace MusiyoBetsknate.Museum
             HeightOffset = Mathf.Clamp(metres, -MuseumComfort.MaxHeightOffset, MuseumComfort.MaxHeightOffset);
             Changed?.Invoke();
         }
+        public void SetNarrationSpeed(float value)
+        {
+            if (!MuseumNarrationSpeed.IsSpeed(value)) return;
+            NarrationSpeed = value;
+            Changed?.Invoke();
+        }
         /// <summary>Turning the visitor chose, or the shipped default.</summary>
         public MuseumTurnMode Turn(MuseumTurnMode fallback) => MuseumTurning.ParseMode(TurnMode) ?? fallback;
         /// <summary>The vignette the visitor chose; soft until they choose.</summary>
@@ -143,6 +152,7 @@ namespace MusiyoBetsknate.Museum
             TurnSpeed = 0;
             Vignette = MuseumComfort.Name(MuseumVignette.Soft);
             HeightOffset = 0;
+            NarrationSpeed = MuseumNarrationSpeed.Normal;
             Changed?.Invoke();
         }
         public string Serialize() => JsonConvert.SerializeObject(this);

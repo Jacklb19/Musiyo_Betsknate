@@ -323,6 +323,147 @@ namespace MusiyoBetsknate.Tests
                 PlayerPrefs.Save();
             }
         }
+
+        /// <summary>
+        /// The 1.5x control beside pause and restart (owner, 28/10/2026): the narration goes on from the same words, faster
+        /// and at the same pitch, its subtitles keep time with the recording, every pause still holds and the choice is
+        /// remembered.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ANarrationIsHeardAtOneAndAHalfAndKeepsItsSubtitlesInTime()
+        {
+            bool hadPreferences = PlayerPrefs.HasKey(MuseumVisitorPreferences.StorageKey);
+            string preferencesBefore = PlayerPrefs.GetString(MuseumVisitorPreferences.StorageKey, "");
+            PlayerPrefs.DeleteKey(MuseumVisitorPreferences.StorageKey);
+            InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Mouse>();
+            var api = StartService();
+            yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(MuseumScene,
+                new LoadSceneParameters(LoadSceneMode.Additive));
+            try
+            {
+                var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
+                var loader = flow.GetComponent<TourLoader>();
+                var settings = new UnityEditor.SerializedObject(loader);
+                settings.FindProperty("apiBase").stringValue = api;
+                settings.ApplyModifiedPropertiesWithoutUndo();
+                yield return null;
+                var runtime = flow.GetComponent<TourRuntime>();
+                var interaction = flow.GetComponent<MuseumInteraction>();
+                var narration = flow.GetComponent<MuseumNarration>();
+                var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
+                var body = visitor.GetComponent<CharacterController>();
+                flow.GetComponent<MuseumEntryView>().HeadsetActive = () => false;
+                for (float waited = 0; loader.State == TourLoadState.Loading && waited < 20; waited += Time.unscaledDeltaTime) yield return null;
+                RoomContractV1 Room(string key, int order, params PointContractV1[] points)
+                    => new RoomContractV1 { key = key, name = key, order = order, points = points };
+                Assert.That(runtime.Apply(new TourContractV1
+                {
+                    schema_version = 1, tour = new TourMetadataContractV1 { key = runtime.TourKey, name = "Test" },
+                    rooms = new[]
+                    {
+                        Room("room.arrival", 0), Room("room.welcome", 1), Room("room.characters", 2), Room("room.instruments", 3),
+                        Room("room.hearth", 4), Room("room.overlook", 5, new PointContractV1
+                        {
+                            key = "punto.mirador.creditos", name = "Créditos", order = 0, activation = new[] { "proximity", "keyboard" },
+                            elements = new[] { new ElementSummaryContractV1 { slug = Slug, title = "Elemento sintético", has_narration = true } }
+                        }),
+                    },
+                }, out var error), Is.True, error);
+                flow.EnterImmediately();
+                yield return null;
+                var point = runtime.FindPoint("punto.mirador.creditos");
+                Assert.That(visitor.FocusPoint(point.Anchor), Is.True);
+                for (float waited = 0; narration.State != NarrationState.Playing && waited < 20; waited += Time.unscaledDeltaTime) yield return null;
+                Assert.That(narration.State, Is.EqualTo(NarrationState.Playing), narration.Status);
+                Assert.That(narration.Speed, Is.EqualTo(1), "A first visit hears 1x.");
+                yield return null;
+                var icons = UnityEngine.Object.FindAnyObjectByType<MuseumNarrationButtons>();
+                Assert.That(icons.Speed, Is.Not.Null);
+                Assert.That(icons.Speed.gameObject.activeInHierarchy, Is.True, "The speed control stands beside pause and restart.");
+                Assert.That(icons.SpeedLit, Is.False);
+                Assert.That(icons.SpeedLabel, Does.Contain("1,5"));
+
+                float before = narration.PlaybackTime;
+                icons.Speed.onClick.Invoke();
+                Assert.That(narration.Speed, Is.EqualTo(1.5f));
+                Assert.That(PlayerPrefs.GetString(MuseumVisitorPreferences.StorageKey, ""), Does.Contain("\"narration_speed\":1.5"),
+                    "Remembered for the next visit.");
+                for (float waited = 0; !narration.SpeedApplied && waited < 5; waited += Time.unscaledDeltaTime) yield return null;
+                Assert.That(narration.SpeedApplied, Is.True, "The faster narration is ready in a moment.");
+                Assert.That(narration.State, Is.EqualTo(NarrationState.Playing));
+                Assert.That(narration.PlaybackTime, Is.GreaterThanOrEqualTo(before - .1f), "It goes on from the same words.");
+                Assert.That(narration.ContextSource.pitch, Is.EqualTo(1), "Never a raised voice.");
+                Assert.That(narration.Duration, Is.EqualTo(8).Within(.3f), "The recording's own length.");
+                yield return null;
+                Assert.That(icons.SpeedLit, Is.True, "Lit while heard faster.");
+                Assert.That(icons.SpeedLabel, Does.Contain("normal"));
+
+                float start = narration.PlaybackTime, clock = Time.realtimeSinceStartup;
+                yield return new WaitForSecondsRealtime(1);
+                float rate = (narration.PlaybackTime - start) / (Time.realtimeSinceStartup - clock);
+                Assert.That(rate, Is.EqualTo(1.5f).Within(.25f), "One second heard covers a second and a half of the recording.");
+
+                // The subtitles follow the recording's time: its second cue starts at 4 s of the recording.
+                for (float waited = 0; narration.PlaybackTime < 4.1f && narration.State == NarrationState.Playing && waited < 4; waited += Time.unscaledDeltaTime) yield return null;
+                Assert.That(narration.Subtitle, Is.EqualTo("Sin contenido cultural."), "The cue in force at 4 s of the recording.");
+
+                narration.TogglePause();
+                Assert.That(narration.State, Is.EqualTo(NarrationState.Paused));
+                float stoppedAt = narration.PlaybackTime;
+                yield return new WaitForSecondsRealtime(.3f);
+                Assert.That(narration.PlaybackTime, Is.EqualTo(stoppedAt).Within(.05f), "Pause holds at 1.5x.");
+                narration.TogglePause();
+                Assert.That(narration.State, Is.EqualTo(NarrationState.Playing));
+
+                narration.Repeat();
+                yield return null;
+                Assert.That(narration.PlaybackTime, Is.LessThan(.3f), "Restart goes back to the beginning.");
+                Assert.That(narration.SpeedApplied, Is.True, "And stays faster.");
+                for (float waited = 0; narration.Subtitle != "Audio sintético de prueba." && waited < 2; waited += Time.unscaledDeltaTime) yield return null;
+                Assert.That(narration.Subtitle, Is.EqualTo("Audio sintético de prueba."));
+
+                // Walking away pauses where it was; coming back resumes from there, still faster.
+                var near = visitor.transform.position;
+                var radius = point.Anchor.ActivationRadius + MuseumExperienceConfiguration.Current.PointLeaveMargin + 1;
+                Place(body, point.Anchor.transform.position + (near - point.Anchor.transform.position).normalized * radius
+                    + Vector3.up * (near.y - point.Anchor.transform.position.y));
+                for (float waited = 0; narration.State == NarrationState.Playing && waited < 2; waited += Time.unscaledDeltaTime) yield return null;
+                Assert.That(narration.PausedByDistance, Is.True);
+                stoppedAt = narration.PlaybackTime;
+                yield return new WaitForSecondsRealtime(.3f);
+                Assert.That(narration.PlaybackTime, Is.EqualTo(stoppedAt).Within(.05f), "Nothing plays while the visitor is away.");
+                Place(body, near);
+                for (float waited = 0; narration.State != NarrationState.Playing && waited < 2; waited += Time.unscaledDeltaTime) yield return null;
+                Assert.That(narration.State, Is.EqualTo(NarrationState.Playing), "Returning resumes the narration.");
+                Assert.That(narration.SpeedApplied, Is.True);
+
+                interaction.SetPaused(true);
+                Assert.That(narration.State, Is.EqualTo(NarrationState.Paused), "Pausing the visit pauses the narration.");
+                interaction.SetPaused(false);
+                Assert.That(narration.State, Is.EqualTo(NarrationState.Playing));
+
+                // Back to 1x from the same words.
+                before = narration.PlaybackTime;
+                icons.Speed.onClick.Invoke();
+                Assert.That(narration.Speed, Is.EqualTo(1));
+                Assert.That(narration.SpeedApplied, Is.True, "1x needs no preparation.");
+                Assert.That(narration.PlaybackTime, Is.EqualTo(before).Within(.1f), "It goes on from the same words.");
+                start = narration.PlaybackTime;
+                clock = Time.realtimeSinceStartup;
+                yield return new WaitForSecondsRealtime(.6f);
+                rate = (narration.PlaybackTime - start) / (Time.realtimeSinceStartup - clock);
+                Assert.That(rate, Is.EqualTo(1).Within(.2f));
+                yield return null;
+                Assert.That(icons.SpeedLit, Is.False);
+            }
+            finally
+            {
+                if (hadPreferences) PlayerPrefs.SetString(MuseumVisitorPreferences.StorageKey, preferencesBefore);
+                else PlayerPrefs.DeleteKey(MuseumVisitorPreferences.StorageKey);
+                PlayerPrefs.Save();
+            }
+        }
 #endif
     }
 }

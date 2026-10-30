@@ -34,6 +34,17 @@ namespace MusiyoBetsknate.Museum
         /// <summary>Seconds the narration of a record takes to fade out when the visitor moves to another record.</summary>
         public const float SwitchFadeSeconds = .6f;
         private MuseumPointPresence presence;
+        /// <summary>The narration as downloaded, and the same narration stretched to be heard 1.5 times as fast.</summary>
+        private AudioClip narrationClip, fastClip;
+        private float speed = MuseumNarrationSpeed.Normal;
+        private bool stretching, stretchFailed;
+        /// <summary>Grows with every narration cleared, so a stretch finished for an earlier one is dropped.</summary>
+        private int stretchGeneration;
+        /// <summary>Temporary address of the narration, which the browser's audio element plays at 1.5x.</summary>
+        private string narrationUrl;
+        private readonly BrowserNarration browser = new BrowserNarration();
+        private bool browserOpen, inBrowser, browserFailed;
+        private AudioListener listener;
         public NarrationState State { get; private set; }
         public string Status { get; private set; } = "";
         public string Transcription { get; private set; } = "";
@@ -47,9 +58,18 @@ namespace MusiyoBetsknate.Museum
         public float Volume => volume;
         /// <summary>True while the previous record's narration fades out before the next one is offered.</summary>
         public bool Fading => fading != null;
-        public bool CanPlay => source != null && source.clip != null;
-        public float PlaybackTime => CanPlay ? source.time : 0;
-        public float Duration => CanPlay ? source.clip.length : 0;
+        public bool CanPlay => source != null && narrationClip != null;
+        /// <summary>Seconds into the narration as recorded, at either speed, so subtitles and the reading keep time.</summary>
+        public float PlaybackTime => !CanPlay ? 0 : inBrowser ? browser.Time
+            : fastClip != null && source.clip == fastClip ? source.time * MuseumNarrationSpeed.Fast : source.time;
+        public float Duration => CanPlay ? narrationClip.length : 0;
+        /// <summary>Speed chosen for the narrations: 1 or 1.5.</summary>
+        public float Speed => speed;
+        /// <summary>True while the narration is heard at the chosen speed; 1.5x needs a moment to be prepared first.</summary>
+        public bool SpeedApplied => speed <= MuseumNarrationSpeed.Normal || inBrowser || fastClip != null && source.clip == fastClip;
+        /// <summary>False where faster narration cannot keep the voice's pitch, such as a browser without it.</summary>
+        public bool SpeedAvailable => !browserFailed && !stretchFailed && (!InBrowserBuild || BrowserNarration.Available);
+        private static bool InBrowserBuild => Application.platform == RuntimePlatform.WebGLPlayer;
         public AudioSource ContextSource => source;
         public event Action Changed;
         public event Action SubtitleChanged;
@@ -132,7 +152,7 @@ namespace MusiyoBetsknate.Museum
 
         private IEnumerator FadeThenLoad(ElementSummaryContractV1 target, bool offer)
         {
-            for (float elapsed = 0; elapsed < SwitchFadeSeconds && source.isPlaying; elapsed += Time.unscaledDeltaTime)
+            for (float elapsed = 0; elapsed < SwitchFadeSeconds && Sounding; elapsed += Time.unscaledDeltaTime)
             {
                 source.volume = volume * (1 - Mathf.SmoothStep(0, 1, elapsed / SwitchFadeSeconds));
                 yield return null;
@@ -151,31 +171,43 @@ namespace MusiyoBetsknate.Museum
             Changed?.Invoke();
         }
         public void ToggleMute() { source.mute = !source.mute; Changed?.Invoke(); }
+
+        /// <summary>
+        /// Hears the narrations at <paramref name="value"/> times their speed, 1 or 1.5, with the voice's pitch kept. A
+        /// narration under way goes on from the same words; until its faster version is ready it is heard as it was.
+        /// </summary>
+        public void SetSpeed(float value)
+        {
+            if (!MuseumNarrationSpeed.IsSpeed(value) || Mathf.Approximately(value, speed)) return;
+            speed = value;
+            PrepareFast();
+            ApplySpeed();
+            Changed?.Invoke();
+        }
+
         public void TogglePause()
         {
             if (!CanPlay || interaction.State == InteractionState.Paused) return;
             pausedByDistance = false;
-            if (State == NarrationState.Playing) { source.Pause(); SetState(NarrationState.Paused, MuseumInterfaceText.Get("narration_paused")); }
+            if (State == NarrationState.Playing) { PausePlayback(); SetState(NarrationState.Paused, MuseumInterfaceText.Get("narration_paused")); }
             else if (State == NarrationState.Ready) Repeat();
-            else if (State == NarrationState.Paused) { source.UnPause(); SetState(NarrationState.Playing, MuseumInterfaceText.Get("narration_playing")); }
+            else if (State == NarrationState.Paused) { ResumePlayback(); SetState(NarrationState.Playing, MuseumInterfaceText.Get("narration_playing")); }
             else Repeat();
         }
         public void Repeat()
         {
             if (!CanPlay || interaction.State == InteractionState.Paused) return;
             pausedByDistance = false;
-            source.Stop();
-            source.Play();
-            Starts++;
+            PlayFromStart();
             SetState(NarrationState.Playing, MuseumInterfaceText.Get("narration_playing"));
             UpdateSubtitle();
         }
         private void OnInteractionChanged()
         {
             if (interaction.State == InteractionState.Paused && State == NarrationState.Playing)
-            { pausedByVisit = true; source.Pause(); SetState(NarrationState.Paused, MuseumInterfaceText.Get("narration_paused")); }
+            { pausedByVisit = true; PausePlayback(); SetState(NarrationState.Paused, MuseumInterfaceText.Get("narration_paused")); }
             else if (interaction.State != InteractionState.Paused && pausedByVisit && CanPlay)
-            { pausedByVisit = false; source.UnPause(); SetState(NarrationState.Playing, MuseumInterfaceText.Get("narration_playing")); }
+            { pausedByVisit = false; ResumePlayback(); SetState(NarrationState.Playing, MuseumInterfaceText.Get("narration_playing")); }
         }
         private void Update()
         {
@@ -186,9 +218,130 @@ namespace MusiyoBetsknate.Museum
                 SetState(NarrationState.Unavailable, MuseumInterfaceText.Get("narration_expired"));
                 return;
             }
-            if (State == NarrationState.Playing && !source.isPlaying)
+            if (inBrowser) FollowBrowser();
+            if (State == NarrationState.Playing && !Sounding)
                 SetState(NarrationState.Finished, MuseumInterfaceText.Get("narration_finished"));
             UpdateSubtitle();
+        }
+
+        /// <summary>True while the narration is being heard, from Unity's source or from the browser's element.</summary>
+        private bool Sounding => inBrowser ? browser.State == BrowserNarration.PlayState.Playing : source.isPlaying;
+
+        /// <summary>The clip heard in Unity at the chosen speed, once its faster version is ready.</summary>
+        private AudioClip SpeedClip => speed > MuseumNarrationSpeed.Normal && fastClip != null ? fastClip : narrationClip;
+
+        private void PlayFromStart()
+        {
+            source.Stop();
+            Starts++;
+            if (UseBrowser()) { inBrowser = true; browser.Play(0, MuseumNarrationSpeed.Fast); return; }
+            if (inBrowser) { browser.Pause(); inBrowser = false; }
+            if (source.clip != SpeedClip) source.clip = SpeedClip;
+            source.Play();
+        }
+        private void PausePlayback() { if (inBrowser) browser.Pause(); else source.Pause(); }
+        private void ResumePlayback() { if (inBrowser) browser.Play(-1, MuseumNarrationSpeed.Fast); else source.UnPause(); }
+
+        /// <summary>In a browser build, 1.5x plays through the page's audio element, opened once for this narration.</summary>
+        private bool UseBrowser()
+        {
+            if (!InBrowserBuild || speed <= MuseumNarrationSpeed.Normal || browserFailed) return false;
+            if (browserOpen) return true;
+            if (!BrowserNarration.Available || string.IsNullOrEmpty(narrationUrl)) return false;
+            browser.Open(narrationUrl);
+            return browserOpen = true;
+        }
+
+        /// <summary>Starts the stretch of the narration for 1.5x, off the main thread, when it is wanted and not yet made.</summary>
+        private void PrepareFast()
+        {
+            if (InBrowserBuild || speed <= MuseumNarrationSpeed.Normal || narrationClip == null || fastClip != null || stretching) return;
+            var clip = narrationClip;
+            int channels = clip.channels, frequency = clip.frequency;
+            var samples = new float[clip.samples * channels];
+            // A clip whose samples cannot be read cannot be stretched: the control then hides for this narration.
+            if (!clip.GetData(samples, 0)) { stretchFailed = true; Changed?.Invoke(); return; }
+            stretching = true;
+            var work = System.Threading.Tasks.Task.Run(() => NarrationTimeStretch.Stretch(samples, channels, frequency, MuseumNarrationSpeed.Fast));
+            StartCoroutine(AwaitFast(work, stretchGeneration, channels, frequency));
+        }
+
+        private IEnumerator AwaitFast(System.Threading.Tasks.Task<float[]> work, int generation, int channels, int frequency)
+        {
+            while (!work.IsCompleted) yield return null;
+            if (generation != stretchGeneration) yield break;
+            stretching = false;
+            if (narrationClip == null) yield break;
+            if (work.IsFaulted || work.IsCanceled) { stretchFailed = true; Changed?.Invoke(); yield break; }
+            var data = work.Result;
+            fastClip = AudioClip.Create(narrationClip.name + " 1.5x", data.Length / channels, channels, frequency, false);
+            fastClip.SetData(data, 0);
+            ApplySpeed();
+            Changed?.Invoke();
+        }
+
+        /// <summary>Moves what is heard to the chosen speed, from the same point of the narration and in the same state.</summary>
+        private void ApplySpeed()
+        {
+            if (!CanPlay) return;
+            bool playing = State == NarrationState.Playing, paused = State == NarrationState.Paused;
+            float at = PlaybackTime;
+            if (InBrowserBuild)
+            {
+                bool wanted = speed > MuseumNarrationSpeed.Normal && !browserFailed;
+                if (wanted == inBrowser) return;
+                if (wanted)
+                {
+                    if (!UseBrowser()) return;
+                    source.Pause();
+                    inBrowser = true;
+                    if (playing) browser.Play(at, MuseumNarrationSpeed.Fast); else browser.Seek(at);
+                }
+                else
+                {
+                    browser.Pause();
+                    inBrowser = false;
+                    Place(narrationClip, at, playing, paused);
+                }
+                return;
+            }
+            var target = SpeedClip;
+            if (source.clip == target) return;
+            source.clip = target;
+            Place(target, at, playing, paused);
+        }
+
+        /// <summary>Puts Unity's source at <paramref name="at"/> seconds of the recording, playing or paused there.</summary>
+        private void Place(AudioClip clip, float at, bool playing, bool paused)
+        {
+            if (source.clip != clip) source.clip = clip;
+            if (!playing && !paused) return;
+            float rate = clip == fastClip ? MuseumNarrationSpeed.Fast : MuseumNarrationSpeed.Normal;
+            source.Play();
+            source.time = Mathf.Clamp(at / rate, 0, Mathf.Max(0, clip.length - .05f));
+            if (paused) source.Pause();
+        }
+
+        /// <summary>
+        /// Keeps the browser's element as loud as the narration's 3D source would be from where the visitor stands, and
+        /// goes back to Unity's source at the normal speed if the browser cannot play it.
+        /// </summary>
+        private void FollowBrowser()
+        {
+            if (browser.State == BrowserNarration.PlayState.Failed)
+            {
+                float at = browser.Time;
+                bool playing = State == NarrationState.Playing, paused = State == NarrationState.Paused;
+                browser.Close();
+                browserOpen = inBrowser = false;
+                browserFailed = true;
+                Place(narrationClip, at, playing, paused);
+                Changed?.Invoke();
+                return;
+            }
+            if (listener == null || !listener.isActiveAndEnabled) listener = FindAnyObjectByType<AudioListener>();
+            float distance = listener != null ? Vector3.Distance(listener.transform.position, source.transform.position) : 0;
+            browser.Volume(source.volume * BrowserNarration.Rolloff(distance, source.minDistance, source.maxDistance), source.mute);
         }
         /// <summary>Walking away from the point pauses its narration; coming back resumes it where it stopped.</summary>
         private void OnPresenceChanged(bool away)
@@ -196,14 +349,14 @@ namespace MusiyoBetsknate.Museum
             if (away && !pausedByDistance && State == NarrationState.Playing)
             {
                 pausedByDistance = true;
-                source.Pause();
+                PausePlayback();
                 SetState(NarrationState.Paused, MuseumInterfaceText.Get("narration_paused_away"));
             }
             else if (!away && pausedByDistance)
             {
                 pausedByDistance = false;
                 if (State != NarrationState.Paused) return;
-                source.UnPause();
+                ResumePlayback();
                 SetState(NarrationState.Playing, MuseumInterfaceText.Get("narration_playing"));
             }
         }
@@ -271,11 +424,12 @@ namespace MusiyoBetsknate.Museum
                 yield break;
             }
             source.transform.position = interaction.ActivePoint.Anchor.LookTarget.position;
-            source.clip = clip;
+            source.clip = narrationClip = clip;
+            narrationUrl = url;
+            PrepareFast();
             if (autoplay)
             {
-                source.Play();
-                Starts++;
+                PlayFromStart();
                 SetState(NarrationState.Playing, MuseumInterfaceText.Get("narration_playing"));
                 OnInteractionChanged();
                 if (presence.Away) OnPresenceChanged(true);
@@ -329,13 +483,19 @@ namespace MusiyoBetsknate.Museum
             DisposeSubtitlesRequest();
             if (decodingClip != null) Destroy(decodingClip);
             decodingClip = null;
+            stretchGeneration++;
+            stretching = stretchFailed = false;
+            if (browserOpen) browser.Close();
+            browserOpen = inBrowser = browserFailed = false;
+            narrationUrl = null;
             if (source != null)
             {
                 source.Stop();
-                var clip = source.clip;
                 source.clip = null;
-                if (clip != null) Destroy(clip);
             }
+            if (narrationClip != null) Destroy(narrationClip);
+            if (fastClip != null) Destroy(fastClip);
+            narrationClip = fastClip = null;
             cues = Array.Empty<SubtitleCue>();
             pausedByVisit = false;
             pausedByDistance = false;

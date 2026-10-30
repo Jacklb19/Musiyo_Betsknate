@@ -109,6 +109,10 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("reading_follow_line")] public float ReadingFollowLine;
         /// <summary>Seconds the panel takes to reach the fragment being heard.</summary>
         [JsonProperty("reading_follow_seconds")] public float ReadingFollowSeconds;
+        /// <summary>Whether the narration's 1.5x control is offered on the headset (and in the Editor and on a desktop).</summary>
+        [JsonProperty("narration_speed_headset")] public bool NarrationSpeedHeadset = true;
+        /// <summary>Whether the narration's 1.5x control is offered in the browser build.</summary>
+        [JsonProperty("narration_speed_web")] public bool NarrationSpeedWeb = true;
         [JsonProperty("auto_tour_speed")] public float AutoTourSpeed;
         [JsonProperty("auto_tour_acceleration")] public float AutoTourAcceleration;
         /// <summary>Shortest time the automatic tour stays at a point, also when it has no narration.</summary>

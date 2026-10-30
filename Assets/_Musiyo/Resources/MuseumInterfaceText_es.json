@@ -368,6 +368,8 @@
     "narration_ready": "Narración lista.",
     "play_narration": "Escuchar la narración ({input:narration_pause})",
     "play_narration_xr": "Escuchar la narración",
+    "narration_speed_faster": "Escuchar más rápido (1,5×)",
+    "narration_speed_normal": "Volver a la velocidad normal (1×)",
     "controls_stick_left": "Palanca izquierda",
     "controls_stick_left_action": "Caminar · púlsala para correr al aire libre · muévela sentado para levantarte",
     "controls_stick_right": "Palanca derecha",
