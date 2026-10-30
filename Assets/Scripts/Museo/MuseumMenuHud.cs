@@ -62,6 +62,9 @@ namespace MusiyoBetsknate.Museum
         private TMP_Text subtitleSizeValue;
         private TMP_Text readingSizeValue;
         private TMP_Text vignetteValue;
+        private Button tutorialOption;
+        private Button controllerLabels;
+        private TMP_Text controllerLabelsValue;
         private MuseumMenuMotion motion;
         private float openSeconds = OpenSeconds;
         private MenuPage page;
@@ -111,6 +114,11 @@ namespace MusiyoBetsknate.Museum
         public Button VignetteButton => vignette;
         public TMP_Text TurnModeValue => turnModeValue;
         public TMP_Text TurnSpeedValue => turnSpeedValue;
+        /// <summary>Repeats the first-visit tutorial from the pause menu, or skips it while it runs.</summary>
+        public Button TutorialButton => tutorialOption;
+        /// <summary>Headset-only: shows or hides the labels by the controls of the controllers.</summary>
+        public Button ControllerLabelsButton => controllerLabels;
+        public TMP_Text ControllerLabelsValue => controllerLabelsValue;
         /// <summary>True where the application can be left from the menu: everywhere but a Web page.</summary>
         public static bool CanQuit => Application.platform != RuntimePlatform.WebGLPlayer;
 
@@ -191,6 +199,7 @@ namespace MusiyoBetsknate.Museum
             headingControl ??= AddHeading(sensitivity, "heading_control");
             headingComfort ??= AddHeading(vignette, "heading_comfort");
             OrderSettings();
+            AddTutorialOptions();
             // The controls page opens on a drawing of the controls in use, above its lists.
             if (diagram == null) diagram = MuseumControlsDiagram.Ensure(view.Controls);
             turnMode.gameObject.SetActive(spatial);
@@ -231,6 +240,8 @@ namespace MusiyoBetsknate.Museum
             Listen(turnSpeed, NextTurnSpeed);
             Listen(autoTour, ToggleAutoTour);
             Listen(orientation, OpenOrientation);
+            Listen(tutorialOption, ToggleTutorial);
+            Listen(controllerLabels, ToggleControllerLabels, MuseumUiSound.Step);
             Listen(view.Settings.Reset, preferences.Reset);
             Listen(settingsBack, OpenHome, MuseumUiSound.Back);
             Listen(controlsBack, OpenHome, MuseumUiSound.Back);
@@ -520,7 +531,35 @@ namespace MusiyoBetsknate.Museum
             turnSpeed.gameObject.SetActive(spatial && turning == MuseumTurnMode.Continuous);
             var tour = interaction != null ? interaction.GetComponent<MuseumAutoTour>() : null;
             autoTour.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Get(tour != null && tour.Active ? "auto_tour_stop" : "auto_tour_start");
+            SyncTutorialOptions();
         }
+
+        // The first-visit tutorial and the controller labels (28/10/2026): one option in the pause menu, one in the settings.
+        private void AddTutorialOptions()
+        {
+            tutorialOption ??= AddOption(orientation, "Tutorial", "tutorial_repeat");
+            controllerLabels ??= AddOption(turnSpeed, "ControllerLabels", "controller_labels_option");
+            controllerLabelsValue ??= AddValue(controllerLabels);
+            controllerLabels.transform.SetSiblingIndex(turnSpeed.transform.GetSiblingIndex() + 1);
+            MuseumFirstVisitTutorial.Ensure(this, interaction);
+            MuseumControllerLabels.Ensure(this, interaction);
+        }
+        private void SyncTutorialOptions()
+        {
+            var tutorial = interaction != null ? interaction.GetComponent<MuseumFirstVisitTutorial>() : null;
+            tutorialOption.GetComponentInChildren<TMP_Text>().text = MuseumInterfaceText.Get(tutorial != null && tutorial.Running ? "tutorial_skip" : "tutorial_repeat");
+            controllerLabels.gameObject.SetActive(spatial);
+            controllerLabelsValue.text = MuseumInterfaceText.Get(preferences.ControllerLabels ? "option_on" : "option_off");
+        }
+        private void ToggleTutorial()
+        {
+            var tutorial = interaction.GetComponent<MuseumFirstVisitTutorial>();
+            if (tutorial == null) return;
+            if (tutorial.Running) { tutorial.Skip(); Refresh(); return; }
+            ResumeVisit();
+            tutorial.Begin(true);
+        }
+        private void ToggleControllerLabels() => preferences.SetControllerLabels(!preferences.ControllerLabels);
         private void ShowPage(MenuPage selected)
         {
             preferences.Save();
@@ -600,6 +639,7 @@ namespace MusiyoBetsknate.Museum
             resume.gameObject.SetActive(!entry);
             autoTour.gameObject.SetActive(!entry && interaction.GetComponent<MuseumAutoTour>() != null);
             orientation.gameObject.SetActive(!entry && interaction.GetComponent<MuseumWayfinding>() != null);
+            tutorialOption.gameObject.SetActive(!entry && interaction.GetComponent<MuseumFirstVisitTutorial>() != null);
             mainMenu.gameObject.SetActive(!entry);
             quitPause.gameObject.SetActive(!entry && CanQuit);
             quitMain.gameObject.SetActive(entry && CanQuit);
