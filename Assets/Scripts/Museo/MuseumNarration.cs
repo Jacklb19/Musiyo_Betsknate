@@ -425,7 +425,7 @@ namespace MusiyoBetsknate.Museum
             }
             source.transform.position = interaction.ActivePoint.Anchor.LookTarget.position;
             source.clip = narrationClip = clip;
-            narrationUrl = url;
+            narrationUrl = url.AbsoluteUri;
             PrepareFast();
             if (autoplay)
             {
