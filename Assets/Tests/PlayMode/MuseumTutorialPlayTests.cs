@@ -58,8 +58,8 @@ namespace MusiyoBetsknate.Tests
             Assert.That(tutorial, Is.Not.Null, "The menu adds the tutorial to the visit.");
             yield return null;
             yield return null;
-            Assert.That(MuseumFirstVisitTutorial.Pending, Is.True, "A first visit has the tutorial ahead.");
-            bool announced = false;
+            Assert.That(MuseumFirstVisitTutorial.Pending, Is.False, "Not in the museum yet, nothing is about to start.");
+            bool announced = false, sawPending = false;
             void Heard(bool active) => announced |= active;
             MuseumFirstVisitTutorial.ActiveChanged += Heard;
             try
@@ -68,8 +68,13 @@ namespace MusiyoBetsknate.Tests
                 Place(body, new Vector3(0, .05f, -48));
                 body.transform.rotation = Quaternion.identity;
                 var settings = MuseumTutorialSettings.Current;
-                for (float waited = 0; !tutorial.Running && waited < settings.StartAtLatest + 3; waited += Time.deltaTime) yield return null;
+                for (float waited = 0; !tutorial.Running && waited < settings.StartAtLatest + 3; waited += Time.deltaTime)
+                {
+                    sawPending |= MuseumFirstVisitTutorial.Pending;
+                    yield return null;
+                }
                 Assert.That(tutorial.Running, Is.True, "It starts in the arrival (zone " + companion.Zone + ").");
+                Assert.That(sawPending, Is.True, "In the arrival, before it starts, it is about to start (room names wait for it).");
                 Assert.That(MuseumFirstVisitTutorial.Active && announced, Is.True, "Others hear that it speaks (room names wait for it).");
                 Assert.That(flow.Menu.Preferences.TutorialDone, Is.False, "It is remembered only once it ends or is skipped.");
                 Assert.That(MuseumFirstVisitTutorial.Pending, Is.False, "Started, it is no longer pending.");
@@ -156,7 +161,7 @@ namespace MusiyoBetsknate.Tests
             yield return null;
             Assert.That(tutorial.Running || MuseumFirstVisitTutorial.Active, Is.False, "Leaving the museum ends it quietly.");
             Assert.That(flow.Menu.Preferences.TutorialDone, Is.False, "Left halfway, it is not remembered.");
-            Assert.That(MuseumFirstVisitTutorial.Pending, Is.True, "It is about to speak again.");
+            Assert.That(MuseumFirstVisitTutorial.Pending, Is.False, "Out of the museum, it is not about to start.");
             yield return Enter();
             Assert.That(tutorial.Running, Is.True, "It starts again in the arrival.");
             Assert.That(tutorial.Progress.CurrentNumber, Is.EqualTo(1), "From its first step.");
@@ -173,6 +178,37 @@ namespace MusiyoBetsknate.Tests
             yield return null;
             yield return Enter();
             Assert.That(tutorial.Running, Is.False, "Finished once, it does not start by itself again.");
+        }
+
+        /// <summary>
+        /// With the tutorial not yet done, it is pending only in the arrival: in another room it is not, so a room's name held
+        /// back for it comes out there; back in the arrival it starts.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheTutorialIsPendingOnlyInTheArrival()
+        {
+            yield return OpenMuseum(true);
+            var flow = Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var tutorial = flow.GetComponent<MuseumFirstVisitTutorial>();
+            var companion = Object.FindAnyObjectByType<MuseumCompanion>();
+            var body = Object.FindAnyObjectByType<DesktopVisitorController>().GetComponent<CharacterController>();
+            var settings = MuseumTutorialSettings.Current;
+            flow.EnterImmediately();
+            Place(body, new Vector3(0, .05f, -6));
+            bool everPending = false;
+            for (float waited = 0; waited < settings.StartAtLatest + 2; waited += Time.deltaTime)
+            {
+                if (waited > 1) everPending |= MuseumFirstVisitTutorial.Pending;
+                yield return null;
+            }
+            Assert.That(companion.Zone, Is.Not.EqualTo(settings.StartRoom), "The visitor and the colibrí are in another room.");
+            Assert.That(flow.Menu.Preferences.TutorialDone, Is.False);
+            Assert.That(everPending || MuseumFirstVisitTutorial.Pending, Is.False, "Outside the arrival it is never pending.");
+            Assert.That(tutorial.Running, Is.False, "Nor does it start there.");
+            Place(body, new Vector3(0, .05f, -48));
+            for (float waited = 0; !tutorial.Running && waited < settings.StartAtLatest + 6; waited += Time.deltaTime) yield return null;
+            Assert.That(tutorial.Running, Is.True, "Back in the arrival, it starts.");
+            tutorial.Skip();
         }
 
         [UnityTest]

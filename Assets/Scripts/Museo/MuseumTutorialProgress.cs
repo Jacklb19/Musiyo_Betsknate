@@ -37,7 +37,7 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("start_room")] public string StartRoom = "room.arrival";
         /// <summary>After the companion's welcome has been read, this long before the first step.</summary>
         [JsonProperty("start_after_welcome_seconds")] public float StartAfterWelcome = 1;
-        /// <summary>Into the visit, the tutorial begins at the latest after this long, welcome or not.</summary>
+        /// <summary>Into the arrival, the tutorial begins at the latest after this long, welcome or not.</summary>
         [JsonProperty("start_at_latest_seconds")] public float StartAtLatest = 14;
         /// <summary>Degrees the visitor's gaze must turn, in all, to have turned.</summary>
         [JsonProperty("turn_degrees")] public float TurnDegrees = 60;

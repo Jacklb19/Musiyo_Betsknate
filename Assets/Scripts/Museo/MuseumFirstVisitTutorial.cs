@@ -23,8 +23,9 @@ namespace MusiyoBetsknate.Museum
         public static bool Active { get; private set; }
         public static event Action<bool> ActiveChanged;
         /// <summary>
-        /// True while the tutorial is neither running nor finished or skipped: on a first visit, or after one left halfway,
-        /// it is about to speak in the arrival.
+        /// True only while the tutorial is about to start: not finished or skipped yet, the visitor exploring with the
+        /// companion in the arrival, and its latest start not yet past. Anywhere else it is false, so a room's name held back
+        /// for the tutorial is never held for the rest of the visit.
         /// </summary>
         public static bool Pending { get; private set; }
 
@@ -44,7 +45,7 @@ namespace MusiyoBetsknate.Museum
         private Vector3 startFloor;
         private Vector3 lastGaze;
         private bool companionWasMuted;
-        private float exploringSince = float.NaN;
+        private float arrivalSince = float.NaN;
         private float welcomedAt = float.NaN;
         private float stepShownAt;
         private float doneUntil;
@@ -88,13 +89,16 @@ namespace MusiyoBetsknate.Museum
             if (companion == null) companion = FindAnyObjectByType<MuseumCompanion>();
             if (companion == null || !companion.isActiveAndEnabled) { Pending = false; return; }
             bool exploring = flow.Phase == VisitPhase.Exploring;
-            if (!exploring) exploringSince = float.NaN;
-            else if (float.IsNaN(exploringSince)) exploringSince = Time.unscaledTime;
+            bool inArrival = exploring && companion.Placed && companion.Zone == settings.StartRoom;
+            if (!inArrival) arrivalSince = float.NaN;
+            else if (float.IsNaN(arrivalSince)) arrivalSince = Time.unscaledTime;
             var preferences = menu != null ? menu.Preferences : null;
-            Pending = !Running && preferences != null && !preferences.TutorialDone;
+            bool due = !Running && preferences != null && !preferences.TutorialDone && inArrival;
+            // A second of grace past the latest start, in case the bubble could not be taken: it is never pending for long.
+            Pending = due && Time.unscaledTime - arrivalSince <= settings.StartAtLatest + 1;
             if (!Running)
             {
-                if (Pending && exploring && ReadyToStart()) Begin();
+                if (due && ReadyToStart()) Begin();
                 return;
             }
             if (!exploring && flow.Phase != VisitPhase.Entering) { End(TutorialEnding.LeftHalfway); return; }
@@ -104,7 +108,10 @@ namespace MusiyoBetsknate.Museum
             Present();
         }
 
-        /// <summary>A first visit begins in the arrival once the companion is there and its welcome has been read.</summary>
+        /// <summary>
+        /// A first visit begins in the arrival once the companion is there and its welcome has been read, and at the latest
+        /// a while after coming into the arrival.
+        /// </summary>
         private bool ReadyToStart()
         {
             if (!companion.Placed || companion.Zone != settings.StartRoom || bubble == null && !TakeBubble()) return false;
@@ -112,7 +119,7 @@ namespace MusiyoBetsknate.Museum
             var remarks = companion.Remarks;
             bool welcomed = remarks != null && remarks.Said.Contains(MuseumCompanionRemarks.WelcomeId) && remarks.Current == null;
             if (welcomed && float.IsNaN(welcomedAt)) welcomedAt = now;
-            return welcomed && now - welcomedAt >= settings.StartAfterWelcome || now - exploringSince >= settings.StartAtLatest;
+            return welcomed && now - welcomedAt >= settings.StartAfterWelcome || now - arrivalSince >= settings.StartAtLatest;
         }
 
         /// <summary>
