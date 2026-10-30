@@ -113,7 +113,7 @@ namespace MusiyoBetsknate.Tests
             visitor.PlaceAt(entry, Quaternion.LookRotation(characters.transform.forward));
             yield return Until(() => presenter.ResidentCount >= 3, 180);
             notes.Add("residents standing: " + presenter.ResidentCount);
-            var points = new[] { "punto.personajes.pedestal_1", "punto.personajes.pedestal_4" }.Select(runtime.FindPoint).Where(point => point != null).ToArray();
+            var points = new[] { "punto.personajes.pedestal_1", "punto.personajes.pedestal_4" }.Select(key => runtime.FindPoint(key)).Where(point => point != null).ToArray();
 
             // Sizes to compare: as before (0.6 m on the longest side), the size of the digitisation, and three measured ones.
             var options = new List<(string name, MuseumPieceSizes sizes)>

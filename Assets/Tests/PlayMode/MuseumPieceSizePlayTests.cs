@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using MusiyoBetsknate.Museum;
+using MusiyoBetsknate.Museo;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
