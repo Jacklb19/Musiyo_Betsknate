@@ -72,6 +72,7 @@ namespace MusiyoBetsknate.Editor
             MuseumWorldSurroundings.Apply(root.transform, objects, new System.Random(20261019));
             MuseumGateDressing.Apply(root.transform, objects, new System.Random(20261023));
             MuseumCulturalDressing.Apply(root.transform, new System.Random(20261024));
+            MuseumNightLamps.Apply(root.transform);
             return root;
         }
 

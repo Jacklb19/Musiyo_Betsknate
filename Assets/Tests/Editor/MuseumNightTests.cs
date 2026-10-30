@@ -1,12 +1,17 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using MusiyoBetsknate.Museum;
 using NUnit.Framework;
+using UnityEditor;
+using UnityEditor.Rendering;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.Rendering;
+using UnityEngine.TestTools.Utils;
 
 namespace MusiyoBetsknate.Tests
 {
@@ -112,6 +117,7 @@ namespace MusiyoBetsknate.Tests
             Assert.That(RenderSettings.fogEndDistance, Is.EqualTo(settings.FogEnd));
             Assert.That(sun.color, Is.EqualTo(MuseumExperienceConfiguration.ColorValue(settings.MoonColor)), "The sun becomes the moon.");
             Assert.That(sun.intensity, Is.EqualTo(settings.MoonIntensity));
+            Assert.That(Vector3.Angle(-sun.transform.forward, settings.MoonDirection()), Is.LessThan(.01f), "Its light comes from where the moon stands.");
             Assert.That(RenderSettings.skybox, Is.Not.Null.And.Property("name").EqualTo(MuseumNight.SkyMaterialName));
             Assert.That(RenderSettings.skybox.GetTexture("_MainTex"), Is.Not.Null, "Stars and the moon.");
             Assert.That(RenderSettings.reflectionIntensity, Is.EqualTo(settings.ReflectionIntensity));
@@ -141,6 +147,7 @@ namespace MusiyoBetsknate.Tests
             Assert.That(RenderSettings.reflectionIntensity, Is.EqualTo(day.reflection));
             Assert.That(sun.color, Is.EqualTo(day.color));
             Assert.That(sun.intensity, Is.EqualTo(day.intensity));
+            Assert.That(Quaternion.Angle(sun.transform.rotation, Quaternion.Euler(40, 30, 0)), Is.LessThan(.01f), "The sun shines from where it did.");
             Assert.That(renderer.HasPropertyBlock(), Is.False, "The lantern gets its own material back.");
             Assert.That(night.Pools.enabled, Is.False);
         }
@@ -189,24 +196,157 @@ namespace MusiyoBetsknate.Tests
         }
 
         [Test]
-        public void TheMoonShinesWhereTheSunStoodAndTheStarsStayElsewhere()
+        public void TheMoonStandsOverTheOverlooksValleyWhereTheEyeMeetsItWithoutLookingUpMuch()
         {
-            int width = MuseumEntryBackdrop.NightSkyWidth, height = MuseumEntryBackdrop.NightSkyHeight;
-            Assert.That(MuseumNight.PanoramaPixel(Vector3.forward, width, height).x, Is.EqualTo(width / 2f).Within(.5f));
-            Assert.That(MuseumNight.PanoramaPixel(Vector3.right, width, height).x, Is.EqualTo(width * .75f).Within(.5f));
-            Assert.That(MuseumNight.PanoramaPixel(Vector3.up, width, height).y, Is.EqualTo(height).Within(.5f));
-            var stars = MuseumEntryBackdrop.StarPixels();
-            var withMoon = MuseumEntryBackdrop.StarPixels();
-            var direction = Quaternion.Euler(-35, 120, 0) * Vector3.forward;
-            MuseumNight.DrawMoon(withMoon, direction, 2.4f);
-            var centre = MuseumNight.PanoramaPixel(direction, width, height);
-            var face = withMoon[(int)centre.y * width + (int)centre.x];
-            Assert.That(face.b, Is.GreaterThan(180), "A pale disc where the moon stands.");
-            Assert.That(face.b, Is.GreaterThanOrEqualTo(face.r), "Cold, not warm.");
-            int changed = 0;
-            for (int index = 0; index < stars.Length; index++) if (!stars[index].Equals(withMoon[index])) changed++;
-            Assert.That(changed, Is.InRange(50, width * height / 100), "Only the moon and its halo are drawn.");
-            Assert.That(withMoon.Take(width * height / 2).Max(pixel => pixel.g), Is.LessThan(12), "Nothing below the horizon.");
+            var settings = MuseumNightAtmosphere.Current;
+            var moon = settings.MoonDirection();
+            Assert.That(moon.magnitude, Is.EqualTo(1).Within(.001f));
+            Assert.That(moon.x, Is.LessThan(-.8f), "Over the valley the overlook looks out on, to the west.");
+            Assert.That(Mathf.Asin(moon.y) * Mathf.Rad2Deg, Is.InRange(18f, 32f), "High enough over the forest, low enough for a level gaze.");
+            Assert.That(settings.MoonSize, Is.InRange(2f, 4f), "Larger than the real half degree, still a moon in the sky.");
+            var north = MuseumNightAtmosphere.Parse(Resources.Load<TextAsset>(MuseumNightAtmosphere.ResourceName).text
+                .Replace("\"moon_azimuth_degrees\": 270", "\"moon_azimuth_degrees\": 0").Replace("\"moon_elevation_degrees\": 24", "\"moon_elevation_degrees\": 30"));
+            Assert.That(Vector3.Angle(north.MoonDirection(), Quaternion.Euler(-30, 0, 0) * Vector3.forward), Is.LessThan(.01f));
+            Assert.Throws<InvalidOperationException>(() => MuseumNightAtmosphere.Parse(Resources.Load<TextAsset>(MuseumNightAtmosphere.ResourceName).text
+                .Replace("\"moon_elevation_degrees\": 24", "\"moon_elevation_degrees\": -10")), "Never under the horizon.");
+        }
+
+        [Test]
+        public void TheSkyDrawsTheMoonFromItsDirectionOverTheTitlesOwnStars()
+        {
+            var settings = MuseumNightAtmosphere.Current;
+            var sky = MuseumNight.Sky(settings);
+            Assert.That(sky, Is.Not.Null);
+            Assert.That(sky.shader.name, Is.EqualTo("Musiyo/Night Sky"));
+            Assert.That(sky.GetTexture("_MainTex"), Is.SameAs(MuseumEntryBackdrop.NightSky().GetTexture("_MainTex")),
+                "The stars of the title and the credits, already on the graphics card: no second panorama.");
+            Assert.That((Vector3)sky.GetVector("_MoonDirection"), Is.EqualTo(settings.MoonDirection()).Using(Vector3EqualityComparer.Instance));
+            Assert.That(Vector3.Dot(sky.GetVector("_MoonRight"), sky.GetVector("_MoonDirection")), Is.EqualTo(0).Within(.001f));
+            Assert.That(Vector3.Dot(sky.GetVector("_MoonUp"), sky.GetVector("_MoonDirection")), Is.EqualTo(0).Within(.001f));
+            Assert.That(sky.GetFloat("_MoonRadius"), Is.EqualTo(settings.MoonSize * .5f * Mathf.Deg2Rad).Within(1e-5f));
+            var face = (Texture2D)sky.GetTexture("_MoonTex");
+            Assert.That(face, Is.SameAs(MuseumNight.MoonFace()));
+            Assert.That((face.width, face.height, face.format), Is.EqualTo((MuseumNight.MoonFaceSize, MuseumNight.MoonFaceSize, TextureFormat.R8)));
+            Assert.That(face.mipmapCount, Is.GreaterThan(1), "Smooth however small the disc is drawn.");
+            Assert.That(face.isReadable, Is.False, "Only the graphics card keeps it.");
+        }
+
+        [Test]
+        public void TheMoonsFaceIsPaleWithSoftSeas()
+        {
+            var texels = MuseumNight.MoonFacePixels();
+            Assert.That(texels.Length, Is.EqualTo(MuseumNight.MoonFaceSize * MuseumNight.MoonFaceSize));
+            Assert.That(texels, Is.EqualTo(MuseumNight.MoonFacePixels()), "The same face every time.");
+            var values = texels.Select(texel => texel / 255f).ToArray();
+            Assert.That(values.Average(), Is.InRange(.7f, .92f), "Pale overall.");
+            Assert.That(values.Min(), Is.GreaterThan(.45f), "Seas are soft, never black.");
+            Assert.That(values.Max() - values.Min(), Is.GreaterThan(.15f), "But they are there.");
+        }
+
+        [Test]
+        public void ALampBesideAWallLightsItAndTheMoonLaysAStreakOnStillWater()
+        {
+            var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            wall.name = "NightTestWall";
+            wall.transform.position = new Vector3(2, 1.5f, 3.75f);
+            wall.transform.localScale = new Vector3(4, 3, .2f);
+            var post = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            post.name = "NightTestPost";
+            post.transform.position = new Vector3(2.7f, 1.5f, 3);
+            post.transform.localScale = new Vector3(.1f, 1.2f, .1f);
+            try
+            {
+                var settings = MuseumNightAtmosphere.Parse(Resources.Load<TextAsset>(MuseumNightAtmosphere.ResourceName).text
+                    .Replace("{ \"x\": -27.5, \"z\": 19.0 }", "{ \"x\": -5, \"z\": -5 }"));
+                var night = Museum();
+                night.Configure(null, null, settings);
+                Physics.SyncTransforms();
+                night.Set(true);
+                Assert.That(night.WallGlows, Is.EqualTo(1), "The wall .6 m behind the lantern; the post beside it is no wall.");
+                Assert.That(night.MoonGlints, Is.EqualTo(1));
+                var mesh = night.Pools.GetComponent<MeshFilter>().sharedMesh;
+                Assert.That(mesh.vertexCount, Is.EqualTo(12), "Pool, wall and streak in one mesh: one draw.");
+                var vertices = mesh.vertices;
+                var colours = mesh.colors;
+                var onWall = vertices.Skip(4).Take(4).ToArray();
+                Assert.That(onWall.All(vertex => Mathf.Abs(vertex.z - 3.63f) < .01f), Is.True, "Upright on the wall's face, just in front of it.");
+                Assert.That(onWall.Max(vertex => vertex.y) - onWall.Min(vertex => vertex.y), Is.EqualTo(settings.LampWallSize).Within(.01f));
+                Assert.That(mesh.normals[4].z, Is.LessThan(-.99f), "Facing the lamp.");
+                Assert.That(colours[4].a, Is.EqualTo(settings.LampWallAlpha).Within(.001f), "Softer than the pool on the floor.");
+                Assert.That(colours[0].a, Is.EqualTo(settings.LampPoolAlpha).Within(.001f));
+                var streak = vertices.Skip(8).Take(4).ToArray();
+                var centre = streak.Aggregate(Vector3.zero, (sum, vertex) => sum + vertex) / 4;
+                Assert.That(centre.x, Is.EqualTo(-5).Within(.01f));
+                Assert.That(centre.z, Is.EqualTo(-5).Within(.01f));
+                Assert.That(centre.y, Is.EqualTo(.08f).Within(.01f), "Just above the water.");
+                Assert.That(streak.Max(vertex => vertex.x) - streak.Min(vertex => vertex.x), Is.EqualTo(settings.MoonGlintLength).Within(.01f),
+                    "Lying towards the moon in the west.");
+                Assert.That(colours[8].b, Is.GreaterThan(colours[8].r), "Cold moonlight, not a lamp's.");
+                var block = new MaterialPropertyBlock();
+                night.Pools.GetPropertyBlock(block);
+                Assert.That(block.GetColor("_BaseColor"), Is.EqualTo(Color.white), "The night only fades the glows in together.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(wall);
+                UnityEngine.Object.DestroyImmediate(post);
+            }
+        }
+
+        [Test]
+        public void TheNightSkyCompilesForTheHeadsetInStereo()
+        {
+            var shader = Shader.Find("Musiyo/Night Sky");
+            Assert.That(shader, Is.Not.Null);
+            Assert.That(ShaderUtil.ShaderHasError(shader), Is.False);
+            var pass = ShaderUtil.GetShaderData(shader).GetSubshader(0).GetPass(0);
+            foreach (var platform in new[] { ShaderCompilerPlatform.Vulkan, ShaderCompilerPlatform.GLES3x })
+                foreach (var keywords in new[] { new string[0], new[] { "STEREO_MULTIVIEW_ON" }, new[] { "STEREO_INSTANCING_ON" } })
+                    foreach (var stage in new[] { ShaderType.Vertex, ShaderType.Fragment })
+                        Assert.That(pass.CompileVariant(stage, keywords, platform, BuildTarget.Android).Success, Is.True,
+                            platform + " " + stage + " [" + string.Join(" ", keywords) + "]");
+            Assert.That(Resources.Load<Material>(MuseumNight.SkyMaterialName).shader, Is.SameAs(shader), "Shipped with a material, so builds keep it.");
+        }
+
+        private static Type Dressing => AppDomain.CurrentDomain.GetAssemblies()
+            .Select(assembly => assembly.GetType("MusiyoBetsknate.Editor.MuseumWorldDressing")).First(type => type != null);
+
+        [Test]
+        public void TheRoomsThatHadNoLampGetThePathsLanternOnAPlainPostWithNothingInTheWay()
+        {
+            var scene = EditorSceneManager.OpenScene("Assets/_Musiyo/Scenes/10_Museum_Blockout.unity", OpenSceneMode.Additive);
+            try
+            {
+                var apply = Dressing.GetMethod("Apply", BindingFlags.Public | BindingFlags.Static);
+                var world = (GameObject)apply.Invoke(null, new object[] { scene, true });
+                var lamps = world.transform.Find("MuseumNightLamps");
+                Assert.That(lamps, Is.Not.Null);
+                var rooms = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<RoomAnchor>(true)).ToList();
+                var points = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<PointAnchor>(true)).ToList();
+                var expected = new Dictionary<string, string>
+                {
+                    ["NightLamp_Welcome_Loom"] = "room.welcome", ["NightLamp_Instruments_Drum"] = "room.instruments",
+                    ["NightLamp_Instruments_Shelf"] = "room.instruments", ["NightLamp_Overlook_Bench"] = "room.overlook",
+                };
+                Assert.That(lamps.Cast<Transform>().Select(lamp => lamp.name), Is.EquivalentTo(expected.Keys), "All four stand: none crossed anything solid.");
+                foreach (Transform lamp in lamps)
+                {
+                    var glass = lamp.GetComponentsInChildren<Renderer>().Where(renderer => renderer.sharedMaterials.Any(material => material != null
+                        && material.name == "PathLantern_Glass")).ToList();
+                    Assert.That(glass, Is.Not.Empty, lamp.name + ": the path's lantern, found by its glass at night.");
+                    var at = glass[0].bounds.center;
+                    Assert.That(rooms.Where(room => room.Contains(at)).Select(room => room.Key), Does.Contain(expected[lamp.name]), lamp.name);
+                    Assert.That(lamp.GetComponentsInChildren<Collider>(true), Is.Empty, lamp.name + ": nothing to walk into.");
+                    Assert.That(lamp.GetComponentsInChildren<Light>(true), Is.Empty, lamp.name + ": no real-time light.");
+                    Assert.That(points.Min(point => Vector2.Distance(new Vector2(point.transform.position.x, point.transform.position.z), new Vector2(at.x, at.z))),
+                        Is.GreaterThanOrEqualTo(1.2f), lamp.name + ": clear of the points of the visit.");
+                    Assert.That(lamp.GetComponentsInChildren<MeshRenderer>().SelectMany(renderer => renderer.sharedMaterials).Select(material => material.name).Distinct(),
+                        Is.SubsetOf(new[] { "PathLantern_Glass", "PathLantern_Wood" }), lamp.name + ": the lantern's own wood and glass, nothing else.");
+                    float height = at.y - lamp.position.y;
+                    Assert.That(height, lamp.name.Contains("Instruments") ? Is.InRange(.6f, 1f) : Is.InRange(1.1f, 1.6f), lamp.name + ": low by the drums, standing elsewhere.");
+                }
+            }
+            finally { EditorSceneManager.CloseScene(scene, true); }
         }
 
         [Test]

@@ -27,6 +27,26 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("moon_intensity")] public float MoonIntensity;
         /// <summary>Width of the moon's disc drawn in the night sky, in degrees.</summary>
         [JsonProperty("moon_size_degrees")] public float MoonSize = 2;
+        /// <summary>Where the moon stands: degrees from north (+z) towards east (+x), and above the horizon.</summary>
+        [JsonProperty("moon_azimuth_degrees")] public float MoonAzimuth = 270;
+        [JsonProperty("moon_elevation_degrees")] public float MoonElevation = 24;
+        [JsonProperty("moon_disc_color")] public string MoonDiscColor = "#E8EDF7";
+        [JsonProperty("moon_halo_color")] public string MoonHaloColor = "#25314F";
+        /// <summary>How far the moon's faint halo reaches, in moon radii.</summary>
+        [JsonProperty("moon_halo_size")] public float MoonHaloSize = 10;
+        /// <summary>Still water where the moon lays a soft streak of light at night, by its centre on the ground.</summary>
+        [JsonProperty("moon_glints")] public MoonGlint[] MoonGlints = Array.Empty<MoonGlint>();
+        [JsonProperty("moon_glint_color")] public string MoonGlintColor = "#B8C8E8";
+        [JsonProperty("moon_glint_alpha")] public float MoonGlintAlpha = .3f;
+        [JsonProperty("moon_glint_length")] public float MoonGlintLength = 4;
+        [JsonProperty("moon_glint_width")] public float MoonGlintWidth = 1.2f;
+
+        [Preserve]
+        public sealed class MoonGlint
+        {
+            [JsonProperty("x")] public float X;
+            [JsonProperty("z")] public float Z;
+        }
         [JsonProperty("sky_exposure")] public float SkyExposure = 1;
         /// <summary>Share of the day's sky reflection left on glossy surfaces at night.</summary>
         [JsonProperty("reflection_intensity")] public float ReflectionIntensity = .25f;
@@ -45,6 +65,10 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("lamp_pool_color")] public string LampPoolColor;
         [JsonProperty("lamp_pool_alpha")] public float LampPoolAlpha = .3f;
         [JsonProperty("lamp_pool_size")] public float LampPoolSize = 3;
+        /// <summary>A softer glow on a wall standing this close to a lamp, so a room "gives off light" around it.</summary>
+        [JsonProperty("lamp_wall_alpha")] public float LampWallAlpha = .2f;
+        [JsonProperty("lamp_wall_reach")] public float LampWallReach = 1;
+        [JsonProperty("lamp_wall_size")] public float LampWallSize = 2;
         /// <summary>The sky the lagoon reflects and the opening the clear water shows above it, at night.</summary>
         [JsonProperty("water_sky_tint")] public string WaterSkyTint;
         [JsonProperty("water_opening_color")] public string WaterOpeningColor;
@@ -73,18 +97,29 @@ namespace MusiyoBetsknate.Museum
             if (result == null || result.SchemaVersion != 1) throw new InvalidOperationException("Invalid museum night.");
             foreach (var color in new[] { result.FogColor, result.MoonColor, result.AmbientSky, result.AmbientEquator, result.AmbientGround,
                 result.IndoorAmbientSky, result.IndoorAmbientEquator, result.IndoorAmbientGround, result.LampPoolColor,
-                result.WaterSkyTint, result.WaterOpeningColor })
+                result.WaterSkyTint, result.WaterOpeningColor, result.MoonDiscColor, result.MoonHaloColor, result.MoonGlintColor })
                 MuseumExperienceConfiguration.ColorValue(color);
             bool Between(float value, float low, float high) => MuseumExperienceConfiguration.Finite(value) && value >= low && value <= high;
             if (!Between(result.FogStart, 0, 1000) || !Between(result.FogEnd, 0, 1000) || result.FogEnd <= result.FogStart
-                || !Between(result.MoonIntensity, 0, 2) || !Between(result.MoonSize, 0, 10) || !Between(result.SkyExposure, .05f, 4)
+                || !Between(result.MoonIntensity, 0, 2) || !Between(result.MoonSize, .2f, 10) || !Between(result.SkyExposure, .05f, 4)
+                || !Between(result.MoonAzimuth, 0, 360) || !Between(result.MoonElevation, 5, 80) || !Between(result.MoonHaloSize, 1, 40)
+                || !Between(result.MoonGlintAlpha, 0, 1) || !Between(result.MoonGlintLength, 0, 20) || !Between(result.MoonGlintWidth, 0, 10)
                 || !Between(result.ReflectionIntensity, 0, 1) || !Between(result.IndoorBlendSeconds, 0, 10)
                 || !Between(result.LampEmission, 0, 8) || !Between(result.LampPoolAlpha, 0, 1) || !Between(result.LampPoolSize, 0, 10)
+                || !Between(result.LampWallAlpha, 0, 1) || !Between(result.LampWallReach, 0, 5) || !Between(result.LampWallSize, 0, 10)
                 || !Between(result.SwitchSeconds, 0, 10) || !Between(result.AutoNightSeconds, 0, 60)
                 || result.IndoorRooms == null || result.LampMaterials == null || result.IndoorRooms.Any(string.IsNullOrWhiteSpace)
-                || result.LampMaterials.Any(string.IsNullOrWhiteSpace))
+                || result.LampMaterials.Any(string.IsNullOrWhiteSpace) || result.MoonGlints == null
+                || result.MoonGlints.Any(glint => glint == null || !Between(glint.X, -1000, 1000) || !Between(glint.Z, -1000, 1000)))
                 throw new InvalidOperationException("Invalid museum night.");
             return result;
+        }
+
+        /// <summary>The direction the moon is seen in, from its azimuth and elevation.</summary>
+        public Vector3 MoonDirection()
+        {
+            float azimuth = MoonAzimuth * Mathf.Deg2Rad, elevation = MoonElevation * Mathf.Deg2Rad;
+            return new Vector3(Mathf.Sin(azimuth) * Mathf.Cos(elevation), Mathf.Sin(elevation), Mathf.Cos(azimuth) * Mathf.Cos(elevation));
         }
 
         /// <summary>The night's ambient, from the open air (0) to inside a roofed room (1).</summary>
@@ -104,16 +139,22 @@ namespace MusiyoBetsknate.Museum
 
     /// <summary>
     /// Turns the museum to night and back, live (owner, 28/10/2026: «un modo noche para cambiar entorno a noche en el museo
-    /// y poder ver las estrellas»; «las lámparas deberían tener luz y adentro hacer luz»). It adds no real-time light:
-    /// the hearth's fire is the night's main light, the lanterns glow brighter with a soft pool of light under each, and the
-    /// ambient warms inside the roofed rooms. While a scenic set stands in for the museum (the title fire, the credits) it
-    /// waits, since that set keeps and restores the museum's own lighting.
+    /// y poder ver las estrellas»; «las lámparas deberían tener luz y adentro hacer luz»; 30/10: «que la luna se pueda ver
+    /// también, y que sea muy bonita»). It adds no real-time light: the hearth's fire is the night's main light, the
+    /// lanterns glow brighter with a soft pool of light under each and on a wall beside them, the ambient warms inside the
+    /// roofed rooms, and the museum's sun turns into the moon's light from where the moon stands in the sky. While a scenic
+    /// set stands in for the museum (the title fire, the credits) it waits, since that set keeps and restores the museum's
+    /// own lighting.
     /// </summary>
     public sealed class MuseumNight : MonoBehaviour
     {
+        /// <summary>The night sky's material in Resources, and the name of the visit's copy of it.</summary>
         public const string SkyMaterialName = "MuseumNightSky";
         public const string PoolsName = "NightLampPools";
+        /// <summary>Texels across the moon's face: about four for every headset pixel the disc covers.</summary>
+        public const int MoonFaceSize = 256;
         private static Material sky;
+        private static Texture2D moonFace;
         private MuseumNightAtmosphere night;
         private MuseumAtmosphere day;
         private MuseumWayfinding rooms;
@@ -127,8 +168,9 @@ namespace MusiyoBetsknate.Museum
         private bool dayKept;
         private bool automatic;
         private bool asked;
-        /// <summary>The museum's sun while it shines as the moon.</summary>
+        /// <summary>The museum's sun while it shines as the moon, and where it shone from by day.</summary>
         private Light moon;
+        private Quaternion dayRotation;
         private readonly List<(Renderer renderer, int index, Color emission)> lamps = new();
         private readonly List<(Renderer renderer, bool lagoon)> waters = new();
         private readonly Dictionary<(Renderer, int), MaterialPropertyBlock> keptBlocks = new();
@@ -142,8 +184,14 @@ namespace MusiyoBetsknate.Museum
         /// <summary>How far the night's ambient has warmed for a roofed room, from 0 to 1.</summary>
         public float Indoor => indoor;
         public IReadOnlyList<(Renderer renderer, int index, Color emission)> Lamps { get { Find(); return lamps; } }
-        /// <summary>The pools of light under the lamps, one mesh drawn at once; null when the museum has no lamps.</summary>
+        /// <summary>
+        /// The pools of light under the lamps, their glow on a wall beside them and the moon's streaks on still water, one
+        /// mesh drawn at once; null when the museum has neither lamps nor such water.
+        /// </summary>
         public MeshRenderer Pools { get { Find(); return pools; } }
+        /// <summary>How many walls catch a lamp's glow and how many waters the moon's light, in <see cref="Pools"/>.</summary>
+        public int WallGlows { get; private set; }
+        public int MoonGlints { get; private set; }
         /// <summary>The overlook's nightfall at the end of the visit; off until the owner approves it.</summary>
         public bool AutoNightAtOverlook { get; set; }
 
@@ -254,6 +302,7 @@ namespace MusiyoBetsknate.Museum
                 {
                     moon.color = MuseumExperienceConfiguration.ColorValue(day.SunColor);
                     moon.intensity = day.SunIntensity;
+                    moon.transform.rotation = dayRotation;
                     moon = null;
                 }
                 day.Apply();
@@ -279,13 +328,17 @@ namespace MusiyoBetsknate.Museum
             var sun = moon != null ? moon : RenderSettings.sun;
             if (sun != null)
             {
+                if (moon == null) dayRotation = sun.transform.rotation;
                 moon = sun;
                 sun.color = MuseumNightAtmosphere.Mix(MuseumExperienceConfiguration.ColorValue(day.SunColor), MuseumExperienceConfiguration.ColorValue(night.MoonColor), t);
                 sun.intensity = MuseumNightAtmosphere.Mix(day.SunIntensity, night.MoonIntensity, t);
+                // The light swings round to come from the moon, so its shadows and the moon in the sky agree.
+                var fromMoon = Quaternion.LookRotation(-night.MoonDirection(), Vector3.up);
+                sun.transform.rotation = t >= 1 ? fromMoon : Quaternion.Slerp(dayRotation, fromMoon, t);
             }
             // The day's sky darkens away, then the night's rises: two panoramas never mix in one pixel.
             bool headset = Application.platform == RuntimePlatform.Android;
-            var nightSky = level >= .5f ? Sky(sun != null ? -sun.transform.forward : default, night.MoonSize) : null;
+            var nightSky = level >= .5f ? Sky(night) : null;
             if (nightSky != null)
             {
                 nightSky.SetColor("_HorizonColor", fog);
@@ -319,10 +372,9 @@ namespace MusiyoBetsknate.Museum
             }
             if (pools == null) return;
             pools.enabled = true;
-            var tint = MuseumExperienceConfiguration.ColorValue(night.LampPoolColor);
-            tint.a = night.LampPoolAlpha * t;
+            // Each glow carries its own colour and strength in its vertices; the night only fades them in together.
             var pool = new MaterialPropertyBlock();
-            pool.SetColor("_BaseColor", tint);
+            pool.SetColor("_BaseColor", new Color(1, 1, 1, t));
             pools.SetPropertyBlock(pool);
         }
 
@@ -378,7 +430,8 @@ namespace MusiyoBetsknate.Museum
 
         /// <summary>
         /// The museum's lamps by their material, and its water by its shader. A pool of light lies on the ground under
-        /// each lamp, all in one mesh, so the night costs one more draw for every lamp of the museum together.
+        /// each lamp, a softer one on a wall standing close beside it, and the moon lays a streak on the still waters it
+        /// names; all in one mesh, so the night costs one more draw for every lamp of the museum together.
         /// </summary>
         private void Find()
         {
@@ -386,7 +439,10 @@ namespace MusiyoBetsknate.Museum
             Connect();
             found = true;
             var names = new HashSet<string>(night.LampMaterials, StringComparer.Ordinal);
-            var spots = new List<Vector3>();
+            var glows = new List<Glow>();
+            var pooled = new List<Vector3>();
+            var poolColour = MuseumExperienceConfiguration.ColorValue(night.LampPoolColor);
+            float half = night.LampPoolSize * .5f;
             foreach (var renderer in FindObjectsByType<Renderer>(FindObjectsSortMode.None))
             {
                 if (!renderer.enabled || !renderer.gameObject.activeInHierarchy || renderer is ParticleSystemRenderer) continue;
@@ -406,9 +462,62 @@ namespace MusiyoBetsknate.Museum
                         || material.shader.name == "Musiyo/World/Clear Water"))
                         waters.Add((renderer, material.shader.name == "Musiyo/Lagoon Water"));
                 }
-                if (lamp) spots.Add(Ground(renderer.bounds));
+                if (!lamp || night.LampPoolSize <= 0) continue;
+                // A lantern's door and body are both glass: one pool for the lantern, not one for each pane.
+                var foot = Ground(renderer.bounds) + Vector3.up * .03f;
+                if (pooled.Any(spot => new Vector2(spot.x - foot.x, spot.z - foot.z).sqrMagnitude < .16f)) continue;
+                pooled.Add(foot);
+                glows.Add(new Glow(foot, Vector3.right * half, Vector3.forward * half, Alpha(poolColour, night.LampPoolAlpha)));
+                if (night.LampWallAlpha > 0 && night.LampWallSize > 0 && Wall(renderer.bounds.center, night.LampWallReach, out var wall, out var facing))
+                {
+                    // Across the wall and up it, facing the lamp: the same winding as a pool facing up.
+                    float wallHalf = night.LampWallSize * .5f;
+                    glows.Add(new Glow(wall + facing * .02f, Vector3.Cross(facing, Vector3.up) * wallHalf, Vector3.up * wallHalf,
+                        Alpha(poolColour, night.LampWallAlpha)));
+                    WallGlows++;
+                }
             }
-            if (spots.Count > 0 && night.LampPoolSize > 0) pools = BuildPools(spots);
+            // The moon on still water: a soft streak lying towards where the moon stands, just above the water.
+            var towards = Vector3.ProjectOnPlane(night.MoonDirection(), Vector3.up).normalized;
+            foreach (var glint in night.MoonGlints)
+            {
+                if (night.MoonGlintAlpha <= 0 || !Physics.Raycast(new Vector3(glint.X, 400, glint.Z), Vector3.down, out var water, 800, ~0, QueryTriggerInteraction.Ignore))
+                    continue;
+                glows.Add(new Glow(water.point + Vector3.up * .08f, Vector3.Cross(Vector3.up, towards) * night.MoonGlintWidth * .5f,
+                    towards * night.MoonGlintLength * .5f, Alpha(MuseumExperienceConfiguration.ColorValue(night.MoonGlintColor), night.MoonGlintAlpha)));
+                MoonGlints++;
+            }
+            if (glows.Count > 0) pools = BuildPools(glows);
+        }
+
+        /// <summary>One soft glow of the night: its centre, half its width and half its length, and its colour.</summary>
+        private readonly struct Glow
+        {
+            public readonly Vector3 Centre, Across, Along;
+            public readonly Color Colour;
+            public Glow(Vector3 centre, Vector3 across, Vector3 along, Color colour) { Centre = centre; Across = across; Along = along; Colour = colour; }
+        }
+
+        private static Color Alpha(Color colour, float alpha) { colour.a = alpha; return colour; }
+
+        /// <summary>
+        /// The nearest wall within reach of a lamp, at the lamp's height: an upright surface of something at least as tall
+        /// as a room's wall, so a post, a bench or a tree trunk does not count.
+        /// </summary>
+        public static bool Wall(Vector3 lamp, float reach, out Vector3 point, out Vector3 facing)
+        {
+            point = facing = default;
+            float nearest = float.PositiveInfinity;
+            for (int index = 0; index < 8; index++)
+            {
+                var direction = Quaternion.Euler(0, index * 45, 0) * Vector3.forward;
+                if (!Physics.Raycast(lamp, direction, out var hit, reach, ~0, QueryTriggerInteraction.Ignore)) continue;
+                if (Mathf.Abs(hit.normal.y) > .3f || hit.collider.bounds.size.y < 1.8f || hit.distance >= nearest) continue;
+                nearest = hit.distance;
+                point = hit.point;
+                facing = Vector3.ProjectOnPlane(hit.normal, Vector3.up).normalized;
+            }
+            return nearest < float.PositiveInfinity;
         }
 
         public static string BaseName(string material) => material.EndsWith(" (Instance)") ? material.Substring(0, material.Length - 11) : material;
@@ -426,7 +535,7 @@ namespace MusiyoBetsknate.Museum
             return spot;
         }
 
-        private MeshRenderer BuildPools(List<Vector3> spots)
+        private MeshRenderer BuildPools(List<Glow> glows)
         {
             var holder = new GameObject(PoolsName, typeof(MeshFilter), typeof(MeshRenderer));
             holder.transform.SetParent(transform, false);
@@ -434,23 +543,25 @@ namespace MusiyoBetsknate.Museum
             holder.transform.localScale = Vector3.one;
             var mesh = new Mesh { name = PoolsName };
             var vertices = new List<Vector3>();
+            var normals = new List<Vector3>();
             var uvs = new List<Vector2>();
+            var colours = new List<Color>();
             var triangles = new List<int>();
-            float half = night.LampPoolSize * .5f;
-            foreach (var spot in spots)
+            foreach (var glow in glows)
             {
                 int first = vertices.Count;
-                var at = spot + Vector3.up * .03f;
-                vertices.Add(at + new Vector3(-half, 0, -half)); vertices.Add(at + new Vector3(half, 0, -half));
-                vertices.Add(at + new Vector3(-half, 0, half)); vertices.Add(at + new Vector3(half, 0, half));
+                vertices.Add(glow.Centre - glow.Across - glow.Along); vertices.Add(glow.Centre + glow.Across - glow.Along);
+                vertices.Add(glow.Centre - glow.Across + glow.Along); vertices.Add(glow.Centre + glow.Across + glow.Along);
+                var normal = Vector3.Cross(glow.Along, glow.Across).normalized;
                 uvs.Add(new Vector2(0, 0)); uvs.Add(new Vector2(1, 0)); uvs.Add(new Vector2(0, 1)); uvs.Add(new Vector2(1, 1));
+                for (int corner = 0; corner < 4; corner++) { normals.Add(normal); colours.Add(glow.Colour); }
                 triangles.AddRange(new[] { first, first + 2, first + 1, first + 1, first + 2, first + 3 });
             }
             mesh.SetVertices(vertices);
-            mesh.SetNormals(Enumerable.Repeat(Vector3.up, vertices.Count).ToList());
+            mesh.SetNormals(normals);
             mesh.SetUVs(0, uvs);
-            // The particle shader of the fire's glow multiplies by the vertex colour.
-            mesh.SetColors(Enumerable.Repeat(Color.white, vertices.Count).ToList());
+            // The particle shader of the fire's glow multiplies by the vertex colour: each glow's own colour and strength.
+            mesh.SetColors(colours);
             mesh.SetTriangles(triangles, 0);
             mesh.RecalculateBounds();
             holder.GetComponent<MeshFilter>().sharedMesh = mesh;
@@ -463,81 +574,79 @@ namespace MusiyoBetsknate.Museum
         }
 
         /// <summary>
-        /// The night sky of the museum: the stars of the title and the credits with a faint cold moon where the sun
-        /// shone, drawn once into a panorama of its own the first time night falls; null when the build lacks the sky.
+        /// The night sky of the museum: the stars of the title and the credits, shared with them, and the moon drawn by the
+        /// sky shader where the night places it, with its face, limb and halo. Where that shader cannot run, the stars alone;
+        /// null when the build lacks the night sky altogether.
         /// </summary>
-        public static Material Sky(Vector3 moon, float moonSize)
+        public static Material Sky(MuseumNightAtmosphere night)
         {
             if (sky != null) return sky;
-            var shared = Resources.Load<Material>(MuseumEntryBackdrop.NightSkyMaterial);
-            if (shared == null) return null;
-            sky = new Material(shared) { name = SkyMaterialName, hideFlags = HideFlags.DontSave };
-            var texture = new Texture2D(MuseumEntryBackdrop.NightSkyWidth, MuseumEntryBackdrop.NightSkyHeight, TextureFormat.RGB24, false)
-            { name = "NightStarsMoon", wrapModeU = TextureWrapMode.Repeat, wrapModeV = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
-            var pixels = MuseumEntryBackdrop.StarPixels();
-            DrawMoon(pixels, moon, moonSize);
-            texture.SetPixels32(pixels);
-            texture.Apply(false, true);
-            sky.SetTexture("_MainTex", texture);
-            sky.SetFloat("_Rotation", 0);
+            var stars = MuseumEntryBackdrop.NightSky();
+            if (stars == null) return null;
+            var authored = Resources.Load<Material>(SkyMaterialName);
+            if (authored == null || !authored.shader.isSupported)
+            {
+                sky = new Material(stars) { name = SkyMaterialName, hideFlags = HideFlags.DontSave };
+                sky.SetFloat("_Rotation", 0);
+                return sky;
+            }
+            sky = new Material(authored) { name = SkyMaterialName, hideFlags = HideFlags.DontSave };
+            sky.SetTexture("_MainTex", stars.GetTexture("_MainTex"));
+            sky.SetFloat("_HorizonHeight", stars.GetFloat("_HorizonHeight"));
+            var direction = night.MoonDirection();
+            var right = Vector3.Cross(Vector3.up, direction).normalized;
+            sky.SetVector("_MoonDirection", direction);
+            sky.SetVector("_MoonRight", right);
+            sky.SetVector("_MoonUp", Vector3.Cross(direction, right));
+            sky.SetFloat("_MoonRadius", night.MoonSize * .5f * Mathf.Deg2Rad);
+            sky.SetColor("_MoonColor", MuseumExperienceConfiguration.ColorValue(night.MoonDiscColor));
+            sky.SetColor("_HaloColor", MuseumExperienceConfiguration.ColorValue(night.MoonHaloColor));
+            sky.SetFloat("_HaloSize", night.MoonHaloSize);
+            sky.SetTexture("_MoonTex", MoonFace());
             return sky;
         }
 
-        /// <summary>Where the panorama shows a direction, with no rotation: the column and row of the sky shader's mapping.</summary>
-        public static Vector2 PanoramaPixel(Vector3 direction, int width, int height)
+        /// <summary>
+        /// The moon's face, the same every time: a pale ground with soft darker seas, a few small bright craters and a fine
+        /// grain, brightest in the middle of its range so the sky shader's limb and colour do the rest. Mipmapped, so the
+        /// disc stays smooth however small it is drawn.
+        /// </summary>
+        public static Texture2D MoonFace()
         {
-            direction.Normalize();
-            float u = Mathf.Atan2(direction.x, direction.z) / (2 * Mathf.PI) + .5f;
-            float v = Mathf.Asin(Mathf.Clamp(direction.y, -1, 1)) / Mathf.PI + .5f;
-            return new Vector2(u * width, v * height);
+            if (moonFace != null) return moonFace;
+            moonFace = new Texture2D(MoonFaceSize, MoonFaceSize, TextureFormat.R8, true) { name = "MoonFace", wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Trilinear, anisoLevel = 1 };
+            moonFace.SetPixelData(MoonFacePixels(), 0);
+            // Uploaded with its smaller copies and released from memory: only the graphics card keeps it.
+            moonFace.Apply(true, true);
+            return moonFace;
         }
 
-        /// <summary>
-        /// A pale, cold disc with a few soft darker seas and a faint halo around it. A direction under the horizon or none
-        /// at all puts the moon low in the south-west, where the day's sun stands in the delivered scene.
-        /// </summary>
-        public static void DrawMoon(Color32[] pixels, Vector3 direction, float sizeDegrees)
+        /// <summary>The face's brightness, one byte per texel, row by row.</summary>
+        public static byte[] MoonFacePixels()
         {
-            int width = MuseumEntryBackdrop.NightSkyWidth, height = MuseumEntryBackdrop.NightSkyHeight;
-            if (direction.sqrMagnitude < .01f || direction.normalized.y < .1f)
-                direction = Quaternion.Euler(-30, 210, 0) * Vector3.forward;
-            direction.Normalize();
-            float radius = Mathf.Max(.1f, sizeDegrees * .5f) * Mathf.Deg2Rad;
-            var centre = PanoramaPixel(direction, width, height);
-            float cosine = Mathf.Max(.2f, Mathf.Sqrt(1 - direction.y * direction.y));
-            int reachRows = Mathf.CeilToInt(radius * 4 / Mathf.PI * height) + 2;
-            int reachColumns = Mathf.CeilToInt(radius * 4 / (2 * Mathf.PI) * width / cosine) + 2;
-            var tangent = Vector3.Cross(Vector3.up, direction).normalized;
-            var bitangent = Vector3.Cross(direction, tangent);
-            for (int row = (int)centre.y - reachRows; row <= (int)centre.y + reachRows; row++)
-            {
-                if (row < 0 || row >= height) continue;
-                float latitude = ((row + .5f) / height - .5f) * Mathf.PI;
-                for (int step = -reachColumns; step <= reachColumns; step++)
+            const int size = MoonFaceSize;
+            var random = new System.Random(20261030);
+            var craters = Enumerable.Range(0, 9).Select(_ => (x: (float)random.NextDouble() * 1.5f - .75f, y: (float)random.NextDouble() * 1.5f - .75f,
+                radius: .04f + (float)random.NextDouble() * .07f)).ToArray();
+            var texels = new byte[size * size];
+            for (int row = 0; row < size; row++)
+                for (int column = 0; column < size; column++)
                 {
-                    int column = ((int)centre.x + step + width) % width;
-                    float longitude = ((column + .5f) / width - .5f) * 2 * Mathf.PI;
-                    var at = new Vector3(Mathf.Sin(longitude) * Mathf.Cos(latitude), Mathf.Sin(latitude), Mathf.Cos(longitude) * Mathf.Cos(latitude));
-                    float angle = Mathf.Acos(Mathf.Clamp(Vector3.Dot(at, direction), -1, 1));
-                    var under = (Color)pixels[row * width + column];
-                    Color colour;
-                    if (angle < radius)
+                    float x = (column + .5f) / size * 2 - 1, y = (row + .5f) / size * 2 - 1;
+                    // Seas: two scales of soft noise, kept to broad patches.
+                    float broad = Mathf.PerlinNoise(x * 1.4f + 11.3f, y * 1.4f + 4.7f) * .65f + Mathf.PerlinNoise(x * 3.1f + 2.1f, y * 3.1f + 8.8f) * .35f;
+                    float sea = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(.5f, .66f, broad));
+                    float value = .92f - .26f * sea + (Mathf.PerlinNoise(x * 17 + 5.5f, y * 17 + 1.3f) - .5f) * .07f;
+                    foreach (var crater in craters)
                     {
-                        // Seas: soft darker patches across the face, the same every time.
-                        float x = Vector3.Dot(at - direction, tangent) / radius, y = Vector3.Dot(at - direction, bitangent) / radius;
-                        float sea = Mathf.PerlinNoise(x * 1.7f + 3.1f, y * 1.7f + 7.4f);
-                        float edge = Mathf.SmoothStep(1, .85f, angle / radius);
-                        var face = new Color(.86f, .9f, .96f) * (.78f + .22f * sea);
-                        colour = Color.Lerp(under, face, Mathf.Clamp01(edge + (1 - angle / radius) * .5f));
+                        float distance = Mathf.Sqrt((x - crater.x) * (x - crater.x) + (y - crater.y) * (y - crater.y)) / crater.radius;
+                        // A bright floor and a faint darker rim, both soft.
+                        if (distance < 1) value += .06f * (1 - distance * distance);
+                        else if (distance < 1.4f) value -= .03f * (1 - (distance - 1) / .4f);
                     }
-                    else
-                    {
-                        float glow = Mathf.Clamp01(1 - (angle - radius) / (radius * 3));
-                        colour = under + new Color(.16f, .19f, .26f) * glow * glow;
-                    }
-                    pixels[row * width + column] = new Color(Mathf.Clamp01(colour.r), Mathf.Clamp01(colour.g), Mathf.Clamp01(colour.b));
+                    texels[row * size + column] = (byte)Mathf.RoundToInt(Mathf.Clamp01(value) * 255);
                 }
-            }
+            return texels;
         }
 
         private void OnDestroy()
