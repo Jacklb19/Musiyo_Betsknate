@@ -33,6 +33,10 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("vignette")] public string Vignette { get; private set; } = MuseumComfort.Name(MuseumVignette.Soft);
         /// <summary>Metres added to the height of the eyes on a headset, for a seated visitor or a tall one.</summary>
         [JsonProperty("height_offset")] public float HeightOffset { get; private set; }
+        /// <summary>The first-visit tutorial has run (or was skipped); it starts again only when asked from the menu.</summary>
+        [JsonProperty("tutorial_done")] public bool TutorialDone { get; private set; }
+        /// <summary>Small labels by the controls of the Quest controllers, during the tutorial and when looked at.</summary>
+        [JsonProperty("controller_labels")] public bool ControllerLabels { get; private set; } = true;
         [JsonIgnore] private MuseumExperienceConfiguration configuration;
         public event Action Changed;
 
@@ -128,6 +132,8 @@ namespace MusiyoBetsknate.Museum
             HeightOffset = Mathf.Clamp(metres, -MuseumComfort.MaxHeightOffset, MuseumComfort.MaxHeightOffset);
             Changed?.Invoke();
         }
+        public void SetTutorialDone(bool value) { TutorialDone = value; Changed?.Invoke(); }
+        public void SetControllerLabels(bool value) { ControllerLabels = value; Changed?.Invoke(); }
         /// <summary>Turning the visitor chose, or the shipped default.</summary>
         public MuseumTurnMode Turn(MuseumTurnMode fallback) => MuseumTurning.ParseMode(TurnMode) ?? fallback;
         /// <summary>The vignette the visitor chose; soft until they choose.</summary>
@@ -143,6 +149,7 @@ namespace MusiyoBetsknate.Museum
             TurnSpeed = 0;
             Vignette = MuseumComfort.Name(MuseumVignette.Soft);
             HeightOffset = 0;
+            ControllerLabels = true;
             Changed?.Invoke();
         }
         public string Serialize() => JsonConvert.SerializeObject(this);

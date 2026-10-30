@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "enabled": true,
+  "start_room": "room.arrival",
+  "start_after_welcome_seconds": 1.0,
+  "start_at_latest_seconds": 14.0,
+  "turn_degrees": 60,
+  "move_metres": 1.5,
+  "show_seconds": 30,
+  "remind_seconds": 45,
+  "done_seconds": 1.4,
+  "end_seconds": 7,
+  "skip_hold_seconds": 0.8,
+  "steps": [
+    { "id": "turn", "text_key": "tutorial_turn", "needs_controllers": false },
+    { "id": "move", "text_key": "tutorial_move", "needs_controllers": true },
+    { "id": "menu", "text_key": "tutorial_menu", "needs_controllers": true },
+    { "id": "approach", "text_key": "tutorial_approach", "needs_controllers": false },
+    { "id": "grab", "text_key": "tutorial_grab", "needs_controllers": true },
+    { "id": "companion", "text_key": "tutorial_companion", "needs_controllers": true }
+  ]
+}

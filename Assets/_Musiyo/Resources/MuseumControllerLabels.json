@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "look_angle_degrees": 26,
+  "hide_angle_degrees": 36,
+  "look_distance_m": 0.75,
+  "fade_seconds": 0.2,
+  "text_size_mm": 11,
+  "column_offset_mm": 70,
+  "row_gap_mm": 4,
+  "labels": [
+    { "id": "stick", "hand": "left", "action": "Locomotion/Move", "control": "<OculusTouchController>{LeftHand}/thumbstick",
+      "text_key": "controller_label_walk", "button": [0.022, 0.014, -0.060], "label": [-0.085, 0.100, -0.050] },
+    { "id": "menu", "hand": "left", "action": "Common/Pause", "control": "<OculusTouchController>{LeftHand}/menu",
+      "text_key": "controller_label_menu", "button": [0.004, 0.012, -0.078], "label": [-0.085, 0.072, -0.070] },
+    { "id": "y", "hand": "left", "action": "Common/Back", "control": "<OculusTouchController>{LeftHand}/secondaryButton",
+      "text_key": "controller_label_back", "button": [-0.012, 0.016, -0.030], "label": [-0.085, 0.044, -0.030] },
+    { "id": "x", "hand": "left", "action": "Visit/AskCompanion", "control": "<OculusTouchController>{LeftHand}/primaryButton",
+      "text_key": "controller_label_ask", "button": [0.005, 0.010, -0.045], "label": [-0.085, 0.016, -0.045] },
+    { "id": "grip", "hand": "left", "action": "Visit/GrabLeft", "control": "<OculusTouchController>{LeftHand}/gripPressed",
+      "text_key": "controller_label_grab", "button": [0.020, -0.045, -0.080], "label": [-0.085, -0.040, -0.080] },
+    { "id": "stick", "hand": "right", "action": "Locomotion/Turn", "control": "<OculusTouchController>{RightHand}/thumbstick",
+      "text_key": "controller_label_turn", "button": [-0.022, 0.014, -0.060], "label": [0.085, 0.100, -0.050] },
+    { "id": "b", "hand": "right", "action": "Visit/AutoTour", "control": "<OculusTouchController>{RightHand}/secondaryButton",
+      "text_key": "controller_label_auto_tour", "button": [0.012, 0.016, -0.030], "label": [0.085, 0.072, -0.030] },
+    { "id": "a", "hand": "right", "action": "Locomotion/Teleport", "control": "<OculusTouchController>{RightHand}/primaryButton",
+      "text_key": "controller_label_teleport", "button": [-0.005, 0.010, -0.045], "label": [0.085, 0.044, -0.045] },
+    { "id": "trigger", "hand": "right", "action": "Pointer/Click", "control": "<OculusTouchController>{RightHand}/triggerPressed",
+      "text_key": "controller_label_select", "button": [0.000, -0.025, -0.012], "label": [0.085, 0.004, -0.012] },
+    { "id": "grip", "hand": "right", "action": "Visit/Grab", "control": "<OculusTouchController>{RightHand}/gripPressed",
+      "text_key": "controller_label_grab", "button": [-0.020, -0.045, -0.080], "label": [0.085, -0.040, -0.080] }
+  ]
+}
