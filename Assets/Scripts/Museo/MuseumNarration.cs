@@ -299,11 +299,16 @@ namespace MusiyoBetsknate.Museum
                 yield return null;
                 if (!Current()) yield break;
             }
-            var work = System.Threading.Tasks.Task.Run(() => NarrationTimeStretch.Stretch(samples, channels, frequency, MuseumNarrationSpeed.Fast));
+            // The worker gets the samples themselves, not this variable, which is let go here so they are freed with the work.
+            var work = StretchApart(samples, channels, frequency);
             samples = null;
             while (!work.IsCompleted) yield return null;
             if (!Current()) yield break;
-            if (work.IsFaulted || work.IsCanceled) { stretching = false; stretchFailed = true; Changed?.Invoke(); yield break; }
+            if (work.IsFaulted || work.IsCanceled)
+            {
+                Debug.LogWarning($"[NarrationSpeed] {clip.name} could not be prepared at 1.5x: {work.Exception?.GetBaseException().Message}");
+                stretching = false; stretchFailed = true; Changed?.Invoke(); yield break;
+            }
             var data = work.Result;
             int fastFrames = data.Length / channels;
             var fast = AudioClip.Create(clip.name + " 1.5x", fastFrames, channels, frequency, false);
@@ -326,6 +331,9 @@ namespace MusiyoBetsknate.Museum
             ApplySpeed();
             Changed?.Invoke();
         }
+
+        private static System.Threading.Tasks.Task<float[]> StretchApart(float[] samples, int channels, int frequency)
+            => System.Threading.Tasks.Task.Run(() => NarrationTimeStretch.Stretch(samples, channels, frequency, MuseumNarrationSpeed.Fast));
 
         /// <summary>Moves what is heard to the chosen speed, from the same point of the narration and in the same state.</summary>
         private void ApplySpeed()
