@@ -56,6 +56,8 @@ namespace MusiyoBetsknate.Tests
             var companion = Object.FindAnyObjectByType<MuseumCompanion>();
             var body = Object.FindAnyObjectByType<DesktopVisitorController>().GetComponent<CharacterController>();
             Assert.That(tutorial, Is.Not.Null, "The menu adds the tutorial to the visit.");
+            yield return null;
+            yield return null;
             Assert.That(MuseumFirstVisitTutorial.Pending, Is.True, "A first visit has the tutorial ahead.");
             bool announced = false;
             void Heard(bool active) => announced |= active;
