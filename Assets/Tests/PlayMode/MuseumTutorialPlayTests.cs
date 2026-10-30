@@ -161,6 +161,11 @@ namespace MusiyoBetsknate.Tests
             Assert.That(labels.Showing(false), Is.False, "The left one, out of sight, does not.");
             Assert.That(labels.Texts(true), Does.Contain(MuseumInterfaceText.Get("controller_label_grab")));
             Assert.That(labels.Texts(false), Does.Contain(MuseumInterfaceText.Get("controller_label_ask")).And.Contain(MuseumInterfaceText.Get("controller_label_menu")));
+            var boxes = labels.Boxes(true).ToList();
+            Assert.That(boxes.Count, Is.EqualTo(5));
+            for (int one = 0; one < boxes.Count; one++)
+                for (int other = one + 1; other < boxes.Count; other++)
+                    Assert.That(boxes[one].Overlaps(boxes[other]), Is.False, "Held tilted, no label covers another.");
             rightAt = new Vector3(.6f, -.6f, .1f);
             yield return Wait(.5f);
             Assert.That(labels.Showing(true), Is.False, "Looked away, they fade.");

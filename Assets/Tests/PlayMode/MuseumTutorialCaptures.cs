@@ -104,15 +104,15 @@ namespace MusiyoBetsknate.Tests
             labels.Space = eye.transform;
             labels.Head = eye;
             labels.ForceShow = true;
-            labels.Poses = right => (true, new Vector3(right ? .11f : -.11f, -.12f, .36f), Quaternion.Euler(-35, right ? -12 : 12, 0));
+            labels.Poses = right => (true, new Vector3(right ? .09f : -.09f, -.14f, .45f), Quaternion.Euler(-35, right ? -12 : 12, 0));
             yield return Wait(.6f);
-            yield return Shot("4_controller_labels_both", eye, 60);
-            labels.Poses = right => (true, new Vector3(right ? .05f : -.6f, -.08f, right ? .3f : -.3f), Quaternion.Euler(-40, -10, 0));
+            yield return Shot("4_controller_labels_both", eye, 80);
+            labels.Poses = right => (true, new Vector3(right ? .02f : -.6f, -.08f, right ? .38f : -.3f), Quaternion.Euler(-40, -10, 0));
             yield return Wait(.6f);
-            yield return Shot("5_controller_labels_right", eye, 50);
-            labels.Poses = right => (true, new Vector3(right ? .6f : -.05f, -.08f, right ? -.3f : .3f), Quaternion.Euler(-40, 10, 0));
+            yield return Shot("5_controller_labels_right", eye, 65);
+            labels.Poses = right => (true, new Vector3(right ? .6f : -.02f, -.08f, right ? -.3f : .38f), Quaternion.Euler(-40, 10, 0));
             yield return Wait(.6f);
-            yield return Shot("6_controller_labels_left", eye, 50);
+            yield return Shot("6_controller_labels_left", eye, 65);
             Assert.That(companion.Placed, Is.True);
         }
 #endif

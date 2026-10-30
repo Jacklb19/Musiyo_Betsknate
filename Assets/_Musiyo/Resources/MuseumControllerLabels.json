@@ -5,6 +5,8 @@
   "look_distance_m": 0.75,
   "fade_seconds": 0.2,
   "text_size_mm": 11,
+  "column_offset_mm": 70,
+  "row_gap_mm": 4,
   "labels": [
     { "id": "stick", "hand": "left", "action": "Locomotion/Move", "control": "<OculusTouchController>{LeftHand}/thumbstick",
       "text_key": "controller_label_walk", "button": [0.022, 0.014, -0.060], "label": [-0.085, 0.100, -0.050] },

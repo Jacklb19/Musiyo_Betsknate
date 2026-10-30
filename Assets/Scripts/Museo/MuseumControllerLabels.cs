@@ -22,7 +22,8 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("text_key")] public string TextKey;
         /// <summary>Where the control is on the controller, in metres in the controller's pointing frame (x right, y up, z forward).</summary>
         [JsonProperty("button")] public float[] Button = new float[3];
-        /// <summary>Where its label stands, in the same frame: beside the controller, on its outer side.</summary>
+        /// <summary>Where its label stands, in the same frame: beside the controller, on its outer side. The labels of a hand
+        /// stand in one column, top to bottom by this height, so a tilted controller never piles them up.</summary>
         [JsonProperty("label")] public float[] Label = new float[3];
 
         public bool Right => Hand == "right";
@@ -42,6 +43,10 @@ namespace MusiyoBetsknate.Museum
         [JsonProperty("fade_seconds")] public float FadeSeconds = .2f;
         /// <summary>Text height in millimetres.</summary>
         [JsonProperty("text_size_mm")] public float TextSize = 11;
+        /// <summary>How far out from the controller the column of labels stands, in millimetres on the facing canvas.</summary>
+        [JsonProperty("column_offset_mm")] public float ColumnOffset = 70;
+        /// <summary>The space between two labels of the column, in millimetres.</summary>
+        [JsonProperty("row_gap_mm")] public float RowGap = 4;
         [JsonProperty("labels")] public List<ControllerLabelSettings> Labels = new();
 
         private static MuseumControllerLabelSettings current;
@@ -60,7 +65,7 @@ namespace MusiyoBetsknate.Museum
         {
             var result = JsonConvert.DeserializeObject<MuseumControllerLabelSettings>(json);
             if (result == null || result.SchemaVersion != 1) throw new InvalidOperationException("Invalid controller label settings.");
-            foreach (var value in new[] { result.LookAngle, result.HideAngle, result.LookDistance, result.FadeSeconds, result.TextSize })
+            foreach (var value in new[] { result.LookAngle, result.HideAngle, result.LookDistance, result.FadeSeconds, result.TextSize, result.ColumnOffset, result.RowGap })
                 if (!MuseumExperienceConfiguration.Finite(value) || value <= 0) throw new InvalidOperationException("Invalid controller label settings.");
             result.Labels ??= new();
             if (result.HideAngle < result.LookAngle || result.Labels.Count == 0
@@ -109,6 +114,13 @@ namespace MusiyoBetsknate.Museum
         /// <summary>The labels of a hand are showing.</summary>
         public bool Showing(bool right) => hands[right ? 1 : 0] != null && hands[right ? 1 : 0].Group.alpha > .5f;
         public IEnumerable<string> Texts(bool right) => hands[right ? 1 : 0]?.Labels.Select(label => label.text.text) ?? Enumerable.Empty<string>();
+        /// <summary>Where each label of a hand stands on its canvas, in millimetres.</summary>
+        public IEnumerable<Rect> Boxes(bool right) => hands[right ? 1 : 0]?.Labels.Select(label =>
+        {
+            var box = label.pill.rect;
+            box.position += (Vector2)label.pill.localPosition;
+            return box;
+        }) ?? Enumerable.Empty<Rect>();
 
         public static MuseumControllerLabels Ensure(MuseumMenuHud menu, MuseumInteraction interaction)
         {
@@ -172,7 +184,7 @@ namespace MusiyoBetsknate.Museum
         /// </summary>
         private Hand Build(bool right)
         {
-            var wanted = settings.Labels.Where(label => label.Right == right).ToList();
+            var wanted = settings.Labels.Where(label => label.Right == right).OrderByDescending(label => label.Label[1]).ToList();
             if (wanted.Count == 0) return null;
             var holder = new GameObject(right ? "RightControllerLabels" : "LeftControllerLabels", typeof(RectTransform), typeof(Canvas), typeof(CanvasGroup));
             holder.transform.SetParent(transform, false);
@@ -211,16 +223,22 @@ namespace MusiyoBetsknate.Museum
         }
 
         /// <summary>
-        /// Puts the hand's canvas at the controller, facing the eye, and each label where its offset falls on that canvas,
-        /// with its line drawn from the control to the near edge of the label.
+        /// Puts the hand's canvas at the controller, facing the eye, and the labels in a column on its outer side, clear of
+        /// every control however the controller is held, each with its line drawn from the control to the near edge of the label.
         /// </summary>
-        private static void Place(Hand hand, Vector3 position, Quaternion rotation, Vector3 eye)
+        private void Place(Hand hand, Vector3 position, Quaternion rotation, Vector3 eye)
         {
             hand.Canvas.SetPositionAndRotation(position, Quaternion.LookRotation(position - eye, Vector3.up));
-            foreach (var (settings, pill, _, leader, dot) in hand.Labels)
+            float outward = hand.Labels[0].settings.Right ? 1 : -1;
+            float column = settings.ColumnOffset;
+            foreach (var label in hand.Labels)
+                column = Mathf.Max(column, outward * hand.Canvas.InverseTransformPoint(position + rotation * label.settings.ButtonOffset).x + 25);
+            float step = settings.TextSize + 7 + settings.RowGap;
+            for (int row = 0; row < hand.Labels.Count; row++)
             {
-                Vector2 button = hand.Canvas.InverseTransformPoint(position + rotation * settings.ButtonOffset);
-                Vector2 at = hand.Canvas.InverseTransformPoint(position + rotation * settings.LabelOffset);
+                var (control, pill, _, leader, dot) = hand.Labels[row];
+                Vector2 button = hand.Canvas.InverseTransformPoint(position + rotation * control.ButtonOffset);
+                var at = new Vector2(outward * column, ((hand.Labels.Count - 1) * .5f - row) * step);
                 pill.anchoredPosition = at;
                 dot.anchoredPosition = button;
                 var line = at - button;
