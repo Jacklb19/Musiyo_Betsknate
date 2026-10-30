@@ -52,6 +52,26 @@ namespace MusiyoBetsknate.Tests
 
         private static float Longest(Bounds bounds) => Mathf.Max(bounds.size.x, bounds.size.y, bounds.size.z);
 
+        /// <summary>Longest side in the piece's own axes, so a piece turned toward the visitor measures what it is.</summary>
+        private static float Side(Transform model)
+        {
+            var own = new Bounds();
+            var first = true;
+            foreach (var filter in model.GetComponentsInChildren<MeshFilter>())
+            {
+                var mesh = filter.sharedMesh.bounds;
+                for (var corner = 0; corner < 8; corner++)
+                {
+                    var local = mesh.center + Vector3.Scale(mesh.extents,
+                        new Vector3((corner & 1) == 0 ? -1 : 1, (corner & 2) == 0 ? -1 : 1, (corner & 4) == 0 ? -1 : 1));
+                    var point = model.InverseTransformPoint(filter.transform.TransformPoint(local));
+                    if (first) own = new Bounds(point, Vector3.zero); else own.Encapsulate(point);
+                    first = false;
+                }
+            }
+            return Longest(new Bounds(own.center, Vector3.Scale(own.size, model.lossyScale)));
+        }
+
 #if UNITY_EDITOR
         [UnityTest]
         public IEnumerator APieceAtItsScannedSizeFloatsAtItAndIsExaminedAsBefore()
@@ -100,7 +120,7 @@ namespace MusiyoBetsknate.Tests
             Assert.That(presenter.TryResident(point, out _, out var model), Is.True);
             yield return new WaitForSecondsRealtime(1);
             var standing = BoundsOf(model);
-            Assert.That(Longest(standing), Is.EqualTo(2).Within(.05f), "At the size of its digitisation, not 0.6 m.");
+            Assert.That(Side(model), Is.EqualTo(2).Within(.05f), "At the size of its digitisation, not 0.6 m.");
             Assert.That(standing.center.y, Is.EqualTo(point.Anchor.LookTarget.position.y).Within(.05f), "Centred where it floated before.");
             Assert.That(standing.min.y, Is.GreaterThan(point.Anchor.transform.position.y), "Above the floor.");
 
@@ -113,11 +133,11 @@ namespace MusiyoBetsknate.Tests
             Assert.That(interaction.OpenModel(), Is.True);
             yield return null;
             yield return null;
-            Assert.That(Longest(BoundsOf(presenter.Model)), Is.LessThan(ModelExaminationPose.ExhibitSize + .01f),
+            Assert.That(Side(presenter.Model), Is.LessThan(ModelExaminationPose.ExhibitSize + .01f),
                 "Examined, it is framed in the view as every piece is.");
             interaction.Back();
             yield return new WaitForSecondsRealtime(.5f);
-            Assert.That(Longest(BoundsOf(presenter.Model)), Is.EqualTo(2).Within(.05f), "Back at its point at its size.");
+            Assert.That(Side(presenter.Model), Is.EqualTo(2).Within(.05f), "Back at its point at its size.");
         }
 #endif
     }
