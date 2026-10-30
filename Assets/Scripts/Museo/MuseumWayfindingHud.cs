@@ -78,6 +78,8 @@ namespace MusiyoBetsknate.Museum
             shownStatus = guide.Status;
             Refresh();
         }
+        /// <summary>The room's title, which announces a room on its first entry in place of the arrival line.</summary>
+        public MuseumRoomTitle RoomTitle { get; set; }
         /// <summary>True while the orientation status is on screen: while guiding, or briefly after it changed.</summary>
         public bool StatusVisible => legend != null && legend.gameObject.activeSelf;
         private bool StatusWanted => guide.TargetRoomKey != null || Time.unscaledTime < statusUntil;
@@ -116,6 +118,9 @@ namespace MusiyoBetsknate.Museum
             {
                 shownStatus = guide.Status;
                 statusUntil = Time.unscaledTime + StatusSeconds;
+                // On the first entry into a room its title says it; «Has llegado a…» would say the same twice.
+                if (RoomTitle != null && RoomTitle.Announces(guide.CurrentRoomKey)
+                    && guide.Status == MuseumInterfaceText.Format("wayfinding_arrived", guide.CurrentRoomName)) statusUntil = 0;
             }
             menu.SetActive(guide.MenuOpen);
             legend.gameObject.SetActive(!guide.MenuOpen && !interaction.BlocksMovement && StatusWanted);

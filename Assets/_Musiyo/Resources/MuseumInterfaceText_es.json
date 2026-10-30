@@ -102,6 +102,7 @@
     "wayfinding_already_here": "Ya estás en {0}. Puedes explorar la sala.",
     "wayfinding_route_finished": "Fin de la ruta sugerida. Puedes seguir explorando.",
     "wayfinding_arrived": "Has llegado a {0}. Puedes explorar la sala.",
+    "room_title_position": "Sala {0} de {1}",
     "wayfinding_no_path": "No hay un camino calculado desde aquí. Puedes continuar explorando o elegir otra sala.",
     "wayfinding_heading": "Hacia {0} · Sigue la línea del suelo.",
     "narration_not_published": "Esta ficha aún no tiene narración publicada. Puedes leer su texto.",
