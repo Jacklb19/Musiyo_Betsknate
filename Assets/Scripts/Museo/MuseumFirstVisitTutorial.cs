@@ -53,6 +53,8 @@ namespace MusiyoBetsknate.Museum
         private float skipHeld;
         private string closing = "";
         private TutorialStepSettings shown;
+        private MuseumRoomTitle roomTitle;
+        private bool holdingTitle;
 
         /// <summary>The tutorial is running: proposing steps or saying its last word.</summary>
         public bool Running { get; private set; }
@@ -79,6 +81,24 @@ namespace MusiyoBetsknate.Museum
         {
             if (Running) End(TutorialEnding.LeftHalfway);
             Pending = false;
+            HoldRoomTitle(false);
+        }
+
+        /// <summary>The room's name waits while the tutorial is about to speak or speaking, then comes out right after it (owner, 30/10/2026).</summary>
+        private void LateUpdate() => HoldRoomTitle(Active || Pending);
+
+        private void HoldRoomTitle(bool hold)
+        {
+            if (hold == holdingTitle) return;
+            if (roomTitle == null)
+            {
+                var hud = FindAnyObjectByType<MuseumHud>();
+                if (hud != null) roomTitle = hud.RoomTitle;
+            }
+            if (roomTitle == null) return;
+            if (hold) roomTitle.Hold(this);
+            else roomTitle.Release(this);
+            holdingTitle = hold;
         }
 
         private void Update()

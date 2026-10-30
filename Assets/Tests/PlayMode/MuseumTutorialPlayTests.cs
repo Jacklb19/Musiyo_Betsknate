@@ -78,6 +78,9 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(MuseumFirstVisitTutorial.Active && announced, Is.True, "Others hear that it speaks (room names wait for it).");
                 Assert.That(flow.Menu.Preferences.TutorialDone, Is.False, "It is remembered only once it ends or is skipped.");
                 Assert.That(MuseumFirstVisitTutorial.Pending, Is.False, "Started, it is no longer pending.");
+                var roomTitle = Object.FindAnyObjectByType<MuseumHud>().RoomTitle;
+                Assert.That(roomTitle, Is.Not.Null);
+                Assert.That(roomTitle.Held, Is.True, "The room's name waits for the tutorial.");
                 Assert.That(companion.Muted, Is.True, "The companion's own remarks keep quiet meanwhile.");
                 for (float waited = 0; !tutorial.Showing && waited < 2; waited += Time.deltaTime) yield return null;
                 Assert.That(tutorial.Text, Does.Contain(MuseumInterfaceText.Get("tutorial_turn")), "Step one, in the companion's bubble: " + tutorial.Text);
@@ -116,6 +119,8 @@ namespace MusiyoBetsknate.Tests
                     "Its last word still holds back other notices (the room's name comes after it).");
                 for (float waited = 0; tutorial.Running && waited < settings.EndSeconds + 2; waited += Time.deltaTime) yield return null;
                 Assert.That(tutorial.Running || MuseumFirstVisitTutorial.Active || MuseumFirstVisitTutorial.Pending, Is.False);
+                yield return null;
+                Assert.That(roomTitle.Held, Is.False, "Once the tutorial ends, the room's name comes out.");
                 Assert.That(companion.Muted, Is.False, "The companion speaks again.");
 
                 // Asked again from the pause menu, it starts over, the menu already known.
