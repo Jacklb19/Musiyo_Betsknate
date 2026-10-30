@@ -67,6 +67,11 @@ namespace MusiyoBetsknate.Museum
         /// </summary>
         [JsonProperty("wait_box_pieces")] public List<string> WaitBoxPieces = new();
         [JsonProperty("wait_box_margin_m")] public float WaitBoxMargin = .5f;
+        /// <summary>
+        /// Where the companion stays in sight (owner, 28/10/2026: «que el colibrí siempre intente ponerse delante del usuario
+        /// para poder verlo siempre», in front and a little aside, without chasing every turn of the head).
+        /// </summary>
+        [JsonProperty("in_view")] public CompanionInViewSettings InView = new();
         [JsonProperty("welcome_text")] public string WelcomeText;
         [JsonProperty("welcome_delay_seconds")] public float WelcomeDelay;
         [JsonProperty("remark_seconds")] public float RemarkSeconds;
@@ -112,6 +117,8 @@ namespace MusiyoBetsknate.Museum
             if (result.WaitBoxPieces.Any(string.IsNullOrWhiteSpace) || !MuseumExperienceConfiguration.Finite(result.WaitBoxMargin)
                 || result.WaitBoxMargin < 0 || result.WaitBoxMargin > 3)
                 throw new InvalidOperationException("Invalid companion waiting box.");
+            result.InView ??= new();
+            if (!result.InView.Valid(result.PersonalSpace)) throw new InvalidOperationException("Invalid companion in-view settings.");
             result.InterfaceRemarks ??= new();
             if (result.InterfaceRemarks.Any(remark => remark == null || string.IsNullOrWhiteSpace(remark.Id)
                 || string.IsNullOrWhiteSpace(remark.Zone) || string.IsNullOrWhiteSpace(remark.TextKey)
@@ -120,6 +127,56 @@ namespace MusiyoBetsknate.Museum
                     .Distinct().Count() != result.InterfaceRemarks.Count + result.Remarks.Count)
                 throw new InvalidOperationException("Invalid companion interface remark.");
             return result;
+        }
+    }
+
+    /// <summary>
+    /// How the companion keeps itself in the visitor's sight: standing, it flies to a free spot in front and to one side of
+    /// the gaze once it has been out of sight a moment; walking, it goes a little ahead and aside, never on the way; after
+    /// a jump it reappears in sight. Its height follows the visitor's eyes within limits.
+    /// </summary>
+    [Preserve]
+    public sealed class CompanionInViewSettings
+    {
+        [JsonProperty("enabled")] public bool Enabled = true;
+        /// <summary>Distance from the visitor of the spot in sight.</summary>
+        [JsonProperty("distance_m")] public float Distance = 1.8f;
+        /// <summary>Angle of the spot from the gaze, to either side.</summary>
+        [JsonProperty("angle_degrees")] public float Angle = 35;
+        /// <summary>Time out of sight before the companion moves back into it, so it never chases a glance.</summary>
+        [JsonProperty("out_of_sight_seconds")] public float OutOfSightSeconds = 1.5f;
+        /// <summary>Degrees beyond half the field of view that still count as in sight: once seen, a small turn keeps it there.</summary>
+        [JsonProperty("sight_margin_degrees")] public float SightMargin = 8;
+        /// <summary>Speed of the move back into sight, gentler than walking.</summary>
+        [JsonProperty("move_speed")] public float MoveSpeed = 1.3f;
+        /// <summary>The bird flies this far below the visitor's eyes, within the lift limits from its own height.</summary>
+        [JsonProperty("eye_drop_m")] public float EyeDrop = .15f;
+        [JsonProperty("lift_min_m")] public float LiftMin = -.45f;
+        [JsonProperty("lift_max_m")] public float LiftMax = .35f;
+        /// <summary>Vertical speed of the height change, in metres per second.</summary>
+        [JsonProperty("lift_speed")] public float LiftSpeed = .4f;
+        /// <summary>Walking, the companion keeps this far ahead along the visitor's way and this far to its side.</summary>
+        [JsonProperty("lead_ahead_m")] public float LeadAhead = 1.5f;
+        [JsonProperty("lead_aside_m")] public float LeadAside = 1;
+        /// <summary>The visitor walks above this speed and stands below <see cref="StandSpeed"/> for <see cref="StandSeconds"/>.</summary>
+        [JsonProperty("walk_speed_threshold")] public float WalkThreshold = .45f;
+        [JsonProperty("stand_speed_threshold")] public float StandSpeed = .2f;
+        [JsonProperty("stand_seconds")] public float StandSeconds = .6f;
+        /// <summary>The companion never passes nearer than this to the visitor on its way round them.</summary>
+        [JsonProperty("pass_clearance_m")] public float PassClearance = .7f;
+        /// <summary>Out of sight and with no clear way back this long, it reappears in sight, as after a jump.</summary>
+        [JsonProperty("reappear_after_seconds")] public float ReappearAfter = 5;
+
+        public bool Valid(float personalSpace)
+        {
+            foreach (var value in new[] { Distance, Angle, OutOfSightSeconds, MoveSpeed, LiftSpeed, LeadAhead, LeadAside, WalkThreshold,
+                StandSpeed, StandSeconds, PassClearance, ReappearAfter })
+                if (!MuseumExperienceConfiguration.Finite(value) || value <= 0) return false;
+            return MuseumExperienceConfiguration.Finite(SightMargin) && SightMargin >= 0 && SightMargin < 45
+                && MuseumExperienceConfiguration.Finite(EyeDrop) && MuseumExperienceConfiguration.Finite(LiftMin)
+                && MuseumExperienceConfiguration.Finite(LiftMax) && LiftMin <= 0 && LiftMax >= 0 && LiftMax - LiftMin < 1.5f
+                && Angle >= 10 && Angle <= 60 && Distance > personalSpace && Distance < 4 && StandSpeed < WalkThreshold
+                && ReappearAfter > OutOfSightSeconds;
         }
     }
 

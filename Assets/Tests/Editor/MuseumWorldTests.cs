@@ -143,6 +143,54 @@ namespace MusiyoBetsknate.Tests
             Assert.That(MuseumCompanion.Blocks(visitor, new Vector3(0, 0, 5), exhibit), Is.False, "Beyond the exhibit is fine.");
         }
 
+        /// <summary>
+        /// The spots the companion tries in order to stay in sight (owner, 28/10/2026): in front, 30–40° to one side of the
+        /// gaze at about 1.8 m first, its own side before the other. The set spot is never between the visitor and an
+        /// exhibit straight ahead; the others are checked one by one in the museum.
+        /// </summary>
+        [Test]
+        public void TheCompanionTriesSpotsInFrontAndAsideOfTheGaze()
+        {
+            var view = MuseumCompanionSettings.Current.InView;
+            Assert.That(view.Enabled, Is.True);
+            Assert.That(view.Distance, Is.InRange(1.5f, 2.1f));
+            Assert.That(view.Angle, Is.InRange(30f, 40f));
+            Assert.That(view.OutOfSightSeconds, Is.InRange(1f, 2f), "It never chases a glance.");
+            var candidates = MuseumCompanion.ViewCandidates(view, -1).ToList();
+            Assert.That(candidates[0], Is.EqualTo((view.Distance, view.Angle, -1f)), "The set spot first, on the companion's own side.");
+            Assert.That(candidates[1].side, Is.EqualTo(1f), "Then the same spot on the other side.");
+            Assert.That(candidates.All(candidate => candidate.angle >= 20 && candidate.angle <= 50), Is.True, "Always aside, never straight ahead.");
+            var exhibit = new Vector3(0, 1.2f, 4);
+            foreach (var (distance, angle, side) in candidates)
+            {
+                var spot = Quaternion.AngleAxis(side * angle, Vector3.up) * Vector3.forward * distance;
+                Assert.That(spot.z, Is.GreaterThan(0), "In front of the visitor.");
+                Assert.That(Mathf.Sign(spot.x), Is.EqualTo(side), "On its side.");
+                if (angle >= view.Angle && distance >= view.Distance)
+                    Assert.That(MuseumCompanion.Blocks(Vector3.zero, spot, exhibit), Is.False, "Not in front of the exhibit: " + spot);
+            }
+        }
+
+        [Test]
+        public void TheCompanionGoesRoundTheVisitorInsteadOfThroughThem()
+        {
+            var visitor = Vector3.zero;
+            Assert.That(MuseumCompanion.PassesNear(new Vector3(0, 0, -2), new Vector3(.3f, 0, 2), visitor, .7f), Is.True, "From behind to in front passes through.");
+            Assert.That(MuseumCompanion.PassesNear(new Vector3(-2, 0, -2), new Vector3(-1.5f, 0, 1), visitor, .7f), Is.False, "Along one side is clear.");
+            Assert.That(MuseumCompanion.PassesNear(new Vector3(0, 0, 3), new Vector3(0, 0, 5), visitor, .7f), Is.False, "Away from the visitor is clear.");
+        }
+
+        [TestCase("{\"distance_m\":0.5}")]
+        [TestCase("{\"angle_degrees\":0}")]
+        [TestCase("{\"out_of_sight_seconds\":-1}")]
+        [TestCase("{\"lift_min_m\":0.5}")]
+        [TestCase("{\"stand_speed_threshold\":1,\"walk_speed_threshold\":0.5}")]
+        public void InvalidInViewSettingsAreRejected(string inView)
+            => Assert.Throws<InvalidOperationException>(() => MuseumCompanionSettings.Parse("{\"schema_version\":1,\"follow_distance_m\":2,"
+                + "\"personal_space_m\":1,\"hide_within_m\":.6,\"side_offset_m\":.8,\"walk_speed\":1.5,\"catch_up_speed\":3,\"catch_up_beyond_m\":4,"
+                + "\"rejoin_beyond_m\":9,\"turn_degrees_per_second\":160,\"figure_scale\":1.3,\"remark_seconds\":5,\"dwell_seconds\":3,"
+                + "\"in_view\":" + inView + "}"));
+
         [Test]
         public void MusicFollowsTheVisitorVolumeAndStepsBackForVoices()
         {
