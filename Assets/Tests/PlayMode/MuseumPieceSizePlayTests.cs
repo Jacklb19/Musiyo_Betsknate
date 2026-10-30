@@ -121,8 +121,12 @@ namespace MusiyoBetsknate.Tests
             yield return new WaitForSecondsRealtime(1);
             var standing = BoundsOf(model);
             Assert.That(Side(model), Is.EqualTo(2).Within(.05f), "At the size of its digitisation, not 0.6 m.");
-            Assert.That(standing.center.y, Is.EqualTo(point.Anchor.LookTarget.position.y).Within(.05f), "Centred where it floated before.");
+            Assert.That(standing.center.y, Is.GreaterThanOrEqualTo(point.Anchor.LookTarget.position.y - .01f), "Where it floated before, or a little higher.");
             Assert.That(standing.min.y, Is.GreaterThan(point.Anchor.transform.position.y), "Above the floor.");
+            Assert.That(Physics.Raycast(new Vector3(standing.center.x, standing.min.y - .001f, standing.center.z), Vector3.down, out var below, 3,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore), Is.True, "The pedestal stands below the point.");
+            Assert.That(standing.min.y - below.point.y, Is.GreaterThanOrEqualTo(MuseumModelPresenter.FloatClearance - .02f),
+                $"Clear of {below.collider.name}, never resting in it.");
 
             Assert.That(visitor.FocusPoint(point.Anchor), Is.True);
             yield return Until(() => interaction.ActivePoint == point && presenter.State == ModelLoadState.Ready && presenter.ModelSlug == "mask-a", 10);
