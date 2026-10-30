@@ -61,8 +61,8 @@ namespace MusiyoBetsknate.Museum
             /// <summary>Compass angle the piece's face is turned to, once known.</summary>
             public float Yaw;
             public bool YawSet;
-            /// <summary>Metres a floating piece rises above its point so it clears what stands below it, once measured.</summary>
-            public float? Lift;
+            /// <summary>Height of the pedestal or floor below a floating piece's point, once measured.</summary>
+            public float? Below;
             private bool cancelled;
             public void Cancel()
             {
@@ -462,21 +462,21 @@ namespace MusiyoBetsknate.Museum
         /// <summary>
         /// Height a floating piece rises above its point so its lowest part keeps <see cref="FloatClearance"/> above what
         /// stands below: nothing for a piece of the usual size, a few centimetres for a mask at its real size over its
-        /// pedestal. Measured once per piece, by one ray down past the piece itself.
+        /// pedestal. What stands below is measured once per piece, by one ray down past the piece itself.
         /// </summary>
         private static float LiftFor(LoadSession piece, Vector3 fit)
         {
-            if (piece.Lift.HasValue) return piece.Lift.Value;
             // Pieces at the usual size float where they always did.
-            if (fit.y <= 1.001f) return (piece.Lift = 0).Value;
-            float half = piece.Size.y * fit.y * .5f;
+            if (fit.y <= 1.001f) return 0;
             var from = piece.Point.Anchor.LookTarget.position;
-            float surface = float.NegativeInfinity;
-            foreach (var hit in Physics.RaycastAll(from, Vector3.down, half + FloatClearance + 2, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
-                if (piece.Pivot == null || !hit.transform.IsChildOf(piece.Pivot.transform)) surface = Mathf.Max(surface, hit.point.y);
-            float lift = Mathf.Max(0, surface + FloatClearance - (from.y - half));
-            piece.Lift = lift;
-            return lift;
+            if (!piece.Below.HasValue)
+            {
+                float surface = float.NegativeInfinity;
+                foreach (var hit in Physics.RaycastAll(from, Vector3.down, 3, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                    if (piece.Pivot == null || !hit.transform.IsChildOf(piece.Pivot.transform)) surface = Mathf.Max(surface, hit.point.y);
+                piece.Below = surface;
+            }
+            return Mathf.Max(0, piece.Below.Value + FloatClearance - (from.y - piece.Size.y * fit.y * .5f));
         }
 
         /// <summary>A piece turns to the visitor unless it stands at its natural size, like the Castle built into the courtyard.</summary>
