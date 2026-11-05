@@ -757,6 +757,8 @@ namespace MusiyoBetsknate.Editor
         // ---- Room 6: overlook ---------------------------------------------------------------------------------------
 
         internal const float OverlookBenchZ = 19.35f;
+        /// <summary>Metres of wet mud between the overlook's lagoon and the grass.</summary>
+        internal const float LagoonShore = .4f;
 
         /// <summary>
         /// The closing of the visit. A6.1 a plain bench of thick plank turned to the valley, by the credits, to sit and look:
@@ -781,7 +783,8 @@ namespace MusiyoBetsknate.Editor
                 kit.Box(seat + turn * new Vector3(end * .68f, .19f, 0), turn, new Vector3(.14f, .38f, .38f), WoodDark);
             // A bench of the museum: «Sentarte» offers it, looking at the valley.
             solids.Add(seat + Vector3.up * .24f, turn, new Vector3(1.8f, .48f, .42f), "Bench");
-            // A small lagoon on the plain below the overlook, with reeds at its edge.
+            // A small lagoon on the plain below the overlook, with reeds at its edge. Deep, still water ringed by a band of
+            // wet mud, so it reads as water lying in the ground and not as a pale sheet laid on the grass, by day and by night.
             var lagoon = new Vector3(-27.5f, 0, 19f);
             lagoon.y = Ground(lagoon.x, lagoon.z) + .04f;
             const int sides = 18;
@@ -795,6 +798,11 @@ namespace MusiyoBetsknate.Editor
                 p1.y = Mathf.Max(lagoon.y, Ground(p1.x, p1.z) + .03f);
                 var mid = new Vector3(lagoon.x, lagoon.y, lagoon.z);
                 kit.Sheet(mid, p1, p0, mid, Lagoon);
+                var q0 = lagoon + new Vector3(Mathf.Cos(a0) * (r0 + LagoonShore) * 1.3f, 0, Mathf.Sin(a0) * (r0 + LagoonShore));
+                var q1 = lagoon + new Vector3(Mathf.Cos(a1) * (r1 + LagoonShore) * 1.3f, 0, Mathf.Sin(a1) * (r1 + LagoonShore));
+                q0.y = Ground(q0.x, q0.z) + .025f;
+                q1.y = Ground(q1.x, q1.z) + .025f;
+                kit.Sheet(p0, p1, q1, q0, EarthDark);
                 if (index % 3 == 0)
                     for (int reed = 0; reed < 7; reed++)
                         foliage.Leaf(p0 + Y(reed * 50) * Vector3.forward * .15f, Vector3.up + Y(reed * 50) * Vector3.forward * .15f, Y(reed * 50) * Vector3.right,

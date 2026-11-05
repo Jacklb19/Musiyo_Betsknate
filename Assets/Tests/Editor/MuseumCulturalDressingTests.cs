@@ -163,6 +163,37 @@ namespace MusiyoBetsknate.Tests
             });
         }
 
+        /// <summary>
+        /// The overlook's lagoon is deep, still water, dark enough not to read as a pale sheet on the grass by night, and
+        /// the palette the headset draws holds the colours the code names, so a changed colour never ships without its picture.
+        /// </summary>
+        [Test]
+        public void TheOverlookLagoonIsDarkWaterAndThePaletteHoldsTheNamedColours()
+        {
+            var kit = EditorType("MuseumDecorKit");
+            var colours = (Color32[])kit.GetField("Colours").GetValue(null);
+            var path = (string)kit.GetField("PalettePath").GetValue(null);
+            var palette = new Texture2D(2, 2);
+            try
+            {
+                Assert.That(palette.LoadImage(System.IO.File.ReadAllBytes(path)), Is.True);
+                for (int index = 0; index < colours.Length; index++)
+                {
+                    var centre = (Vector2)Call(kit, "Swatch", index);
+                    Color32 pixel = palette.GetPixel((int)(centre.x * palette.width), (int)(centre.y * palette.height));
+                    Assert.That(pixel, Is.EqualTo(colours[index]), "Swatch " + index + " of " + path);
+                }
+            }
+            finally { UnityEngine.Object.DestroyImmediate(palette); }
+            var water = (Color)colours[(int)kit.GetField("Lagoon").GetValue(null)];
+            var mud = (Color)colours[(int)kit.GetField("EarthDark").GetValue(null)];
+            var grass = (Color)colours[(int)kit.GetField("Field1").GetValue(null)];
+            Assert.That(water.grayscale, Is.LessThan(grass.grayscale * .8f), "Darker than the fields around it.");
+            Assert.That(water.b, Is.GreaterThan(water.r), "Still the blue of water.");
+            Assert.That(mud.grayscale, Is.LessThan(grass.grayscale), "A darker band of wet mud rings it.");
+            Assert.That(Constant("LagoonShore"), Is.InRange(.25f, .6f));
+        }
+
         [Test]
         public void TheDecorationCanBeLeftOutForPicturesBeforeAndAfter()
         {
