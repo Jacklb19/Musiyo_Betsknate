@@ -470,11 +470,10 @@ namespace MusiyoBetsknate.Museum
                 glows.Add(new Glow(foot, Vector3.right * half, Vector3.forward * half, Alpha(poolColour, night.LampPoolAlpha)));
                 if (night.LampWallAlpha > 0 && night.LampWallSize > 0 && Wall(renderer.bounds.center, night.LampWallReach, out var wall, out var facing))
                 {
-                    // Across the wall and up it, facing the lamp: the same winding as a pool facing up. A little off the
-                    // wall, so a round room's wall does not cut the glow's sides.
+                    // Across the wall and up it, facing the lamp, in upright slices that follow the wall: a flat sheet stood
+                    // off a round room's wall and the wall cut one of its sides in a straight line.
                     float wallHalf = night.LampWallSize * .5f;
-                    glows.Add(new Glow(wall + facing * .07f, Vector3.Cross(facing, Vector3.up) * wallHalf, Vector3.up * wallHalf,
-                        Alpha(poolColour, night.LampWallAlpha)));
+                    glows.Add(new Glow(WallLine(wall, facing, wallHalf), Vector3.up * wallHalf, Alpha(poolColour, night.LampWallAlpha)));
                     WallGlows++;
                 }
             }
@@ -491,12 +490,56 @@ namespace MusiyoBetsknate.Museum
             if (glows.Count > 0) pools = BuildPools(glows);
         }
 
-        /// <summary>One soft glow of the night: its centre, half its width and half its length, and its colour.</summary>
+        /// <summary>
+        /// One soft glow of the night: its centre, half its width and half its length, and its colour. A glow on a wall
+        /// gives instead the line across its middle, one point for each edge of its slices, and half its height.
+        /// </summary>
         private readonly struct Glow
         {
             public readonly Vector3 Centre, Across, Along;
+            public readonly Vector3[] Line;
             public readonly Color Colour;
-            public Glow(Vector3 centre, Vector3 across, Vector3 along, Color colour) { Centre = centre; Across = across; Along = along; Colour = colour; }
+            public Glow(Vector3 centre, Vector3 across, Vector3 along, Color colour) { Centre = centre; Across = across; Along = along; Line = null; Colour = colour; }
+            public Glow(Vector3[] line, Vector3 along, Color colour) { Centre = Across = default; Along = along; Line = line; Colour = colour; }
+        }
+
+        /// <summary>Upright slices of a glow on a wall, so it lies on a round room's wall instead of standing off it.</summary>
+        public const int WallSlices = 8;
+        /// <summary>Metres a glow on a wall stands before the wall's face.</summary>
+        public const float WallGap = .07f;
+
+        /// <summary>
+        /// The line across the middle of a glow on a wall, from one side to the other: for each edge of its slices, the
+        /// wall's face behind it, a little before it. Where no wall stands behind (a doorway), the point stays in line
+        /// with the wall at the glow's centre.
+        /// </summary>
+        public static Vector3[] WallLine(Vector3 wall, Vector3 facing, float half)
+        {
+            var across = Vector3.Cross(facing, Vector3.up);
+            var line = new Vector3[WallSlices + 1];
+            for (int index = 0; index <= WallSlices; index++)
+            {
+                var flat = wall + across * Mathf.Lerp(-half, half, index / (float)WallSlices);
+                line[index] = WallFace(flat, facing) + facing * WallGap;
+            }
+            return line;
+        }
+
+        /// <summary>
+        /// The face of a wall behind a point, looked for half a metre either side of it: the nearest upright surface of
+        /// something as tall as a room's wall, so a post, a bench or a plant before the wall does not count.
+        /// </summary>
+        private static Vector3 WallFace(Vector3 point, Vector3 facing)
+        {
+            var face = point;
+            float nearest = float.PositiveInfinity;
+            foreach (var hit in Physics.RaycastAll(point + facing * .5f, -facing, 1, ~0, QueryTriggerInteraction.Ignore))
+                if (Mathf.Abs(hit.normal.y) <= .3f && hit.collider.bounds.size.y >= 1.8f && hit.distance < nearest)
+                {
+                    nearest = hit.distance;
+                    face = hit.point;
+                }
+            return face;
         }
 
         private static Color Alpha(Color colour, float alpha) { colour.a = alpha; return colour; }
@@ -518,7 +561,15 @@ namespace MusiyoBetsknate.Museum
                 point = hit.point;
                 facing = Vector3.ProjectOnPlane(hit.normal, Vector3.up).normalized;
             }
-            return nearest < float.PositiveInfinity;
+            if (nearest == float.PositiveInfinity) return false;
+            // A ray at a slant meets the wall to one side of the lamp: the glow is centred where the wall faces the lamp.
+            if (Physics.Raycast(lamp, -facing, out var square, reach * 1.5f, ~0, QueryTriggerInteraction.Ignore)
+                && Mathf.Abs(square.normal.y) <= .3f && square.collider.bounds.size.y >= 1.8f)
+            {
+                point = square.point;
+                facing = Vector3.ProjectOnPlane(square.normal, Vector3.up).normalized;
+            }
+            return true;
         }
 
         public static string BaseName(string material) => material.EndsWith(" (Instance)") ? material.Substring(0, material.Length - 11) : material;
@@ -551,6 +602,24 @@ namespace MusiyoBetsknate.Museum
             foreach (var glow in glows)
             {
                 int first = vertices.Count;
+                if (glow.Line != null)
+                {
+                    // A strip: the foot and the head of each edge, the glow's texture spread across the whole width.
+                    var line = glow.Line;
+                    for (int index = 0; index < line.Length; index++)
+                    {
+                        float u = index / (float)(line.Length - 1);
+                        var tangent = line[Mathf.Min(index + 1, line.Length - 1)] - line[Mathf.Max(index - 1, 0)];
+                        var normal = Vector3.Cross(glow.Along, tangent).normalized;
+                        vertices.Add(line[index] - glow.Along); vertices.Add(line[index] + glow.Along);
+                        uvs.Add(new Vector2(u, 0)); uvs.Add(new Vector2(u, 1));
+                        for (int end = 0; end < 2; end++) { normals.Add(normal); colours.Add(glow.Colour); }
+                        if (index == 0) continue;
+                        int foot = first + index * 2 - 2;
+                        triangles.AddRange(new[] { foot, foot + 1, foot + 2, foot + 2, foot + 1, foot + 3 });
+                    }
+                    continue;
+                }
                 vertices.Add(glow.Centre - glow.Across - glow.Along); vertices.Add(glow.Centre + glow.Across - glow.Along);
                 vertices.Add(glow.Centre - glow.Across + glow.Along); vertices.Add(glow.Centre + glow.Across + glow.Along);
                 var normal = Vector3.Cross(glow.Along, glow.Across).normalized;

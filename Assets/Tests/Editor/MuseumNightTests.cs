@@ -269,16 +269,18 @@ namespace MusiyoBetsknate.Tests
                 Assert.That(night.WallGlows, Is.EqualTo(1), "The wall .6 m behind the lantern; the post beside it is no wall.");
                 Assert.That(night.MoonGlints, Is.EqualTo(1));
                 var mesh = night.Pools.GetComponent<MeshFilter>().sharedMesh;
-                Assert.That(mesh.vertexCount, Is.EqualTo(12), "Pool, wall and streak in one mesh: one draw.");
+                int wallVertices = (MuseumNight.WallSlices + 1) * 2;
+                Assert.That(mesh.vertexCount, Is.EqualTo(4 + wallVertices + 4), "Pool, wall and streak in one mesh: one draw.");
                 var vertices = mesh.vertices;
                 var colours = mesh.colors;
-                var onWall = vertices.Skip(4).Take(4).ToArray();
+                var onWall = vertices.Skip(4).Take(wallVertices).ToArray();
                 Assert.That(onWall.All(vertex => Mathf.Abs(vertex.z - 3.58f) < .01f), Is.True, "Upright before the wall's face, just in front of it.");
                 Assert.That(onWall.Max(vertex => vertex.y) - onWall.Min(vertex => vertex.y), Is.EqualTo(settings.LampWallSize).Within(.01f));
                 Assert.That(mesh.normals[4].z, Is.LessThan(-.99f), "Facing the lamp.");
                 Assert.That(colours[4].a, Is.EqualTo(settings.LampWallAlpha).Within(.001f), "Softer than the pool on the floor.");
                 Assert.That(colours[0].a, Is.EqualTo(settings.LampPoolAlpha).Within(.001f));
-                var streak = vertices.Skip(8).Take(4).ToArray();
+                Assert.That(onWall.Max(vertex => vertex.x) - onWall.Min(vertex => vertex.x), Is.EqualTo(settings.LampWallSize).Within(.01f), "As wide as it is tall.");
+                var streak = vertices.Skip(4 + wallVertices).Take(4).ToArray();
                 var centre = streak.Aggregate(Vector3.zero, (sum, vertex) => sum + vertex) / 4;
                 Assert.That(centre.x, Is.EqualTo(-5).Within(.01f));
                 Assert.That(centre.z, Is.EqualTo(-5).Within(.01f));
@@ -286,7 +288,7 @@ namespace MusiyoBetsknate.Tests
                 var towards = Vector3.ProjectOnPlane(settings.MoonDirection(), Vector3.up).normalized;
                 Assert.That(streak.Max(vertex => Vector3.Dot(vertex, towards)) - streak.Min(vertex => Vector3.Dot(vertex, towards)),
                     Is.EqualTo(settings.MoonGlintLength).Within(.01f), "Lying towards where the moon stands.");
-                Assert.That(colours[8].b, Is.GreaterThan(colours[8].r), "Cold moonlight, not a lamp's.");
+                Assert.That(colours[4 + wallVertices].b, Is.GreaterThan(colours[4 + wallVertices].r), "Cold moonlight, not a lamp's.");
                 var block = new MaterialPropertyBlock();
                 night.Pools.GetPropertyBlock(block);
                 Assert.That(block.GetColor("_BaseColor"), Is.EqualTo(Color.white), "The night only fades the glows in together.");
@@ -295,6 +297,47 @@ namespace MusiyoBetsknate.Tests
             {
                 UnityEngine.Object.DestroyImmediate(wall);
                 UnityEngine.Object.DestroyImmediate(post);
+            }
+        }
+
+        [Test]
+        public void ALampsGlowFollowsARoundRoomsWallInsteadOfStandingOffIt()
+        {
+            // A round room of 4 m radius, walled with 36 upright panels, and a lantern near the wall, off to one side of
+            // where the panels meet: the flat glow of before stood behind the wall at one side and was cut straight there.
+            const float radius = 4;
+            var room = new GameObject("NightTestRoundRoom");
+            for (int index = 0; index < 36; index++)
+            {
+                var panel = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                panel.transform.SetParent(room.transform, false);
+                var direction = Quaternion.Euler(0, index * 10, 0) * Vector3.forward;
+                panel.transform.position = direction * (radius + .1f) + Vector3.up * 1.5f;
+                panel.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+                panel.transform.localScale = new Vector3(.75f, 3, .2f);
+            }
+            try
+            {
+                var night = Museum();
+                lampObject.transform.position = Quaternion.Euler(0, 33, 0) * Vector3.forward * (radius - .6f) + Vector3.up * 1.5f;
+                night.Configure(null, null, MuseumNightAtmosphere.Current);
+                Physics.SyncTransforms();
+                night.Set(true);
+                Assert.That(night.WallGlows, Is.EqualTo(1));
+                var onWall = night.Pools.GetComponent<MeshFilter>().sharedMesh.vertices.Skip(4).Take((MuseumNight.WallSlices + 1) * 2).ToArray();
+                foreach (var vertex in onWall)
+                {
+                    float fromCentre = new Vector2(vertex.x, vertex.z).magnitude;
+                    Assert.That(fromCentre, Is.LessThan(radius - .01f), "Never behind the wall, where the wall would hide it: " + vertex);
+                    Assert.That(fromCentre, Is.GreaterThan(radius - .15f), "Close on the wall, not standing off it: " + vertex);
+                }
+                var lamp = new Vector2(lampObject.transform.position.x, lampObject.transform.position.z).normalized;
+                var middle = onWall.Aggregate(Vector3.zero, (sum, vertex) => sum + vertex) / onWall.Length;
+                Assert.That(Vector2.Angle(lamp, new Vector2(middle.x, middle.z)), Is.LessThan(3), "Centred on the wall facing the lamp.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(room);
             }
         }
 
