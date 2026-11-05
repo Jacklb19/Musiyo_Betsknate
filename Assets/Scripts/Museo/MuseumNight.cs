@@ -610,10 +610,10 @@ namespace MusiyoBetsknate.Museum
                     {
                         float u = index / (float)(line.Length - 1);
                         var tangent = line[Mathf.Min(index + 1, line.Length - 1)] - line[Mathf.Max(index - 1, 0)];
-                        var normal = Vector3.Cross(glow.Along, tangent).normalized;
+                        var facing = Vector3.Cross(glow.Along, tangent).normalized;
                         vertices.Add(line[index] - glow.Along); vertices.Add(line[index] + glow.Along);
                         uvs.Add(new Vector2(u, 0)); uvs.Add(new Vector2(u, 1));
-                        for (int end = 0; end < 2; end++) { normals.Add(normal); colours.Add(glow.Colour); }
+                        for (int end = 0; end < 2; end++) { normals.Add(facing); colours.Add(glow.Colour); }
                         if (index == 0) continue;
                         int foot = first + index * 2 - 2;
                         triangles.AddRange(new[] { foot, foot + 1, foot + 2, foot + 2, foot + 1, foot + 3 });
