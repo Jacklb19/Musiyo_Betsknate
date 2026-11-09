@@ -89,6 +89,7 @@ namespace MusiyoBetsknate.Tests
                         var reply = routed ?? (404, "{\"detail\":\"Not Found\"}");
                         var bytes = Encoding.UTF8.GetBytes(reply.body);
                         context.Response.StatusCode = reply.status;
+                        if (reply.status == 429) context.Response.Headers["Retry-After"] = "1";
                         context.Response.ContentType = "application/json";
                         context.Response.ContentLength64 = bytes.Length;
                         context.Response.OutputStream.Write(bytes, 0, bytes.Length);
@@ -1033,6 +1034,245 @@ namespace MusiyoBetsknate.Tests
             Assert.That(kept.Sent[0].Select(answer => answer.QuestionId + ":" + answer.OptionId), Is.EqualTo(new[] { "q1:a" }),
                 "Only the question and the choice; a passed question is not sent.");
             Assert.That(guide.Message, Is.EqualTo("Gracias. Tus respuestas se guardaron de forma anónima."));
+        }
+
+        [UnityTest]
+        public IEnumerator QuestInterviewCanRetryQuestionsAfterTheGuideAnswers()
+        {
+            InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Mouse>();
+            int attempts = 0;
+            var api = StartService((method, path, headers, body) =>
+                method == "GET" && path == "/api/v1/guide/quiz" && Interlocked.Increment(ref attempts) == 1
+                    ? (429, "{}") : ((int, string)?)null);
+            yield return OpenMuseumAtTheGuide(api);
+            var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var guide = flow.GetComponent<MuseumGuide>();
+            var quiz = flow.GetComponent<MuseumHearthQuiz>();
+            var view = UnityEngine.Object.FindAnyObjectByType<MuseumGuideView>();
+            var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
+            Assert.That(visitor.FocusPoint(flow.GetComponent<TourRuntime>().GuidePoint.Anchor), Is.True);
+            yield return null;
+            MuseumInput.Current.SetSpatial(true, visitor.transform);
+            Assert.That(guide.Ask(), Is.True);
+            yield return Until(() => quiz.Client.State == GuideQuizState.RateLimited, 10);
+            Assert.That(quiz.Client.State, Is.EqualTo(GuideQuizState.RateLimited));
+            Assert.That(guide.Send("Pregunta sintética de prueba"), Is.True);
+            yield return Until(() => guide.Client.State == GuideQuestionState.Answered && quiz.Client.RetryWaitRemaining == 0, 10);
+            yield return null;
+            var retry = view.QuizRetry;
+            Assert.That(retry.gameObject.activeInHierarchy, Is.True, "A held-back interview must offer a retry without leaving the guide.");
+            Assert.That(retry.IsInteractable(), Is.True);
+            retry.onClick.Invoke();
+            yield return Until(() => quiz.Available, 10);
+            Assert.That(quiz.Available, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator QuestInterviewKeepsLongOptionsInsideTheirButtons()
+        {
+            InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Mouse>();
+            string published = File.ReadAllText(Path.Combine(Application.dataPath, "Contracts", "examples", "guide_quiz.json"));
+            string longOption = string.Join(" ", Enumerable.Repeat("Texto sintético largo de una opción para comprobar sus límites.", 3));
+            Assert.That(longOption.Length, Is.LessThanOrEqualTo(250), "Exercise a valid published option.");
+            published = published.Replace("Ficha sintética A", longOption).Replace("Ficha sintética B", longOption).Replace("Ficha sintética C", longOption);
+            var api = StartService((method, path, headers, body) =>
+                method == "GET" && path == "/api/v1/guide/quiz" ? (200, published) : ((int, string)?)null);
+            yield return OpenMuseumAtTheGuide(api);
+            var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var guide = flow.GetComponent<MuseumGuide>();
+            var quiz = flow.GetComponent<MuseumHearthQuiz>();
+            var view = UnityEngine.Object.FindAnyObjectByType<MuseumGuideView>();
+            var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
+            Assert.That(visitor.FocusPoint(flow.GetComponent<TourRuntime>().GuidePoint.Anchor), Is.True);
+            yield return null;
+            MuseumInput.Current.SetSpatial(true, visitor.transform);
+            Assert.That(guide.Ask(), Is.True);
+            yield return Until(() => quiz.Available, 10);
+            Assert.That(quiz.Begin(), Is.True);
+            yield return AssertSteady(view.QuizOptions);
+            AssertFits(view.QuizOptions);
+            yield return Until(() => flow.GetComponent<MuseumLecternDisplay>().Openness >= 1, 3);
+            var scroll = view.QuizStart.GetComponentInParent<UnityEngine.UI.ScrollRect>();
+            Assert.That(scroll, Is.Not.Null, "Long choices must scroll inside the screen.");
+            Assert.That(scroll.content.rect.height, Is.GreaterThan(scroll.viewport.rect.height));
+            scroll.verticalNormalizedPosition = 0;
+            yield return null;
+            var display = flow.GetComponent<MuseumLecternDisplay>();
+            yield return RevealChoice(view.QuizOptions[2]);
+            CaptureConversation(display, "opciones-largas");
+            PressOnScreen(display, view.QuizOptions[2]);
+            yield return Until(() => quiz.Explanation != null, 10);
+            Assert.That(quiz.Explanation, Is.Not.Null, "A choice below the initial viewport remains answerable.");
+            yield return null;
+            var disabled = (RectTransform)view.QuizOptions[2].transform;
+            var spot = disabled.TransformPoint(disabled.rect.center);
+            display.Aim(new Ray(spot - display.Surface.forward, display.Surface.forward));
+            Assert.That(display.Aimed, Is.Null, "An answered option is no longer clickable.");
+            Assert.That(display.PointingAtChoices, Is.True, "The stick must still scroll when options are disabled.");
+        }
+
+        [UnityTest]
+        public IEnumerator QuestInterviewOffersOpinionQuestionsWithoutAKnowledgeQuiz()
+        {
+            InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Mouse>();
+            string empty = File.ReadAllText(Path.Combine(Application.dataPath, "Contracts", "examples", "guide_quiz_empty.json"));
+            var api = StartService((method, path, headers, body) =>
+                method == "GET" && path == "/api/v1/guide/quiz" ? (200, empty) : ((int, string)?)null);
+            yield return OpenMuseumAtTheGuide(api);
+            var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var guide = flow.GetComponent<MuseumGuide>();
+            var quiz = flow.GetComponent<MuseumHearthQuiz>();
+            var survey = flow.GetComponent<MuseumClosingSurvey>();
+            var kept = new KeptSurvey();
+            survey.Source = kept;
+            var view = UnityEngine.Object.FindAnyObjectByType<MuseumGuideView>();
+            var display = flow.GetComponent<MuseumLecternDisplay>();
+            var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
+            Assert.That(visitor.FocusPoint(flow.GetComponent<TourRuntime>().GuidePoint.Anchor), Is.True);
+            yield return null;
+            MuseumInput.Current.SetSpatial(true, visitor.transform);
+            Assert.That(guide.Ask(), Is.True);
+            yield return Until(() => quiz.Client.State == GuideQuizState.Ready && survey.Available && display.Openness >= 1, 10);
+            Assert.That(quiz.Count, Is.Zero, "The published museum has opinion questions but no knowledge quiz.");
+            Assert.That(guide.Send("Pregunta sintética de prueba"), Is.True);
+            yield return Until(() => guide.Client.State == GuideQuestionState.Answered, 10);
+            yield return null;
+            Assert.That(view.QuizStart.gameObject.activeInHierarchy, Is.True);
+            yield return RevealChoice(view.QuizStart);
+            PressOnScreen(display, view.QuizStart);
+            yield return null;
+            Assert.That(survey.Stage, Is.EqualTo(ClosingSurveyStage.Notice));
+            Assert.That(kept.Sent, Is.Empty, "Opening the interview never consents to storage.");
+            yield return RevealChoice(view.SurveyWithoutStoring);
+            CaptureConversation(display, "aviso-entrevista");
+            PressOnScreen(display, view.SurveyWithoutStoring);
+            yield return null;
+            Assert.That(survey.Stage, Is.EqualTo(ClosingSurveyStage.Answering));
+            yield return RevealChoice(view.SurveyOptions[0]);
+            PressOnScreen(display, view.SurveyOptions[0]);
+            yield return null;
+            Assert.That(survey.Index, Is.EqualTo(1));
+            yield return RevealChoice(view.SurveyOptions[3]);
+            CaptureConversation(display, "preguntas-opinion");
+            PressOnScreen(display, view.SurveyOptions[3]);
+            yield return null;
+            Assert.That(survey.Stage, Is.EqualTo(ClosingSurveyStage.Done));
+            Assert.That(kept.Sent, Is.Empty);
+        }
+
+        [UnityTest]
+        public IEnumerator QuestInterviewRemainsReachableAfterAConversation()
+        {
+            InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Mouse>();
+            var api = StartService();
+            yield return OpenMuseumAtTheGuide(api);
+            MuseumInput.Current.SetSpatial(true);
+            var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var runtime = flow.GetComponent<TourRuntime>();
+            var guide = flow.GetComponent<MuseumGuide>();
+            var quiz = flow.GetComponent<MuseumHearthQuiz>();
+            var display = flow.GetComponent<MuseumLecternDisplay>();
+            var view = UnityEngine.Object.FindAnyObjectByType<MuseumGuideView>();
+            var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
+            Assert.That(visitor.FocusPoint(runtime.GuidePoint.Anchor), Is.True);
+            yield return null;
+            Assert.That(guide.Ask(), Is.True);
+            yield return Until(() => quiz.Available && display.Openness >= 1, 10);
+
+            view.BeginTyping();
+            view.Keyboard.Insert("Pregunta sintética de prueba");
+            view.Keyboard.Submit();
+            yield return Until(() => guide.Client.State == GuideQuestionState.Answered, 10);
+            Assert.That(guide.Client.State, Is.EqualTo(GuideQuestionState.Answered));
+            yield return null;
+            yield return null;
+            AssertFits(new[] { view.QuizStart });
+            AssertInsideScreen(display, view.QuizStart);
+            PressOnScreen(display, view.QuizStart);
+            yield return null;
+            Assert.That(quiz.Active, Is.True);
+            Assert.That(guide.Typing, Is.False);
+            yield return AssertSteady(view.QuizOptions);
+            foreach (var option in view.QuizOptions) AssertInsideScreen(display, option);
+            PressOnScreen(display, view.QuizOptions[0]);
+            yield return Until(() => quiz.Explanation != null, 10);
+            Assert.That(quiz.Explanation, Is.Not.Null);
+        }
+
+        private static IEnumerator RevealChoice(UnityEngine.UI.Button choice)
+        {
+            // Let the new words determine their height before moving the viewport to a choice below the fold.
+            for (int frame = 0; frame < 3; frame++) yield return null;
+            Canvas.ForceUpdateCanvases();
+            var scroll = choice.GetComponentInParent<UnityEngine.UI.ScrollRect>();
+            var rect = (RectTransform)choice.transform;
+            float excess = scroll.content.rect.height - scroll.viewport.rect.height;
+            float offset = scroll.viewport.InverseTransformPoint(rect.TransformPoint(rect.rect.center)).y - scroll.viewport.rect.center.y;
+            if (excess > 1) scroll.verticalNormalizedPosition = Mathf.Clamp01(scroll.verticalNormalizedPosition + offset / excess);
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+            Vector2 spot = scroll.viewport.InverseTransformPoint(rect.TransformPoint(rect.rect.center));
+            Assert.That(scroll.viewport.rect.Contains(spot), Is.True, choice.name + " can be brought into view.");
+            yield return new WaitForSecondsRealtime(.4f);
+        }
+
+        private static void CaptureConversation(MuseumLecternDisplay display, string name)
+        {
+            string folder = Environment.GetEnvironmentVariable("MUSIYO_CAPTURE_DIR");
+            if (string.IsNullOrEmpty(folder)) return;
+            var holder = new GameObject("InterviewCapture");
+            var camera = holder.AddComponent<Camera>();
+            var centre = display.Surface.TransformPoint(display.Surface.rect.center);
+            holder.transform.SetPositionAndRotation(centre - display.Surface.forward * 2, Quaternion.LookRotation(display.Surface.forward, display.Surface.up));
+            camera.orthographic = true;
+            camera.orthographicSize = Mathf.Max(display.Surface.rect.height * display.Surface.lossyScale.y * .58f, .5f);
+            camera.nearClipPlane = .05f;
+            var target = new RenderTexture(1440, 1100, 24);
+            var picture = new Texture2D(1440, 1100, TextureFormat.RGB24, false);
+            var previous = RenderTexture.active;
+            try
+            {
+                camera.targetTexture = target;
+                camera.Render();
+                RenderTexture.active = target;
+                picture.ReadPixels(new Rect(0, 0, 1440, 1100), 0, 0);
+                Directory.CreateDirectory(folder);
+                File.WriteAllBytes(Path.Combine(folder, name + ".png"), picture.EncodeToPNG());
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                camera.targetTexture = null;
+                target.Release();
+                UnityEngine.Object.Destroy(target);
+                UnityEngine.Object.Destroy(picture);
+                UnityEngine.Object.Destroy(holder);
+            }
+        }
+
+        private static void AssertInsideScreen(MuseumLecternDisplay display, UnityEngine.UI.Button choice)
+        {
+            Canvas.ForceUpdateCanvases();
+            var corners = new Vector3[4];
+            ((RectTransform)choice.transform).GetWorldCorners(corners);
+            foreach (var corner in corners)
+            {
+                Vector2 local = display.Surface.InverseTransformPoint(corner);
+                Assert.That(display.Surface.rect.Contains(local), Is.True, choice.name + " must remain inside the screen: " + local);
+            }
+        }
+
+        private static void PressOnScreen(MuseumLecternDisplay display, UnityEngine.UI.Button choice)
+        {
+            var rect = (RectTransform)choice.transform;
+            var spot = rect.TransformPoint(rect.rect.center);
+            display.Aim(new Ray(spot - display.Surface.forward, display.Surface.forward));
+            Assert.That(display.Aimed, Is.SameAs(choice));
+            Assert.That(display.Press(), Is.True);
         }
 
         [UnityTest]
