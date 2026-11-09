@@ -31,7 +31,7 @@ namespace MusiyoBetsknate.Museum
         private RectTransform panel;
         private Image dot;
         private TMP_Text chip, note, body, sources, hint;
-        private Button accept, decline, stop, confirm, again, close;
+        private Button accept, decline, stop, confirm, again, close, write;
         private bool registered;
         private bool invited;
         private float inviteUntil;
@@ -125,6 +125,7 @@ namespace MusiyoBetsknate.Museum
             confirm = Make("Confirm", "companion_voice_confirm", () => voice.Confirm(), true);
             again = Make("Again", "companion_voice_again", () => voice.Again(), false);
             close = Make("Close", "companion_voice_close", () => voice.End(), false);
+            write = Make("Write", "keyboard_write", () => voice.Write(), false);
             hint = MuseumWorldUi.Label("Hint", panel, "", 18, MuseumWorldUi.Muted);
             canvas.gameObject.SetActive(false);
         }
@@ -144,7 +145,7 @@ namespace MusiyoBetsknate.Museum
             if (canvas == null) return;
             var stage = voice.Stage;
             bool conversing = voice.Conversing;
-            bool shown = conversing || Inviting;
+            bool shown = conversing && stage != CompanionVoiceStage.Writing || Inviting;
             if (shown && !canvas.gameObject.activeSelf) placed = following = false;
             canvas.gameObject.SetActive(shown);
             if (!shown) return;
@@ -166,6 +167,10 @@ namespace MusiyoBetsknate.Museum
             confirm.gameObject.SetActive(stage == CompanionVoiceStage.Review);
             again.gameObject.SetActive(stage == CompanionVoiceStage.Review || stage == CompanionVoiceStage.Answer || stage == CompanionVoiceStage.Problem);
             close.gameObject.SetActive(conversing && stage != CompanionVoiceStage.Notice);
+            write.gameObject.SetActive(conversing && voice.QuestionsOffered && stage != CompanionVoiceStage.Writing
+                && stage != CompanionVoiceStage.Thinking && stage != CompanionVoiceStage.Transcribing
+                && stage != CompanionVoiceStage.Recording && stage != CompanionVoiceStage.Permission);
+            if (stage == CompanionVoiceStage.Writing) { canvas.gameObject.SetActive(false); return; }
             accept.transform.parent.gameObject.SetActive(conversing);
             string hintKey = stage == CompanionVoiceStage.Notice ? "companion_voice_hint_notice"
                 : stage == CompanionVoiceStage.Recording ? "companion_voice_hint_recording"
@@ -193,7 +198,7 @@ namespace MusiyoBetsknate.Museum
                 inviteUntil = Time.unscaledTime + InviteSeconds;
                 Refresh();
             }
-            bool shown = voice.Conversing || Inviting;
+            bool shown = voice.Conversing && voice.Stage != CompanionVoiceStage.Writing || Inviting;
             if (shown != canvas.gameObject.activeSelf) Refresh();
             if (!shown) return;
             var camera = FindHead();

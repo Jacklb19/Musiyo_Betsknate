@@ -356,11 +356,11 @@ namespace MusiyoBetsknate.Museum
             rayLine.SetPosition(0, position); rayLine.SetPosition(1, ray.GetPoint(distance));
             var pointerDevice = input.Click.activeControl?.device;
             bool overInterface = pointerDevice != null && module.IsPointerOverGameObject(pointerDevice.deviceId);
-            if (interfaceOpen || overInterface || flow.InputConsumedThisFrame)
+            if (interfaceOpen || flow.InputConsumedThisFrame)
             { display?.ClearAim(); return; }
             // The screen and the cues beside the pieces are chosen only where nothing solid stands in front of them.
             display?.Aim(ray, distance);
-            if (input.Click.WasPressedThisFrame()) display?.Press();
+            if (!overInterface && input.Click.WasPressedThisFrame()) display?.Press();
         }
 
         private void OnDestroy()

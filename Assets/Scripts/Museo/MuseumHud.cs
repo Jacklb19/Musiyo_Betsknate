@@ -69,6 +69,8 @@ namespace MusiyoBetsknate.Museum
         /// <summary>Below the narration on the screen by a stand: «Más sobre esta pieza» and the references at the end.</summary>
         private TMP_Text recordText;
         private MuseumPanelScroll panelScrolling;
+        private MuseumPanelScroll choicesScrolling;
+        private ScrollRect choicesScroll;
         private MuseumLecternDisplay lectern;
         private MuseumPointPresence presence;
         private MuseumInput input;
@@ -230,19 +232,37 @@ namespace MusiyoBetsknate.Museum
             var viewport = content != null ? content.parent as RectTransform : null;
             if (viewport == null) return;
             float width = MuseumLecternDisplay.SideColumnWidth;
-            var side = new GameObject("SideColumn", typeof(RectTransform), typeof(VerticalLayoutGroup)).GetComponent<RectTransform>();
+            var side = new GameObject("SideColumn", typeof(RectTransform), typeof(RectMask2D), typeof(ScrollRect)).GetComponent<RectTransform>();
             side.SetParent(panel.transform, false);
             side.anchorMin = new Vector2(1, 0);
             side.anchorMax = Vector2.one;
             side.pivot = Vector2.one;
             side.offsetMin = new Vector2(viewport.offsetMax.x - width, viewport.offsetMin.y);
             side.offsetMax = new Vector2(viewport.offsetMax.x, viewport.offsetMax.y);
-            var layout = side.GetComponent<VerticalLayoutGroup>();
+            // A long answer or option must never squeeze the other controls or push them outside the screen.
+            var choices = new GameObject("Choices", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter)).GetComponent<RectTransform>();
+            choices.SetParent(side, false);
+            choices.anchorMin = new Vector2(0, 1);
+            choices.anchorMax = Vector2.one;
+            choices.pivot = new Vector2(.5f, 1);
+            choices.sizeDelta = Vector2.zero;
+            choices.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var layout = choices.GetComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(0, (int)MuseumPanelScroll.BarWidth + 5, 0, 0);
             layout.spacing = 10;
             layout.childAlignment = TextAnchor.UpperCenter;
             layout.childControlWidth = layout.childControlHeight = true;
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
+            choicesScroll = side.GetComponent<ScrollRect>();
+            choicesScroll.viewport = side;
+            choicesScroll.content = choices;
+            choicesScroll.horizontal = false;
+            choicesScroll.movementType = ScrollRect.MovementType.Clamped;
+            choicesScroll.inertia = false;
+            choicesScroll.scrollSensitivity = MuseumPanelScroll.WheelUnits;
+            choicesScrolling = side.gameObject.AddComponent<MuseumPanelScroll>();
+            choicesScrolling.Configure(choicesScroll);
             sideColumn = side;
             panelViewport = viewport;
             viewportRight = viewport.offsetMax.x;
@@ -252,10 +272,11 @@ namespace MusiyoBetsknate.Museum
             var moved = new System.Collections.Generic.List<Transform>();
             foreach (Transform child in content)
                 if (child.GetComponent<TMP_Text>() == null) moved.Add(child);
-            foreach (var child in moved) child.SetParent(side, false);
+            foreach (var child in moved) child.SetParent(choices, false);
             if (modelControls != null && modelControls.TryGetComponent<GridLayoutGroup>(out var grid))
-                grid.cellSize = new Vector2((width - grid.spacing.x * (grid.constraintCount - 1)) / grid.constraintCount, grid.cellSize.y);
-            lectern.SideColumn = side;
+                grid.cellSize = new Vector2((width - layout.padding.horizontal - grid.spacing.x * (grid.constraintCount - 1)) / grid.constraintCount, grid.cellSize.y);
+            lectern.SideColumn = choices;
+            lectern.SideViewport = side;
             narrationButtons = gameObject.AddComponent<MuseumNarrationButtons>();
             narrationButtons.Configure((RectTransform)panel.transform, new Vector2(viewportRight, viewportTop), panelText,
                 ToggleNarration, RestartNarration, () => lectern.Aimed,
@@ -273,7 +294,7 @@ namespace MusiyoBetsknate.Museum
         {
             if (sideColumn == null || panelViewport == null) return;
             bool used = false;
-            foreach (Transform child in sideColumn) if (child.gameObject.activeSelf) { used = true; break; }
+            foreach (Transform child in choicesScroll.content) if (child.gameObject.activeSelf) { used = true; break; }
             bool header = narrationButtons != null && narrationButtons.Row != null && narrationButtons.Row.gameObject.activeSelf
                 || recordTabs != null && recordTabs.Row != null && recordTabs.Row.gameObject.activeSelf;
             float top = header ? viewportTop - MuseumNarrationButtons.RowHeight : viewportTop;
@@ -389,8 +410,10 @@ namespace MusiyoBetsknate.Museum
             var input = MuseumInput.Current;
             // While a piece is in the hand the stick turns the piece.
             bool held = grab != null && grab.Held && input.Spatial;
-            bool scrolled = panelScrolling.Step(input.ScrollPanel, panel.activeSelf && !held, Time.unscaledDeltaTime);
-            scrolled |= panelScrolling.Wheel(input.ScrollWheel.ReadValue<Vector2>().y, WheelScrollsPanel(input));
+            bool choosing = choicesScroll != null && lectern.PointingAtChoices;
+            var scrolling = choosing ? choicesScrolling : panelScrolling;
+            bool scrolled = scrolling.Step(input.ScrollPanel, panel.activeSelf && !held, Time.unscaledDeltaTime);
+            scrolled |= scrolling.Wheel(input.ScrollWheel.ReadValue<Vector2>().y, WheelScrollsPanel(input));
             // Scrolling by hand takes the panel away from the narration until the visitor asks to follow it again.
             if (scrolled) narrationReading?.Suspend();
         }

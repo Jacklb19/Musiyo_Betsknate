@@ -48,6 +48,8 @@ namespace MusiyoBetsknate.Museum
         private bool open;
         /// <summary>Column of choices and controls beside the reading column; its height counts toward the screen's.</summary>
         public RectTransform SideColumn { get; set; }
+        public RectTransform SideViewport { get; set; }
+        public bool PointingAtChoices { get; private set; }
 
         /// <summary>Existing stand beside the active point, or null when the stable point anchor carries the panel.</summary>
         public PointLectern Host { get; private set; }
@@ -201,6 +203,10 @@ namespace MusiyoBetsknate.Museum
         /// </summary>
         public void Aim(Ray ray, float reach = float.PositiveInfinity)
         {
+            PointingAtChoices = InWorld && open && Openness >= 1 && SideViewport != null && SideViewport.gameObject.activeInHierarchy
+                && Vector3.Dot(ray.direction, SideViewport.forward) > 0
+                && new Plane(SideViewport.forward, SideViewport.position).Raycast(ray, out float distance)
+                && distance <= reach && Covers(SideViewport, ray.GetPoint(distance));
             Aimed = ControlAt(ray, reach);
             MarkAim();
         }
@@ -208,6 +214,7 @@ namespace MusiyoBetsknate.Museum
         public void ClearAim()
         {
             Aimed = null;
+            PointingAtChoices = false;
             MarkAim();
         }
 
@@ -301,7 +308,7 @@ namespace MusiyoBetsknate.Museum
             float chrome = panel.rect.height - scroll.viewport.rect.height;
             float wanted = chrome + LayoutUtility.GetPreferredHeight(scroll.content);
             // The controls column is never cut: the screen grows for it beyond its usual height when it must.
-            float side = SideColumn != null && SideColumn.gameObject.activeSelf ? chrome + LayoutUtility.GetPreferredHeight(SideColumn) : 0;
+            float side = SideColumn != null && SideColumn.gameObject.activeInHierarchy ? chrome + LayoutUtility.GetPreferredHeight(SideColumn) : 0;
             float limit = Mathf.Max(InWorldMaxHeight, Mathf.Min(side, InWorldMaxHeight * 1.5f));
             float height = Mathf.Clamp(Mathf.Max(wanted, side), MinimumHeight, limit);
             if (Mathf.Abs(panel.sizeDelta.y - height) < .5f) return;

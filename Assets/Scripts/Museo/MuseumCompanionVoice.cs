@@ -17,6 +17,8 @@ namespace MusiyoBetsknate.Museum
         Transcribing,
         /// <summary>The transcript waits for the visitor to confirm it, record again or drop it.</summary>
         Review,
+        /// <summary>The visitor writes with the controller ray, without microphone access.</summary>
+        Writing,
         /// <summary>The confirmed question went to the guide service.</summary>
         Thinking,
         /// <summary>The answer is on the panel, and heard when the service spoke it.</summary>
@@ -64,6 +66,7 @@ namespace MusiyoBetsknate.Museum
         private bool connected;
         private int shownSeconds = -1;
         private VoiceCapabilityState loggedCapability;
+        private MuseumVirtualKeyboard keyboard;
 
         public CompanionVoiceStage Stage { get; private set; }
         /// <summary>Interface text key of the last problem, while <see cref="Stage"/> is Problem.</summary>
@@ -82,6 +85,7 @@ namespace MusiyoBetsknate.Museum
         /// <summary>The conversation paused a narration, which goes on when it ends.</summary>
         public bool PausedNarration => pausedNarration;
         public bool Consented => GuideVoiceConsent.Covers(voice?.Capabilities);
+        public MuseumVirtualKeyboard Keyboard => keyboard;
         /// <summary>The tour publishes the guide's answers; questions to the companion go to the same service.</summary>
         public bool QuestionsOffered => runtime != null && runtime.Guide?.available == true;
         /// <summary>The service transcribes and this device can record.</summary>
@@ -198,6 +202,7 @@ namespace MusiyoBetsknate.Museum
                 case CompanionVoiceStage.Permission:
                 case CompanionVoiceStage.Transcribing:
                 case CompanionVoiceStage.Thinking: return false;
+                case CompanionVoiceStage.Writing: return false;
                 default: return Talk();
             }
         }
@@ -282,6 +287,33 @@ namespace MusiyoBetsknate.Museum
             return true;
         }
 
+        /// <summary>Text remains available when recording or transcription is unavailable; no audio consent is needed.</summary>
+        public bool Write()
+        {
+            if (!CanAsk || !QuestionsOffered || question.Busy || question.RetryWaitRemaining > 0) return false;
+            string draft = Stage == CompanionVoiceStage.Review ? voice.Transcript : question.Question;
+            recorder?.Discard();
+            voice.Forget();
+            StopSpeech();
+            HoldNarration();
+            if (keyboard == null) keyboard = gameObject.AddComponent<MuseumVirtualKeyboard>();
+            var visitor = FindAnyObjectByType<DesktopVisitorController>();
+            var eye = visitor != null ? visitor.GetComponentInChildren<Camera>() : Camera.main;
+            keyboard.Show(draft, eye, interaction.GetComponent<MuseumLecternDisplay>(), AskWritten, End);
+            Set(CompanionVoiceStage.Writing);
+            MuseumInputDirector.Ensure(interaction).Apply();
+            return true;
+        }
+
+        private void AskWritten(string text)
+        {
+            if (!CanAsk || !QuestionsOffered) { End(); return; }
+            heard = null;
+            question.Ask(text);
+            Set(question.Busy ? CompanionVoiceStage.Thinking : CompanionVoiceStage.Answer);
+            MuseumInputDirector.Ensure(interaction).Apply();
+        }
+
         /// <summary>Drops the transcript and listens again at once.</summary>
         public bool Again()
         {
@@ -297,12 +329,14 @@ namespace MusiyoBetsknate.Museum
         /// <summary>Ends the conversation: the microphone stops, nothing in flight reaches the visitor, a paused narration goes on.</summary>
         public void End()
         {
+            keyboard?.Hide();
             recorder?.Discard();
             voice?.Forget();
             question?.Cancel();
             StopSpeech();
             ReleaseNarration();
             if (Stage != CompanionVoiceStage.Idle) Set(CompanionVoiceStage.Idle);
+            if (interaction != null) MuseumInputDirector.Ensure(interaction).Apply();
         }
 
         /// <summary>Silences the spoken answer; its text stays.</summary>

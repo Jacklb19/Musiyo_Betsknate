@@ -56,17 +56,24 @@ namespace MusiyoBetsknate.Museum
         private bool wasSpeaking;
         private int shownWait = -1;
         private bool wasOpen;
+        private GuideQuestionState shownQuestionState;
+        private ClosingSurveyStage shownSurveyStage;
         private bool focusPending;
+        private Button write;
+        private MuseumVirtualKeyboard keyboard;
 
         public TMP_InputField Field => field;
         public Button SendButton => send;
         public Button CancelButton => cancel;
+        public Button WriteButton => write;
+        public MuseumVirtualKeyboard Keyboard => keyboard;
         public TMP_Text Answer => answer;
         public IReadOnlyList<GameObject> Sources => shownSources;
         public Button QuizStart => quizStart;
         public Button QuizSkip => quizSkip;
         public Button QuizNext => quizNext;
         public Button QuizClose => quizClose;
+        public Button QuizRetry => quizRetry;
         public TMP_Text QuizText => quizText;
         /// <summary>The options of the question on show, in published order.</summary>
         public IReadOnlyList<Button> QuizOptions => shownOptions;
@@ -106,7 +113,9 @@ namespace MusiyoBetsknate.Museum
             readingColumn = content;
             fieldRoot = CreateField(bodyText, content);
             spatialNote = Text(bodyText, content, "GuideSpatialNote");
-            spatialNote.text = MuseumInterfaceText.Get("guide_spatial_text_pending");
+            spatialNote.text = MuseumInterfaceText.Get("guide_spatial_keyboard");
+            write = button("keyboard_write", content, BeginTyping);
+            write.name = "GuideWrite";
             appearanceNotice = Text(bodyText, content, "CompanionAppearanceNotice");
             var actions = new GameObject("GuideActions", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
             actions.transform.SetParent(content, false);
@@ -276,6 +285,7 @@ namespace MusiyoBetsknate.Museum
         private void ShowSurveyOptions(ClosingSurveyQuestion question)
         {
             if (question == surveyOptionsFor) return;
+            ResetConversationScroll();
             foreach (var item in shownSurveyOptions) Destroy(item.gameObject);
             shownSurveyOptions.Clear();
             surveyOptionsFor = question;
@@ -352,9 +362,9 @@ namespace MusiyoBetsknate.Museum
             voiceText.gameObject.SetActive(status.Length > 0);
             // With a keyboard the transcript also goes to the question field, where it can be corrected before asking.
             var transcript = stage == GuideVoiceStage.Review ? voice.Client.Transcript : null;
-            if (transcript != null && transcript != reviewed && !MuseumInput.Current.Spatial) field.SetTextWithoutNotify(transcript);
+            if (transcript != null && transcript != reviewed) field.SetTextWithoutNotify(transcript);
             reviewed = transcript;
-            spatialNote.text = MuseumInterfaceText.Get(voice.Offered ? "guide_spatial_voice" : "guide_spatial_text_pending");
+            spatialNote.text = MuseumInterfaceText.Get("guide_spatial_keyboard");
             wasSpeaking = voice.Speaking;
         }
 
@@ -365,7 +375,7 @@ namespace MusiyoBetsknate.Museum
         private void CreateQuiz(TMP_Text bodyText, Transform content, Func<string, Transform, UnityAction, Button> button)
         {
             quizText = Text(bodyText, content, "QuizText");
-            quizStart = button("quiz_start", content, () => quiz.Begin());
+            quizStart = button("quiz_start", content, BeginInterview);
             quizStart.name = "QuizStart";
             quizSkip = button("quiz_skip", content, () => quiz.Next());
             quizSkip.name = "QuizSkip";
@@ -379,6 +389,13 @@ namespace MusiyoBetsknate.Museum
             quizOptionTemplate.name = "QuizOption";
             quizOptionTemplate.gameObject.SetActive(false);
             quiz.Changed += Refresh;
+        }
+
+        // The knowledge quiz is optional. The opinion questions must remain reachable when it has no published items.
+        private void BeginInterview()
+        {
+            if (quiz.Available) quiz.Begin();
+            else if (survey != null && survey.Available) survey.Offer();
         }
 
         /// <summary>Visitor text with rich-text tags shown literally, so a service answer cannot restyle the panel.</summary>
@@ -452,7 +469,7 @@ namespace MusiyoBetsknate.Museum
             return text;
         }
 
-        private bool CanWrite => guide.Open && guide.Offered && !MuseumInput.Current.Spatial;
+        private bool CanWrite => guide.Open && guide.Offered && !guide.Client.Busy;
 
         /// <summary>
         /// Gives the field the keyboard; walking stops until the visitor sends, presses Escape or clicks away. A screen that
@@ -460,6 +477,22 @@ namespace MusiyoBetsknate.Museum
         /// </summary>
         public void BeginTyping()
         {
+            if (CanWrite && MuseumInput.Current.Spatial)
+            {
+                voice?.Discard();
+                voice?.StopSpeech();
+                if (keyboard == null) keyboard = guide.gameObject.AddComponent<MuseumVirtualKeyboard>();
+                var visitor = FindAnyObjectByType<DesktopVisitorController>();
+                var eye = visitor != null ? visitor.GetComponentInChildren<Camera>() : Camera.main;
+                keyboard.Show(field.text, eye, guide.GetComponent<MuseumLecternDisplay>(), text =>
+                {
+                    field.SetTextWithoutNotify(text);
+                    Submit();
+                    guide.Typing = false;
+                }, () => { field.SetTextWithoutNotify(keyboard.Draft); guide.Typing = false; });
+                guide.Typing = true;
+                return;
+            }
             focusPending = CanWrite && field != null;
             if (focusPending && field.isActiveAndEnabled) Focus();
         }
@@ -475,7 +508,8 @@ namespace MusiyoBetsknate.Museum
         public void Submit()
         {
             if (!guide.Open || !guide.Offered || guide.Client.Busy || guide.Client.RetryWaitRemaining > 0) return;
-            guide.Send(MuseumInput.Current.Spatial ? guide.Client.Question : field.text);
+            guide.Send(field.text);
+            keyboard?.Hide();
             voice?.Forget();
             field.DeactivateInputField();
             if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject == field.gameObject)
@@ -490,7 +524,7 @@ namespace MusiyoBetsknate.Museum
                 if (CanWrite) Focus();
                 else focusPending = false;
             }
-            guide.Typing = guide.Open && field.isFocused;
+            guide.Typing = guide.Open && (field.isFocused || keyboard != null && keyboard.Open);
             // A spoken answer ends without any event.
             if (voice != null && voice.Speaking != wasSpeaking) RefreshVoice();
             // The rate-limit countdowns change every second without any event.
@@ -512,6 +546,7 @@ namespace MusiyoBetsknate.Museum
             RefreshVoice();
             fieldRoot.SetActive(offered && !spatial);
             spatialNote.gameObject.SetActive(offered && spatial);
+            write.gameObject.SetActive(offered && spatial && !client.Busy);
             send.transform.parent.gameObject.SetActive(offered);
             send.gameObject.SetActive(!client.Busy && (!spatial || client.CanRetry));
             send.interactable = client.RetryWaitRemaining == 0;
@@ -522,24 +557,39 @@ namespace MusiyoBetsknate.Museum
             ShowSources(offered && client.State == GuideQuestionState.Answered);
             if (open && !wasOpen && !string.IsNullOrEmpty(client.Question)) field.SetTextWithoutNotify(client.Question);
             // The conversation opens ready to write, where the device has a keyboard.
-            if (open && !wasOpen) BeginTyping();
+            if (open && !wasOpen && !spatial) BeginTyping();
+            if ((!offered || !spatial) && keyboard != null) keyboard.Hide(true);
             if (!open && field.isFocused) field.DeactivateInputField();
+            var surveyStage = survey != null ? survey.Stage : ClosingSurveyStage.Off;
+            if (open && (!wasOpen || client.State != shownQuestionState || surveyStage != shownSurveyStage)) ResetConversationScroll();
+            shownQuestionState = client.State;
+            shownSurveyStage = surveyStage;
             wasOpen = open;
+        }
+
+        private void ResetConversationScroll()
+        {
+            var reading = readingColumn != null ? readingColumn.GetComponentInParent<ScrollRect>() : null;
+            var choices = quizStart != null ? quizStart.GetComponentInParent<ScrollRect>() : null;
+            foreach (var scroll in new[] { reading, choices })
+                if (scroll != null) { scroll.StopMovement(); scroll.verticalNormalizedPosition = 1; }
         }
 
         private void RefreshQuiz(bool open)
         {
             if (quiz == null || quizText == null) return;
             var client = quiz.Client;
-            bool failed = client.State == GuideQuizState.Failed || client.State == GuideQuizState.Incompatible;
+            bool limited = client.State == GuideQuizState.RateLimited;
+            bool failed = client.State == GuideQuizState.Failed || client.State == GuideQuizState.Incompatible || limited;
             bool answerLost = client.AnswerState == GuideQuizAnswerState.Unavailable || client.AnswerState == GuideQuizAnswerState.Incompatible;
             var explanation = quiz.Explanation;
             bool sending = client.AnswerState == GuideQuizAnswerState.Sending;
-            quizStart.gameObject.SetActive(open && quiz.Available && !quiz.Active);
+            quizStart.gameObject.SetActive(open && !quiz.Active && (quiz.Available || survey != null && survey.Available));
             quizSkip.gameObject.SetActive(open && quiz.Active && explanation == null && !sending);
             quizNext.gameObject.SetActive(open && quiz.Active && explanation != null);
             quizClose.gameObject.SetActive(open && quiz.Active);
             quizRetry.gameObject.SetActive(open && (quiz.Active ? answerLost : failed));
+            quizRetry.interactable = client.RetryWaitRemaining == 0;
             string text = "";
             if (open && quiz.Done) text = MuseumInterfaceText.Get("quiz_done_text");
             else if (open && quiz.Active && quiz.Current != null)
@@ -549,6 +599,7 @@ namespace MusiyoBetsknate.Museum
                     text += "\n\n" + explanation.explanation + "\n\n" + MuseumInterfaceText.Format("quiz_evidence", explanation.citation.quote)
                         + "\n" + MuseumInterfaceText.Format("quiz_source", explanation.source.reference);
             }
+            else if (open && limited) text = MuseumInterfaceText.Format("quiz_rate_limited", client.RetryWaitRemaining);
             else if (open && failed) text = MuseumInterfaceText.Get("quiz_failure");
             quizText.text = text;
             quizText.gameObject.SetActive(text.Length > 0);
@@ -560,6 +611,7 @@ namespace MusiyoBetsknate.Museum
         {
             if (question != optionsFor)
             {
+                ResetConversationScroll();
                 foreach (var item in shownOptions) Destroy(item.gameObject);
                 shownOptions.Clear();
                 optionsFor = question;
