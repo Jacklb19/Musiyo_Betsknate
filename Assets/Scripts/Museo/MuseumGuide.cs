@@ -215,7 +215,7 @@ namespace MusiyoBetsknate.Museum
         /// <summary>Asks the conversation view for the keyboard, as the guide key does while the conversation is open.</summary>
         public bool RequestTyping()
         {
-            if (!Open || !Offered || MuseumInput.Current.Spatial) return false;
+            if (!Open || !Offered) return false;
             TypingRequested?.Invoke();
             return true;
         }

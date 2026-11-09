@@ -57,10 +57,14 @@ namespace MusiyoBetsknate.Museum
         private int shownWait = -1;
         private bool wasOpen;
         private bool focusPending;
+        private Button write;
+        private MuseumVirtualKeyboard keyboard;
 
         public TMP_InputField Field => field;
         public Button SendButton => send;
         public Button CancelButton => cancel;
+        public Button WriteButton => write;
+        public MuseumVirtualKeyboard Keyboard => keyboard;
         public TMP_Text Answer => answer;
         public IReadOnlyList<GameObject> Sources => shownSources;
         public Button QuizStart => quizStart;
@@ -106,7 +110,9 @@ namespace MusiyoBetsknate.Museum
             readingColumn = content;
             fieldRoot = CreateField(bodyText, content);
             spatialNote = Text(bodyText, content, "GuideSpatialNote");
-            spatialNote.text = MuseumInterfaceText.Get("guide_spatial_text_pending");
+            spatialNote.text = MuseumInterfaceText.Get("guide_spatial_keyboard");
+            write = button("keyboard_write", content, BeginTyping);
+            write.name = "GuideWrite";
             appearanceNotice = Text(bodyText, content, "CompanionAppearanceNotice");
             var actions = new GameObject("GuideActions", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
             actions.transform.SetParent(content, false);
@@ -352,9 +358,9 @@ namespace MusiyoBetsknate.Museum
             voiceText.gameObject.SetActive(status.Length > 0);
             // With a keyboard the transcript also goes to the question field, where it can be corrected before asking.
             var transcript = stage == GuideVoiceStage.Review ? voice.Client.Transcript : null;
-            if (transcript != null && transcript != reviewed && !MuseumInput.Current.Spatial) field.SetTextWithoutNotify(transcript);
+            if (transcript != null && transcript != reviewed) field.SetTextWithoutNotify(transcript);
             reviewed = transcript;
-            spatialNote.text = MuseumInterfaceText.Get(voice.Offered ? "guide_spatial_voice" : "guide_spatial_text_pending");
+            spatialNote.text = MuseumInterfaceText.Get("guide_spatial_keyboard");
             wasSpeaking = voice.Speaking;
         }
 
@@ -452,7 +458,7 @@ namespace MusiyoBetsknate.Museum
             return text;
         }
 
-        private bool CanWrite => guide.Open && guide.Offered && !MuseumInput.Current.Spatial;
+        private bool CanWrite => guide.Open && guide.Offered && !guide.Client.Busy;
 
         /// <summary>
         /// Gives the field the keyboard; walking stops until the visitor sends, presses Escape or clicks away. A screen that
@@ -460,6 +466,22 @@ namespace MusiyoBetsknate.Museum
         /// </summary>
         public void BeginTyping()
         {
+            if (CanWrite && MuseumInput.Current.Spatial)
+            {
+                voice?.Discard();
+                voice?.StopSpeech();
+                if (keyboard == null) keyboard = guide.gameObject.AddComponent<MuseumVirtualKeyboard>();
+                var visitor = FindAnyObjectByType<DesktopVisitorController>();
+                var eye = visitor != null ? visitor.GetComponentInChildren<Camera>() : Camera.main;
+                keyboard.Show(field.text, eye, guide.GetComponent<MuseumLecternDisplay>(), text =>
+                {
+                    field.SetTextWithoutNotify(text);
+                    Submit();
+                    guide.Typing = false;
+                }, () => { field.SetTextWithoutNotify(keyboard.Draft); guide.Typing = false; });
+                guide.Typing = true;
+                return;
+            }
             focusPending = CanWrite && field != null;
             if (focusPending && field.isActiveAndEnabled) Focus();
         }
@@ -475,7 +497,8 @@ namespace MusiyoBetsknate.Museum
         public void Submit()
         {
             if (!guide.Open || !guide.Offered || guide.Client.Busy || guide.Client.RetryWaitRemaining > 0) return;
-            guide.Send(MuseumInput.Current.Spatial ? guide.Client.Question : field.text);
+            guide.Send(field.text);
+            keyboard?.Hide();
             voice?.Forget();
             field.DeactivateInputField();
             if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject == field.gameObject)
@@ -490,7 +513,7 @@ namespace MusiyoBetsknate.Museum
                 if (CanWrite) Focus();
                 else focusPending = false;
             }
-            guide.Typing = guide.Open && field.isFocused;
+            guide.Typing = guide.Open && (field.isFocused || keyboard != null && keyboard.Open);
             // A spoken answer ends without any event.
             if (voice != null && voice.Speaking != wasSpeaking) RefreshVoice();
             // The rate-limit countdowns change every second without any event.
@@ -512,6 +535,7 @@ namespace MusiyoBetsknate.Museum
             RefreshVoice();
             fieldRoot.SetActive(offered && !spatial);
             spatialNote.gameObject.SetActive(offered && spatial);
+            write.gameObject.SetActive(offered && spatial && !client.Busy);
             send.transform.parent.gameObject.SetActive(offered);
             send.gameObject.SetActive(!client.Busy && (!spatial || client.CanRetry));
             send.interactable = client.RetryWaitRemaining == 0;
@@ -522,7 +546,8 @@ namespace MusiyoBetsknate.Museum
             ShowSources(offered && client.State == GuideQuestionState.Answered);
             if (open && !wasOpen && !string.IsNullOrEmpty(client.Question)) field.SetTextWithoutNotify(client.Question);
             // The conversation opens ready to write, where the device has a keyboard.
-            if (open && !wasOpen) BeginTyping();
+            if (open && !wasOpen && !spatial) BeginTyping();
+            if ((!offered || !spatial) && keyboard != null) keyboard.Hide(true);
             if (!open && field.isFocused) field.DeactivateInputField();
             wasOpen = open;
         }
