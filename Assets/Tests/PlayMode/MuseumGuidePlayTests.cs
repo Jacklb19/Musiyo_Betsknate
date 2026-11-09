@@ -208,6 +208,91 @@ namespace MusiyoBetsknate.Tests
             }
         }
 
+        [UnityTest]
+        public IEnumerator AHeadsetCanAskWithoutAMicrophoneThroughTheVirtualKeyboard()
+        {
+            InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Mouse>();
+            var api = StartService();
+            yield return OpenMuseumAtTheGuide(api);
+            var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var runtime = flow.GetComponent<TourRuntime>();
+            var guide = flow.GetComponent<MuseumGuide>();
+            var interaction = flow.GetComponent<MuseumInteraction>();
+            var view = UnityEngine.Object.FindAnyObjectByType<MuseumGuideView>();
+            var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
+            Assert.That(visitor.FocusPoint(runtime.GuidePoint.Anchor), Is.True);
+            yield return null;
+            MuseumInput.Current.SetSpatial(true, visitor.transform);
+            Assert.That(guide.Ask(), Is.True);
+            yield return null;
+            view.Refresh();
+            Assert.That(view.WriteButton.gameObject.activeInHierarchy, Is.True);
+            view.WriteButton.onClick.Invoke();
+            yield return null;
+            Assert.That(view.Keyboard.Open, Is.True);
+            Assert.That(MuseumInput.Current.Context, Is.EqualTo(MuseumInputContext.Typing));
+            Assert.That(MuseumInput.Current.Move.enabled, Is.False);
+            Assert.That(MuseumInput.Current.RightPosition.enabled, Is.True, "The ray still tracks while writing.");
+            var key = view.Keyboard.Keys.First(item => item.name == "q");
+            Canvas.ForceUpdateCanvases();
+            var rect = (RectTransform)key.transform;
+            var spot = rect.TransformPoint(rect.rect.center);
+            var display = flow.GetComponent<MuseumLecternDisplay>();
+            display.Aim(new Ray(spot - view.Keyboard.Surface.forward * .1f, view.Keyboard.Surface.forward));
+            Assert.That(display.Aimed, Is.SameAs(key), "The controller ray reaches a visible key.");
+            Assert.That(display.Press(), Is.True);
+            Assert.That(view.Keyboard.Draft, Does.EndWith("q"));
+            view.Keyboard.Clear();
+            view.Keyboard.Insert("¿Qué dice la ficha de prueba?");
+            view.Keyboard.Submit();
+            yield return Until(() => !guide.Client.Busy, 10);
+            Assert.That(guide.Client.State, Is.EqualTo(GuideQuestionState.Answered));
+            Assert.That(guide.Client.Question, Is.EqualTo("¿Qué dice la ficha de prueba?"));
+            Assert.That(requests, Is.EqualTo(1));
+            Assert.That(GuideVoiceConsent.Covers(null), Is.False, "Writing never asks for microphone consent.");
+            view.WriteButton.onClick.Invoke();
+            yield return null;
+            guide.Close();
+            yield return null;
+            Assert.That(view.Keyboard.Open, Is.False, "Leaving the conversation closes the keyboard.");
+            Assert.That(interaction.State, Is.Not.EqualTo(InteractionState.GuideQuestion));
+        }
+
+        [UnityTest]
+        public IEnumerator TheCompanionKeepsTextQuestionsWhenVoiceIsUnavailable()
+        {
+            InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Mouse>();
+            var api = StartService(); // No voice-capabilities route: only the textual guide is available.
+            yield return OpenMuseumAtTheGuide(api);
+            var flow = UnityEngine.Object.FindAnyObjectByType<MuseumVisitFlow>();
+            var visitor = UnityEngine.Object.FindAnyObjectByType<DesktopVisitorController>();
+            var body = visitor.GetComponent<CharacterController>();
+            body.enabled = false;
+            visitor.transform.position = new Vector3(0, .05f, -48);
+            body.enabled = true;
+            yield return null;
+            var companion = UnityEngine.Object.FindAnyObjectByType<MuseumCompanion>();
+            yield return Until(() => companion.Voice != null, 3);
+            var voice = companion.Voice;
+            MuseumInput.Current.SetSpatial(true, visitor.transform);
+            Assert.That(voice.Write(), Is.True);
+            yield return null;
+            Assert.That(voice.Keyboard.Open, Is.True);
+            Assert.That(MuseumInput.Current.Context, Is.EqualTo(MuseumInputContext.Typing));
+            voice.Keyboard.Insert("¿Qué dice la ficha de prueba?");
+            voice.Keyboard.Submit();
+            yield return Until(() => voice.Stage == CompanionVoiceStage.Answer, 10);
+            Assert.That(voice.Question.State, Is.EqualTo(GuideQuestionState.Answered));
+            Assert.That(requests, Is.EqualTo(1));
+            Assert.That(voice.Speaking, Is.False, "The text answer does not depend on a synthesizer.");
+            voice.End();
+            yield return null;
+            Assert.That(voice.Keyboard.Open, Is.False);
+            Assert.That(MuseumInput.Current.Context, Is.Not.EqualTo(MuseumInputContext.Typing));
+        }
+
         /// <summary>Loads the saved museum against the synthetic service with the guide published at the hearth.</summary>
         private IEnumerator OpenMuseumAtTheGuide(string api)
         {

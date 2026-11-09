@@ -12,6 +12,7 @@ namespace MusiyoBetsknate.Museum
         private MuseumVisitFlow flow;
         private MuseumWayfinding wayfinding;
         private MuseumGuide guide;
+        private MuseumCompanionVoice companionVoice;
 
         /// <summary>Returns the director of a visit, adding it on first use, with the context already applied.</summary>
         public static MuseumInputDirector Ensure(MuseumInteraction state)
@@ -29,6 +30,8 @@ namespace MusiyoBetsknate.Museum
                 Watch();
                 if (flow != null && flow.BlocksInput || interaction.State == InteractionState.Paused) return MuseumInputContext.Menu;
                 if (guide != null && guide.Typing && interaction.State == InteractionState.GuideQuestion) return MuseumInputContext.Typing;
+                if (companionVoice == null) companionVoice = FindAnyObjectByType<MuseumCompanionVoice>();
+                if (companionVoice != null && companionVoice.Stage == CompanionVoiceStage.Writing) return MuseumInputContext.Typing;
                 if (wayfinding != null && wayfinding.MenuOpen) return MuseumInputContext.Panel;
                 if (interaction.State == InteractionState.ModelExamination) return MuseumInputContext.Examine;
                 return interaction.BlocksMovement || interaction.HoldsVisitor ? MuseumInputContext.Panel : MuseumInputContext.Visit;
