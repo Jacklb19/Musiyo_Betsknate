@@ -168,6 +168,30 @@ namespace MusiyoBetsknate.Tests
         }
 
         [Test]
+        public void AFloatingScreenStandsBesideThePieceSoItNeverHidesIt()
+        {
+            var settings = MuseumExperienceConfiguration.Current;
+            var pedestal = new GameObject("Pedestal");
+            pedestal.transform.SetParent(withoutStand.Anchor.transform, false);
+            var mount = pedestal.AddComponent<PointExhibitMount>();
+            mount.Configure(.6f, 1);
+            // The visitor stands south of the piece and looks north at it; their right is east (+X).
+            eye.position = new Vector3(-4, 1.65f, -2);
+            display.Show(withoutStand);
+            display.Advance(settings.LecternFollowSeconds * 40);
+
+            var piece = mount.transform.position;
+            var across = display.Surface.position.x - piece.x;
+            float clearance = settings.LecternScreenWidth * .5f + mount.MaxFootprint * .5f;
+            Assert.That(across, Is.EqualTo(clearance + MuseumLecternDisplay.ExhibitGap).Within(.01f), "The screen stands to the visitor's right of the piece.");
+            Assert.That(across - settings.LecternScreenWidth * .5f, Is.GreaterThan(mount.MaxFootprint * .5f), "No part of the screen lies in front of the piece.");
+            var toVisitor = eye.position - withoutStand.Anchor.transform.position;
+            toVisitor.y = 0;
+            Assert.That(Vector3.Angle(-display.Surface.forward, toVisitor), Is.LessThan(.5f), "It still faces the visitor.");
+            Assert.That(Vector3.Angle(display.Surface.up, Vector3.up), Is.LessThan(.01f), "A floating screen is upright.");
+        }
+
+        [Test]
         public void TheStandsTakeTheirWoodAndBoardFinish()
         {
             var settings = MuseumExperienceConfiguration.Current;
