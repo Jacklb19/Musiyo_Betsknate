@@ -15,6 +15,7 @@ namespace MusiyoBetsknate.Tests
         private TourPoint withStand;
         private TourPoint withoutStand;
         private TourPoint withPiece;
+        private TourPoint centrePiece;
         private PointLectern stand;
         private RectTransform screenParent;
         private RectTransform panel;
@@ -32,6 +33,7 @@ namespace MusiyoBetsknate.Tests
             withStand = CreatePoint(room.transform, "first", new Vector3(4, 0, 2));
             withoutStand = CreatePoint(room.transform, "second", new Vector3(-4, 0, 2));
             withPiece = CreatePoint(room.transform, "third", new Vector3(-12, 0, 2));
+            centrePiece = CreatePoint(room.transform, "fourth", new Vector3(.5f, 0, .5f));
             var elements = new[] { new ElementSummaryContractV1 { slug = "one", title = "One" },
                 new ElementSummaryContractV1 { slug = "two", title = "Two" } };
             var contract = new TourContractV1 { schema_version = 1,
@@ -41,7 +43,9 @@ namespace MusiyoBetsknate.Tests
                         new PointContractV1 { key = "first", name = "First", order = 0, activation = new[] { "keyboard", "proximity" }, elements = elements },
                         new PointContractV1 { key = "second", name = "Second", order = 1, activation = new[] { "keyboard", "proximity" }, elements = elements },
                         new PointContractV1 { key = "third", name = "Third", order = 2, activation = new[] { "keyboard", "proximity" },
-                            elements = new[] { new ElementSummaryContractV1 { slug = "drum", title = "Drum", has_3d_model = true } } }
+                            elements = new[] { new ElementSummaryContractV1 { slug = "drum", title = "Drum", has_3d_model = true } } },
+                        new PointContractV1 { key = "fourth", name = "Fourth", order = 3, activation = new[] { "keyboard", "proximity" },
+                            elements = new[] { new ElementSummaryContractV1 { slug = "dance", title = "Dance", has_3d_model = true } } }
                     } } }
             };
             Assert.That(runtime.Apply(contract, out var error), Is.True, error);
@@ -171,44 +175,84 @@ namespace MusiyoBetsknate.Tests
             }
         }
 
+        /// <summary>Where the screen beside a piece by a wall must rest: to the right of the piece seen from the room.</summary>
+        private static Vector3 RestingBeside(Vector3 piece, Vector3 roomCentre, float footprint)
+        {
+            var settings = MuseumExperienceConfiguration.Current;
+            var towardRoom = roomCentre - piece;
+            towardRoom.y = 0;
+            towardRoom.Normalize();
+            var right = Vector3.Cross(Vector3.up, -towardRoom).normalized;
+            var expected = piece + right * (settings.LecternScreenWidth * .5f + footprint * .5f + MuseumLecternDisplay.ExhibitGap)
+                + towardRoom * settings.LecternFloatDistance;
+            expected.y = 0;
+            return expected;
+        }
+
+        private static Vector3 Flat(Vector3 value) { value.y = 0; return value; }
+
         [Test]
-        public void AFloatingScreenStandsBesideThePieceSoItNeverHidesIt()
+        public void TheScreenBesideAPieceOnItsPedestalRestsFixedToItsRight()
         {
             var settings = MuseumExperienceConfiguration.Current;
             var pedestal = new GameObject("Pedestal");
             pedestal.transform.SetParent(withoutStand.Anchor.transform, false);
             var mount = pedestal.AddComponent<PointExhibitMount>();
             mount.Configure(.6f, 1);
-            // The visitor stands south of the piece and looks north at it; their right is east (+X).
-            eye.position = new Vector3(-4, 1.65f, -2);
+            eye.position = new Vector3(-3, 1.65f, 0);
             display.Show(withoutStand);
             display.Advance(settings.LecternFollowSeconds * 40);
 
-            var piece = mount.transform.position;
-            var across = display.Surface.position.x - piece.x;
-            float clearance = settings.LecternScreenWidth * .5f + mount.MaxFootprint * .5f;
-            Assert.That(across, Is.EqualTo(clearance + MuseumLecternDisplay.ExhibitGap).Within(.01f), "The screen stands to the visitor's right of the piece.");
-            Assert.That(across - settings.LecternScreenWidth * .5f, Is.GreaterThan(mount.MaxFootprint * .5f), "No part of the screen lies in front of the piece.");
-            var toVisitor = eye.position - withoutStand.Anchor.transform.position;
-            toVisitor.y = 0;
-            Assert.That(Vector3.Angle(-display.Surface.forward, toVisitor), Is.LessThan(.5f), "It still faces the visitor.");
-            Assert.That(Vector3.Angle(display.Surface.up, Vector3.up), Is.LessThan(.01f), "A floating screen is upright.");
+            Assert.That(display.FixedBeside, Is.True, "A piece away from the centre of its room keeps its screen fixed.");
+            var expected = RestingBeside(mount.transform.position, Vector3.zero, mount.MaxFootprint);
+            var rest = new Pose(display.Surface.position, display.Surface.rotation);
+            Assert.That(Vector3.Distance(Flat(rest.position), expected), Is.LessThan(.01f), "It rests to the right of the piece, seen from the room.");
+            var towardRoom = Flat(-mount.transform.position).normalized;
+            Assert.That(Vector3.Angle(-display.Surface.forward, towardRoom), Is.LessThan(.5f), "It faces the room, like a page on a stand.");
+            foreach (var position in new[] { new Vector3(-6, 1.65f, 4), new Vector3(-1, 1.65f, 5), new Vector3(-7, 1.65f, -1) })
+            {
+                eye.position = position;
+                display.Advance(settings.LecternFollowSeconds * 40);
+                Assert.That(Vector3.Distance(display.Surface.position, rest.position), Is.LessThan(.0001f), "It does not move with the visitor.");
+                Assert.That(Quaternion.Angle(display.Surface.rotation, rest.rotation), Is.LessThan(.01f), "It does not turn with the visitor.");
+            }
         }
 
         [Test]
-        public void AFloatingScreenStandsBesideAPieceThatFloatsAtItsPoint()
+        public void TheScreenBesideAPieceThatFloatsAtItsPointRestsFixedAndNeverHidesIt()
         {
             var settings = MuseumExperienceConfiguration.Current;
-            // The visitor stands south of the piece and looks north at it; their right is east (+X).
-            eye.position = new Vector3(-12, 1.65f, -2);
+            eye.position = new Vector3(-10, 1.65f, 1);
             display.Show(withPiece);
             display.Advance(settings.LecternFollowSeconds * 40);
 
+            Assert.That(display.FixedBeside, Is.True);
             var piece = withPiece.Anchor.LookTarget.position;
-            var across = display.Surface.position.x - piece.x;
-            float clearance = settings.LecternScreenWidth * .5f + MuseumLecternDisplay.FloatingPieceFootprint * .5f;
-            Assert.That(across, Is.EqualTo(clearance + MuseumLecternDisplay.ExhibitGap).Within(.01f), "The screen stands to the visitor's right of the piece.");
+            var expected = RestingBeside(piece, Vector3.zero, MuseumLecternDisplay.FloatingPieceFootprint);
+            Assert.That(Vector3.Distance(Flat(display.Surface.position), expected), Is.LessThan(.01f));
+            var towardRoom = Flat(-piece).normalized;
+            var right = Vector3.Cross(Vector3.up, -towardRoom).normalized;
+            float across = Vector3.Dot(Flat(display.Surface.position - piece), right);
             Assert.That(across - settings.LecternScreenWidth * .5f, Is.GreaterThan(MuseumLecternDisplay.FloatingPieceFootprint * .5f), "No part of the screen lies in front of the piece.");
+            var rest = display.Surface.position;
+            eye.position = new Vector3(-14, 1.65f, 6);
+            display.Advance(settings.LecternFollowSeconds * 40);
+            Assert.That(Vector3.Distance(display.Surface.position, rest), Is.LessThan(.0001f), "It stays where it rests.");
+        }
+
+        [Test]
+        public void ThePieceAtTheCentreOfTheRoomKeepsAScreenThatFollowsTheVisitor()
+        {
+            var settings = MuseumExperienceConfiguration.Current;
+            display.Show(centrePiece);
+            Assert.That(display.FixedBeside, Is.False, "The dance at the centre of its room keeps a screen that turns toward the visitor.");
+            foreach (var position in new[] { new Vector3(3, 1.65f, 3), new Vector3(-2, 1.65f, 4) })
+            {
+                eye.position = position;
+                display.Advance(settings.LecternFollowSeconds * 40);
+                var toVisitor = Flat(position - centrePiece.Anchor.transform.position);
+                Assert.That(Vector3.Angle(-display.Surface.forward, toVisitor), Is.LessThan(.5f), "It faces the visitor wherever they stand.");
+            }
         }
 
         [Test]
