@@ -53,6 +53,13 @@ namespace MusiyoBetsknate.Museum
         public const float ExhibitGap = .1f;
         /// <summary>Footprint assumed for a piece that floats at its point's look target, without a pedestal mount.</summary>
         public const float FloatingPieceFootprint = .84f;
+        /// <summary>
+        /// A piece at least this far from the centre of its room stands by a wall: its screen stays fixed beside it, facing
+        /// the room, like a page on a reading stand (owner, 10/11/2026). Nearer the centre, as the dance, it follows the visitor.
+        /// </summary>
+        public const float FixedBesideMinimumDistance = 1.5f;
+        /// <summary>True while the screen rests fixed beside a piece instead of turning toward the visitor.</summary>
+        public bool FixedBeside { get; private set; }
         private bool open;
         /// <summary>Column of choices and controls beside the reading column; its height counts toward the screen's.</summary>
         public RectTransform SideColumn { get; set; }
@@ -151,6 +158,18 @@ namespace MusiyoBetsknate.Museum
             if (stand != Host || anchor != Anchor || (anchor == null && panel.parent != screenParent)) Place(stand, anchor);
             showsPiece = exhibit != null || point != null && point.HasContent
                 && System.Array.Exists(point.Content.elements, element => element != null && element.has_3d_model);
+            FixedBeside = false;
+            if (showsPiece && Host == null && anchor != null && anchor.GetComponentInParent<RoomAnchor>() is RoomAnchor room)
+            {
+                var piece = exhibit != null ? exhibit.transform.position : anchor.LookTarget.position;
+                var towardRoom = room.transform.position - piece;
+                towardRoom.y = 0;
+                if (towardRoom.magnitude >= FixedBesideMinimumDistance)
+                {
+                    FixedBeside = true;
+                    heading = Mathf.Atan2(towardRoom.x, towardRoom.z) * Mathf.Rad2Deg;
+                }
+            }
             open = true;
             if (anchor == null) panel.gameObject.SetActive(true);
         }
@@ -350,7 +369,7 @@ namespace MusiyoBetsknate.Museum
             Openness = Mathf.MoveTowards(Openness, target, Mathf.Max(0, elapsed) / settings.LecternUnfoldSeconds);
             // A floating screen keeps turning toward the visitor, eased so it does not jitter with every step; a screen
             // resting on a stand stays where it is.
-            if (InWorld && Host == null)
+            if (InWorld && Host == null && !FixedBeside)
                 heading = Mathf.LerpAngle(heading, HeadingToViewer(), 1 - Mathf.Exp(-Mathf.Max(0, elapsed) / settings.LecternFollowSeconds));
             Apply();
         }
