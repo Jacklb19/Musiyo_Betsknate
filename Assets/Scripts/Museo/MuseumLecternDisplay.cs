@@ -47,8 +47,12 @@ namespace MusiyoBetsknate.Museum
         private float heading;
         /// <summary>Pedestal or floor place where the active point shows its piece; null when the point shows none.</summary>
         private PointExhibitMount exhibit;
+        /// <summary>True while the active point shows a 3D piece, on a pedestal mount or floating at its look target.</summary>
+        private bool showsPiece;
         /// <summary>Space between the edge of a piece's footprint and the floating screen beside it, in metres.</summary>
         public const float ExhibitGap = .1f;
+        /// <summary>Footprint assumed for a piece that floats at its point's look target, without a pedestal mount.</summary>
+        public const float FloatingPieceFootprint = .84f;
         private bool open;
         /// <summary>Column of choices and controls beside the reading column; its height counts toward the screen's.</summary>
         public RectTransform SideColumn { get; set; }
@@ -145,6 +149,8 @@ namespace MusiyoBetsknate.Museum
             var stand = Find(point);
             var anchor = point != null ? point.Anchor : null;
             if (stand != Host || anchor != Anchor || (anchor == null && panel.parent != screenParent)) Place(stand, anchor);
+            showsPiece = exhibit != null || point != null && point.HasContent
+                && System.Array.Exists(point.Content.elements, element => element != null && element.has_3d_model);
             open = true;
             if (anchor == null) panel.gameObject.SetActive(true);
         }
@@ -365,11 +371,14 @@ namespace MusiyoBetsknate.Museum
         /// </summary>
         private Vector3 BesideExhibit(Vector3 toViewer, MuseumExperienceConfiguration settings)
         {
-            if (exhibit == null) return Vector3.zero;
-            var fromAnchor = exhibit.transform.position - Anchor.transform.position;
+            if (!showsPiece) return Vector3.zero;
+            // The piece stands on its pedestal mount or, without one, floats at the point's look target.
+            var piece = exhibit != null ? exhibit.transform.position : Anchor.LookTarget.position;
+            float footprint = exhibit != null ? exhibit.MaxFootprint : FloatingPieceFootprint;
+            var fromAnchor = piece - Anchor.transform.position;
             fromAnchor.y = 0;
             var right = Vector3.Cross(Vector3.up, -toViewer).normalized;
-            return fromAnchor + right * (settings.LecternScreenWidth * .5f + exhibit.MaxFootprint * .5f + ExhibitGap);
+            return fromAnchor + right * (settings.LecternScreenWidth * .5f + footprint * .5f + ExhibitGap);
         }
 
         private void Apply()
