@@ -45,6 +45,10 @@ namespace MusiyoBetsknate.Museum
         private PointLectern[] stands;
         private Transform viewer;
         private float heading;
+        /// <summary>Pedestal or floor place where the active point shows its piece; null when the point shows none.</summary>
+        private PointExhibitMount exhibit;
+        /// <summary>Space between the edge of a piece's footprint and the floating screen beside it, in metres.</summary>
+        public const float ExhibitGap = .1f;
         private bool open;
         /// <summary>Column of choices and controls beside the reading column; its height counts toward the screen's.</summary>
         public RectTransform SideColumn { get; set; }
@@ -155,6 +159,7 @@ namespace MusiyoBetsknate.Museum
         {
             Host = stand;
             Anchor = anchor;
+            exhibit = anchor != null ? anchor.GetComponentInChildren<PointExhibitMount>() : null;
             Openness = 0;
             if (anchor == null)
             {
@@ -354,6 +359,19 @@ namespace MusiyoBetsknate.Museum
             return new Pose(bottom, rotation);
         }
 
+        /// <summary>
+        /// Horizontal shift that takes a floating screen from the point to the visitor's right of the piece it shows: half
+        /// the screen, half the piece's footprint and a gap, measured from the piece. Zero where the point shows no piece.
+        /// </summary>
+        private Vector3 BesideExhibit(Vector3 toViewer, MuseumExperienceConfiguration settings)
+        {
+            if (exhibit == null) return Vector3.zero;
+            var fromAnchor = exhibit.transform.position - Anchor.transform.position;
+            fromAnchor.y = 0;
+            var right = Vector3.Cross(Vector3.up, -toViewer).normalized;
+            return fromAnchor + right * (settings.LecternScreenWidth * .5f + exhibit.MaxFootprint * .5f + ExhibitGap);
+        }
+
         private void Apply()
         {
             bool visible = InWorld && Openness > 0;
@@ -368,10 +386,13 @@ namespace MusiyoBetsknate.Museum
             }
             else
             {
-                // Without a stand it floats at the point, on the side the visitor is on, upright and facing them.
+                // Without a stand it floats at the point, on the side the visitor is on, upright and facing them. Where the
+                // point shows a piece, the screen stands beside it, to the visitor's right, so it never hides the piece
+                // (owner, 10/11/2026).
                 var toViewer = Quaternion.Euler(0, heading, 0) * Vector3.forward;
                 var centre = Anchor.transform.position;
                 centre.y = Anchor.transform.position.y + settings.LecternFloatHeight;
+                centre += BesideExhibit(toViewer, settings);
                 surface.SetPositionAndRotation(centre + toViewer * settings.LecternFloatDistance, Quaternion.LookRotation(-toViewer, Vector3.up));
             }
             float eased = Mathf.SmoothStep(0, 1, Openness);
