@@ -14,6 +14,7 @@ namespace MusiyoBetsknate.Tests
         private Transform eye;
         private TourPoint withStand;
         private TourPoint withoutStand;
+        private TourPoint withPiece;
         private PointLectern stand;
         private RectTransform screenParent;
         private RectTransform panel;
@@ -30,6 +31,7 @@ namespace MusiyoBetsknate.Tests
             room.AddComponent<RoomAnchor>().Configure("room.test");
             withStand = CreatePoint(room.transform, "first", new Vector3(4, 0, 2));
             withoutStand = CreatePoint(room.transform, "second", new Vector3(-4, 0, 2));
+            withPiece = CreatePoint(room.transform, "third", new Vector3(-12, 0, 2));
             var elements = new[] { new ElementSummaryContractV1 { slug = "one", title = "One" },
                 new ElementSummaryContractV1 { slug = "two", title = "Two" } };
             var contract = new TourContractV1 { schema_version = 1,
@@ -37,7 +39,9 @@ namespace MusiyoBetsknate.Tests
                 rooms = new[] { new RoomContractV1 { key = "room.test", name = "Test", order = 0,
                     points = new[] {
                         new PointContractV1 { key = "first", name = "First", order = 0, activation = new[] { "keyboard", "proximity" }, elements = elements },
-                        new PointContractV1 { key = "second", name = "Second", order = 1, activation = new[] { "keyboard", "proximity" }, elements = elements }
+                        new PointContractV1 { key = "second", name = "Second", order = 1, activation = new[] { "keyboard", "proximity" }, elements = elements },
+                        new PointContractV1 { key = "third", name = "Third", order = 2, activation = new[] { "keyboard", "proximity" },
+                            elements = new[] { new ElementSummaryContractV1 { slug = "drum", title = "Drum", has_3d_model = true } } }
                     } } }
             };
             Assert.That(runtime.Apply(contract, out var error), Is.True, error);
@@ -189,6 +193,22 @@ namespace MusiyoBetsknate.Tests
             toVisitor.y = 0;
             Assert.That(Vector3.Angle(-display.Surface.forward, toVisitor), Is.LessThan(.5f), "It still faces the visitor.");
             Assert.That(Vector3.Angle(display.Surface.up, Vector3.up), Is.LessThan(.01f), "A floating screen is upright.");
+        }
+
+        [Test]
+        public void AFloatingScreenStandsBesideAPieceThatFloatsAtItsPoint()
+        {
+            var settings = MuseumExperienceConfiguration.Current;
+            // The visitor stands south of the piece and looks north at it; their right is east (+X).
+            eye.position = new Vector3(-12, 1.65f, -2);
+            display.Show(withPiece);
+            display.Advance(settings.LecternFollowSeconds * 40);
+
+            var piece = withPiece.Anchor.LookTarget.position;
+            var across = display.Surface.position.x - piece.x;
+            float clearance = settings.LecternScreenWidth * .5f + MuseumLecternDisplay.FloatingPieceFootprint * .5f;
+            Assert.That(across, Is.EqualTo(clearance + MuseumLecternDisplay.ExhibitGap).Within(.01f), "The screen stands to the visitor's right of the piece.");
+            Assert.That(across - settings.LecternScreenWidth * .5f, Is.GreaterThan(MuseumLecternDisplay.FloatingPieceFootprint * .5f), "No part of the screen lies in front of the piece.");
         }
 
         [Test]
